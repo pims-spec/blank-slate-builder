@@ -6,6 +6,7 @@ import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, maakVersie, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
 import { facDefault, type WwsInput } from "@/lib/wws";
 import type { Pve } from "@/lib/wws/pve";
+import { berekenVarianten, ruimtenUitTelling, toepassen } from "@/lib/wws/indeling";
 import { rechtenVan, type AppRole } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
@@ -418,5 +419,54 @@ describe("TellingEditor", () => {
       uitPve: true,
     });
     expect(doc.input.overig[0].fac).toEqual(t.input.overig[0]!.fac);
+  });
+
+  // ---------- indelingsadvies ----------
+  it("indelingsadvies: toepassen neemt de variant precies over, koppelt eigenaar en PvE pas dan", async () => {
+    klantenStore.lijst.mockResolvedValue([{ id: "k1", naam: "Amstel Wonen", pves: [PVE] }]);
+    const t = tellingMetPve();
+    t.meta = { ...t.meta, klantId: "", pveId: "" };
+    t.input.vertrekken.push({ type: "woonkamer", m2: 30, verwarmd: true });
+    store.haal.mockResolvedValue(t);
+    const verwacht = toepassen(
+      t.input,
+      berekenVarianten(t.input, ruimtenUitTelling(t.input), PVE, "", N)[0]!,
+    );
+    renderEditor("t-pve");
+    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
+    expect(screen.getByLabelText(/Uitgangspunten \(PvE\)/)).toHaveValue("p1");
+    fireEvent.click(screen.getByRole("button", { name: "Volgende stap →" }));
+    fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Toepassen op deze telling" })[0]!);
+    expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+      "Niet-opgeslagen wijzigingen",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    const doc = store.bewaar.mock.calls[0]![1];
+    expect(doc.input).toEqual(verwacht);
+    expect(JSON.stringify(doc.input)).not.toMatch(/_ind(Vast|Nieuw)/);
+    expect(doc.meta).toMatchObject({ klantId: "k1", pveId: "p1" });
+  });
+
+  it("indelingsadvies: annuleren heeft geen bijwerking (eigenaar niet gekoppeld)", async () => {
+    klantenStore.lijst.mockResolvedValue([{ id: "k1", naam: "Amstel Wonen", pves: [PVE] }]);
+    const t = tellingMetPve();
+    t.meta = { ...t.meta, klantId: "", pveId: "" };
+    store.haal.mockResolvedValue(t);
+    renderEditor("t-pve");
+    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Volgende stap →" }));
+    fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByText("Indelingsadvies", { selector: "h2" })).toBeNull(),
+    );
+    expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+      "Alles opgeslagen",
+    );
+    expect(screen.getByRole("button", { name: "Eigenaar: geen" })).toBeInTheDocument();
   });
 });

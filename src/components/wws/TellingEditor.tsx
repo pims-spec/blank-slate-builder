@@ -36,6 +36,7 @@ import {
 import AdviesDialoog from "./AdviesDialoog";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
+import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
 import PveToepassenDialoog, { type PveVraag } from "./PveToepassenDialoog";
 import WwsCalculator from "./WwsCalculator";
 import { useNormen } from "./NormenContext";
@@ -82,6 +83,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [adviesOpen, setAdviesOpen] = useState(false);
   const [delenOpen, setDelenOpen] = useState(false);
   const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
+  const [indelingOpen, setIndelingOpen] = useState(false);
   const { data: klanten = [] } = useQuery(klantenQuery());
   const [versieNaam, setVersieNaam] = useState("");
 
@@ -221,6 +223,35 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     } finally {
       setBezig(false);
     }
+  }
+
+  /**
+   * Indelingsvariant toepassen: zoals het verbeteradvies in de werkversie (niet opgeslagen) en
+   * zonder stil invullen door het PvE — de variant is al met het gekozen PvE gemaakt. Eigenaar
+   * en gebruikt PvE worden pas nu gekoppeld (annuleren heeft zo geen bijwerking).
+   */
+  function indelingToepassen(
+    input: WwsInput,
+    keuze: IndelingKeuze,
+    nSlaap: number,
+    punten: number,
+  ) {
+    setStaat((s) => ({
+      ...s,
+      input,
+      meta: { ...s.meta, klantId: keuze.klantId, pveId: keuze.pveId },
+    }));
+    setDirty(true);
+    setIndelingOpen(false);
+    toast(
+      "Indeling met " +
+        nSlaap +
+        " slaapkamer" +
+        (nSlaap === 1 ? "" : "s") +
+        " toegepast (" +
+        punten +
+        " punten). Sla de telling op, of leg een nieuwe versie vast.",
+    );
   }
 
   /** "Toepassen op telling": in de werkversie, nog niet opgeslagen */
@@ -449,6 +480,9 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         <Button variant="outline" onClick={() => setAdviesOpen(true)}>
           Verbeteradvies
         </Button>
+        <Button variant="outline" onClick={() => setIndelingOpen(true)}>
+          Indelingsadvies
+        </Button>
         {!alleenLezen && !isNieuw && (
           <Button variant="outline" onClick={() => setDelenOpen(true)}>
             Delen
@@ -537,6 +571,16 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         boven={paneel}
         alleenLezen={alleenLezen}
         pasRuimteAan={pasRuimteAan}
+      />
+      <IndelingDialoog
+        open={indelingOpen}
+        onOpenChange={setIndelingOpen}
+        input={staat.input}
+        klantId={staat.meta.klantId}
+        pveId={staat.meta.pveId}
+        klanten={klanten}
+        magToepassen={!alleenLezen}
+        onToepassen={(input, keuze, v) => indelingToepassen(input, keuze, v.nSlaap, v.R.totaal)}
       />
       <PveToepassenDialoog
         vraag={pveVraag}
