@@ -362,6 +362,24 @@ function Resultaten({
                   </div>
                 </div>
                 <Schema v={v} />
+                {v.toiletToegevoegd && (
+                  <p
+                    className="rounded-md border border-border bg-muted px-2 py-1 text-xs"
+                    role="note"
+                  >
+                    Toilet toegevoegd aan de badkamer: deze variant had verder nergens een toilet.
+                  </p>
+                )}
+                {v.geenToilet && (
+                  <p
+                    className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs"
+                    role="alert"
+                  >
+                    Let op: deze variant heeft geen toilet, en ook geen badkamer om er een in te
+                    plaatsen. Zet bij Ruimten een toiletruimte of badkamer op ‘Vast houden’ of ‘Vrij
+                    herindelen’.
+                  </p>
+                )}
                 {/* fase 4: hier komt de AI-afbeelding van deze variant */}
                 {magToepassen && (
                   <Button variant="outline" onClick={() => onToepassen(v)}>

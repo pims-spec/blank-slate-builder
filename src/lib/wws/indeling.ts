@@ -57,6 +57,10 @@ export interface IndelingVariant {
   nSlaap: number;
   R: WwsResultaat;
   input: WwsInput;
+  /** Vangnet: er was nergens een toilet, de eerste badkamer kreeg er een (zie toiletVangnet) */
+  toiletToegevoegd?: boolean;
+  /** Ook na het vangnet geen toilet (geen badkamer in de variant) */
+  geenToilet?: boolean;
 }
 
 const typeVan = (key: Groep, t: string) => (key === "vertrekken" ? vertrekType(t) : overigType(t));
@@ -365,7 +369,21 @@ export function kandidaten(
   return Array.from(set).sort((a, b) => a - b);
 }
 
-/** Alle varianten, elk doorgerekend met calc — genereerIndelingVarianten() */
+/**
+ * Alle varianten, elk doorgerekend met calc — precies genereerIndelingVarianten() uit de bron,
+ * zonder het toiletvangnet. Alleen voor de vergelijkingstest; de app gebruikt berekenVarianten().
+ */
+export function berekenVariantenKern(
+  input: WwsInput,
+  rooms: readonly IndelingRuimte[],
+  pve: Pve | null,
+  extraSlaap: string,
+  N: Normen,
+): IndelingVariant[] {
+  return varianten(input, rooms, pve, extraSlaap, N, false);
+}
+
+/** Alle varianten met het toiletvangnet (bewuste afwijking, zie toiletVangnet), doorgerekend met calc */
 export function berekenVarianten(
   input: WwsInput,
   rooms: readonly IndelingRuimte[],
@@ -373,16 +391,61 @@ export function berekenVarianten(
   extraSlaap: string,
   N: Normen,
 ): IndelingVariant[] {
+  return varianten(input, rooms, pve, extraSlaap, N, true);
+}
+
+function varianten(
+  input: WwsInput,
+  rooms: readonly IndelingRuimte[],
+  pve: Pve | null,
+  extraSlaap: string,
+  N: Normen,
+  metVangnet: boolean,
+): IndelingVariant[] {
   const out: IndelingVariant[] = [];
   kandidaten(rooms, extraSlaap, pve).forEach((n) => {
-    const v = bouwVariant(n, pve, rooms, input);
-    if (!v) return;
+    const kaal = bouwVariant(n, pve, rooms, input);
+    if (!kaal) return;
+    const v = metVangnet ? toiletVangnet(kaal) : kaal;
     const genInput = clone(input);
     genInput.vertrekken = v.vertrekken as Vertrek[];
     genInput.overig = v.overig as OverigeRuimte[];
     out.push({ ...v, R: calc(genInput, N), input: genInput });
   });
   return out;
+}
+
+// ---------- toiletvangnet (bewuste afwijking van de bron) ----------
+
+/** Heeft de variant ergens een toilet: een toiletruimte met toilet, of een badkamer met toilet? */
+export function heeftToilet(v: Pick<IndelingVariant, "vertrekken" | "overig">): boolean {
+  return [...v.vertrekken, ...v.overig].some((r) => {
+    const f = r.fac;
+    if (!f) return false;
+    if (f.kind === "toilet") return f.toilet.toilet !== "geen";
+    if (f.kind === "badkamer") return num(f.san.toiletStaand) + num(f.san.toiletHang) > 0;
+    return false;
+  });
+}
+
+/**
+ * Vangnet na bouwVariant: heeft de variant nergens een toilet, dan krijgt de eerste badkamer
+ * (behouden of nieuw) een staand toilet — zoals de bron al doet voor een nieuw voorgestelde
+ * badkamer bij "geen aparte toiletruimte". De bron laat dit gat open bij een behouden badkamer
+ * zonder toilet (apartToilet "nee", of "auto" als de toiletruimte vervalt): een variant zonder
+ * toilet is geen bruikbaar advies. Wijzigt de variant niet; geeft een nieuwe terug.
+ */
+export function toiletVangnet<T extends Pick<IndelingVariant, "vertrekken" | "overig">>(
+  v: T,
+): T & { toiletToegevoegd: boolean; geenToilet: boolean } {
+  const uit = { ...v, vertrekken: clone(v.vertrekken), overig: clone(v.overig) };
+  if (heeftToilet(uit)) return { ...uit, toiletToegevoegd: false, geenToilet: false };
+  const badkamer = [...uit.vertrekken, ...uit.overig].find((r) => r.fac?.kind === "badkamer");
+  if (badkamer && badkamer.fac?.kind === "badkamer") {
+    badkamer.fac.san.toiletStaand = 1;
+    return { ...uit, toiletToegevoegd: true, geenToilet: false };
+  }
+  return { ...uit, toiletToegevoegd: false, geenToilet: true };
 }
 
 // ---------- schema ----------

@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { OVERIG_TYPES } from "./basis";
 import {
-  berekenVarianten,
+  berekenVariantenKern,
   blokjes,
   buitenrand,
   ruimtenUitTelling,
@@ -174,7 +174,7 @@ describe("indelingsadvies gelijk aan wws-site.html", () => {
       I.indelingState.pveId = pve ? "p1" : "";
       I.genereerIndelingVarianten();
       const ref = I.indelingState.varianten;
-      const ts = berekenVarianten(kloon(input), rooms, pve ? kloon(pve) : null, extra, N);
+      const ts = berekenVariantenKern(kloon(input), rooms, pve ? kloon(pve) : null, extra, N);
       try {
         expect(
           ts.map((v) => ({ vertrekken: v.vertrekken, overig: v.overig, nSlaap: v.nSlaap, R: v.R })),

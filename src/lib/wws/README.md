@@ -57,3 +57,28 @@ De code volgt wws-site.html (bron van waarheid). Verschillen met de tekstspecifi
   In TypeScript kan de peildatum worden meegegeven (`calc(input, N, { peildatum })`); het formulier
   gebruikt nu nog vandaag, net als de bron.
 - De migratie van zeer oude tellingen (zonder `facV`) is niet overgezet: de database is vers.
+
+## Bewuste afwijkingen van wws-site.html
+
+Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De vergelijkingstests
+vergelijken steeds de kern zónder deze afwijkingen (`berekenVariantenKern`, enz.); de afwijkingen
+hebben eigen tests.
+
+### Indelingsadvies (`indeling.ts`)
+
+- **Toiletvangnet** (`toiletVangnet`, getest in `indeling.test.ts`). De bron kan een variant zonder
+  enig toilet opleveren: bij "geen aparte toiletruimte" krijgt alleen een *nieuw* voorgestelde
+  badkamer een toilet, niet een behouden badkamer zonder toilet; en bij "auto" komt er geen losse
+  toiletruimte bij zodra er een behouden badkamer is — vervalt de bestaande toiletruimte, dan blijft
+  er niets over. Na `bouwVariant` controleert de app daarom of de variant ergens een toilet heeft
+  (toiletruimte met toilet, of badkamer met staand/hangend toilet). Zo niet, dan krijgt de eerste
+  badkamer (behouden of nieuw) `toiletStaand = 1`, zoals de bron al doet voor een nieuwe badkamer,
+  en meldt de variantkaart "toilet toegevoegd aan de badkamer". Is er ook geen badkamer, dan toont
+  de kaart een waarschuwing. De punten van de variant worden ná het vangnet berekend.
+- **Toepassen**: de bron zet een getekend blokkenschema als `plattegrondImg`; de app verwijdert een
+  bestaande `plattegrondImg` (en de `bbox`'en) omdat die niet meer bij de nieuwe indeling past, en
+  toont het schema live.
+- **Eigenaar en PvE pas bij toepassen**: de bron zet `meta.klantId` al bij stap 1 → 2 en legt geen
+  `meta.pveId` vast. De app koppelt eigenaar én gebruikt PvE pas bij "Toepassen", zodat annuleren
+  geen bijwerking heeft en later stil invullen hetzelfde PvE gebruikt.
+
