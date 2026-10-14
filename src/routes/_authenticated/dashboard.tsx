@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
+import { Button } from "@/components/ui/button";
 import { myAccessQuery } from "@/lib/access";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -30,8 +31,11 @@ function Dashboard() {
             <p className="text-sm uppercase tracking-widest text-muted-foreground">Welkom terug</p>
             <h1 className="mt-2 font-display text-5xl text-foreground">{name}</h1>
             <p className="mt-6 max-w-lg text-muted-foreground">
-              Je hebt toegang. Hier komt straks de inhoud van je app.
+              Je hebt toegang. Begin een nieuwe WWS-puntentelling.
             </p>
+            <Button asChild className="mt-8">
+              <Link to="/wws">Puntentelling openen</Link>
+            </Button>
           </>
         ) : (
           <div className="max-w-lg rounded-xl border border-border bg-card p-8">
