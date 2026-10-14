@@ -118,6 +118,8 @@ interface Props {
   onToepassen: (input: WwsInput, n: number, punten: number) => void;
   /** Admins kunnen de kosten als standaard voor iedereen opslaan */
   isAdmin?: boolean;
+  /** Uit bij alleen-lezen (kijkrol, gedeelde telling) */
+  magToepassen?: boolean;
 }
 
 /** Verbeteradvies: route naar de vrije sector, zoals het adviesvenster in wws-site.html. */
@@ -127,6 +129,7 @@ export default function AdviesDialoog({
   input,
   onToepassen,
   isAdmin = false,
+  magToepassen = true,
 }: Props) {
   const NORMEN = useNormen();
   return (
@@ -140,7 +143,14 @@ export default function AdviesDialoog({
           </DialogDescription>
         </DialogHeader>
         {/* alleen gemonteerd zolang het venster open is: elke keer openen begint opnieuw */}
-        {open && <AdviesInhoud input={input} onToepassen={onToepassen} isAdmin={isAdmin} />}
+        {open && (
+          <AdviesInhoud
+            input={input}
+            onToepassen={onToepassen}
+            isAdmin={isAdmin}
+            magToepassen={magToepassen}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -150,7 +160,8 @@ function AdviesInhoud({
   input,
   onToepassen,
   isAdmin,
-}: Pick<Props, "input" | "onToepassen"> & { isAdmin: boolean }) {
+  magToepassen,
+}: Pick<Props, "input" | "onToepassen"> & { isAdmin: boolean; magToepassen: boolean }) {
   const NORMEN = useNormen();
   const [inst, setInst] = useState<AdviesInstellingen>(() => standaardInstellingen(NORMEN));
   // Instellingen-tab: concept, wordt verwerkt bij elke herberekening (readAdviesInputs())
@@ -497,11 +508,13 @@ function AdviesInhoud({
         </TabsContent>
       </Tabs>
 
-      <DialogFooter>
-        <Button disabled={!S.n} onClick={() => onToepassen(S.input, S.n, S.R.totaal)}>
-          {S.n ? `Toepassen op telling (${S.n})` : "Toepassen op telling"}
-        </Button>
-      </DialogFooter>
+      {magToepassen && (
+        <DialogFooter>
+          <Button disabled={!S.n} onClick={() => onToepassen(S.input, S.n, S.R.totaal)}>
+            {S.n ? `Toepassen op telling (${S.n})` : "Toepassen op telling"}
+          </Button>
+        </DialogFooter>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { StrictMode, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
-import { rechtenVan } from "@/lib/rollen";
+import { rechtenVan, type AppRole } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
 const navigate = vi.fn();
@@ -24,16 +24,27 @@ const store = vi.hoisted(() => ({
   voegVersieToe: vi.fn(),
 }));
 const klantenStore = vi.hoisted(() => ({ lijst: vi.fn(), voegToe: vi.fn() }));
+const delenStore = vi.hoisted(() => ({
+  collegas: vi.fn(),
+  gedeeldMet: vi.fn(),
+  deel: vi.fn(),
+  ontdeel: vi.fn(),
+}));
 vi.mock("./tellingStore", () => ({
   tellingStore: store,
   klantenStore,
+  delenStore,
   klantenQuery: () => ({ queryKey: ["klanten"], queryFn: () => klantenStore.lijst() }),
 }));
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
 
-function renderEditor(tellingId: string | undefined, userId = ADMIN.id) {
+function renderEditor(
+  tellingId: string | undefined,
+  userId = ADMIN.id,
+  roles: AppRole[] = ["admin", "member"],
+) {
   const qc = new QueryClient();
   return render(
     // StrictMode buitenaan, zoals TanStack Start in development: alleen dan draait React
@@ -44,7 +55,7 @@ function renderEditor(tellingId: string | undefined, userId = ADMIN.id) {
           tellingId={tellingId}
           userId={userId}
           bewerker={ADMIN}
-          rechten={rechtenVan(["admin", "member"])}
+          rechten={rechtenVan(roles)}
         />
       </QueryClientProvider>
     </StrictMode>,
@@ -175,5 +186,73 @@ describe("TellingEditor", () => {
     expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
       "Niet-opgeslagen wijzigingen",
     );
+  });
+
+  function tellingVanAnna(): Telling {
+    const s = nieuweTellingStaat("Anna");
+    s.meta.adres = "Straat";
+    return {
+      ...maakTellingDoc(s, N, null),
+      id: "t-anna",
+      ownerId: "anna",
+      ownerNaam: "Anna",
+      gewijzigdOp: "2026-10-14T10:00:00Z",
+    };
+  }
+
+  it("kijkrol: telling alleen bekijken — geen opslaan, velden uit; geen nieuwe telling", async () => {
+    store.haal.mockResolvedValue(tellingVanAnna());
+    const { unmount } = renderEditor("t-anna", "lezer-1", ["viewer"]);
+    expect(await screen.findByRole("note", { name: "Alleen lezen" })).toHaveTextContent(
+      "Je hebt een kijkrol",
+    );
+    expect(screen.queryByRole("button", { name: "Opslaan" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Versie vastleggen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delen" })).toBeNull();
+    expect(screen.getByLabelText("Straat")).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Verbeteradvies" })).toBeEnabled();
+    unmount();
+
+    renderEditor(undefined, "lezer-1", ["viewer"]);
+    expect(screen.getByText(/Met de kijkrol kun je geen nieuwe telling maken/)).toBeInTheDocument();
+    expect(store.maakAan).not.toHaveBeenCalled();
+  });
+
+  it("gedeelde telling: een collega kan hem bekijken, niet aanpassen of verder delen", async () => {
+    store.haal.mockResolvedValue(tellingVanAnna());
+    renderEditor("t-anna", "bob", ["member"]);
+    expect(await screen.findByRole("note", { name: "Alleen lezen" })).toHaveTextContent(
+      "Deze telling is met je gedeeld door Anna",
+    );
+    expect(screen.queryByRole("button", { name: "Opslaan" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delen" })).toBeNull();
+    expect(screen.getByLabelText("Huisnummer")).toBeDisabled();
+    expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent("Alleen lezen");
+  });
+
+  it("delen: eigenaar ziet collega's behalve zichzelf, en kan delen en intrekken", async () => {
+    const eigen = { ...tellingVanAnna(), ownerId: "anna" };
+    store.haal.mockResolvedValue(eigen);
+    delenStore.collegas.mockResolvedValue([
+      { id: "anna", naam: "Anna", email: "anna@x.nl" },
+      { id: "bob", naam: "Bob", email: "bob@x.nl" },
+      { id: "cas", naam: "Cas", email: "cas@x.nl" },
+    ]);
+    delenStore.gedeeldMet.mockResolvedValue(["cas"]);
+    delenStore.deel.mockResolvedValue(undefined);
+    delenStore.ontdeel.mockResolvedValue(undefined);
+    renderEditor("t-anna", "anna", ["member"]);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Delen" }));
+    const bob = await screen.findByRole("checkbox", { name: /Bob/ });
+    expect(screen.queryByRole("checkbox", { name: /Anna/ })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: /Cas/ })).toBeChecked();
+    expect(delenStore.collegas).toHaveBeenCalledWith(false);
+
+    fireEvent.click(bob);
+    await waitFor(() => expect(delenStore.deel).toHaveBeenCalledWith("t-anna", "bob"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Cas/ }));
+    await waitFor(() => expect(delenStore.ontdeel).toHaveBeenCalledWith("t-anna", "cas"));
   });
 });

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { SEGMENT_NAMEN, type WwsInput } from "@/lib/wws";
-import type { Rechten } from "@/lib/rollen";
+import { magTellingBewerken, type Rechten } from "@/lib/rollen";
 import {
   legVersieVast,
   nieuweTellingStaat,
@@ -33,6 +33,7 @@ import {
   type Versie,
 } from "@/lib/wws/opslag";
 import AdviesDialoog from "./AdviesDialoog";
+import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import WwsCalculator from "./WwsCalculator";
 import { useNormen } from "./NormenContext";
@@ -77,6 +78,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [bezig, setBezig] = useState(false);
   const [versieDialoog, setVersieDialoog] = useState(false);
   const [adviesOpen, setAdviesOpen] = useState(false);
+  const [delenOpen, setDelenOpen] = useState(false);
   const [versieNaam, setVersieNaam] = useState("");
 
   const [dirty, setDirtyState] = useState(false);
@@ -232,9 +234,19 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     );
   }
 
+  // Alleen-lezen: de kijkrol, of een telling die met je gedeeld is (niet eigenaar, geen admin).
+  // Zelfde regel als mag_telling_bewerken() in de database.
+  const alleenLezen = isNieuw
+    ? !rechten.magSchrijven
+    : !magTellingBewerken(rechten, eigenaar.id, userId);
+
   function versieOpenen(v: Versie) {
     if (dirtyRef.current && !window.confirm(NIET_OPGESLAGEN)) return;
     setStaat((s) => openVersieInStaat(s, v));
+    if (alleenLezen) {
+      toast("Versie " + v.nr + " getoond (alleen lezen).");
+      return;
+    }
     // de werkversie wijkt nu af van wat is opgeslagen
     setDirty(true);
     toast("Versie " + v.nr + " geladen. Sla op om dit de werkversie te maken.");
@@ -259,90 +271,132 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     );
   }
 
+  if (isNieuw && !rechten.magSchrijven) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <p>
+          Met de kijkrol kun je geen nieuwe telling maken. Open een bestaande telling via het
+          archief.
+        </p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link to="/archief">Naar het archief</Link>
+        </Button>
+      </div>
+    );
+  }
+
   const m = staat.meta;
   const vanCollega = eigenaar.id !== userId;
 
   const paneel = (
     <section className="space-y-4 border-b border-border py-6" aria-label="Telling">
-      {vanCollega && (
-        <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
-          Telling van {eigenaar.naam ?? "een collega"}. Wijzigingen worden in deze telling
-          opgeslagen; de eigenaar blijft dezelfde.
+      {alleenLezen ? (
+        <p
+          className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
+          role="note"
+          aria-label="Alleen lezen"
+        >
+          {rechten.isViewer
+            ? "Je hebt een kijkrol: je kunt deze telling bekijken, maar niet wijzigen."
+            : `Deze telling is met je gedeeld door ${eigenaar.naam ?? "een collega"}. Je kunt hem bekijken, maar niet aanpassen.`}
         </p>
+      ) : (
+        vanCollega && (
+          <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
+            Telling van {eigenaar.naam ?? "een collega"}. Wijzigingen worden in deze telling
+            opgeslagen; de eigenaar blijft dezelfde.
+          </p>
+        )
       )}
-      <div className="grid gap-3 sm:grid-cols-6">
-        <MetaVeld
-          label="Naam"
-          className="sm:col-span-6"
-          waarde={m.naam}
-          zet={(v) => zetMeta("naam", v)}
-        />
-        <MetaVeld
-          label="Straat"
-          className="sm:col-span-3"
-          waarde={m.adres}
-          zet={(v) => zetMeta("adres", v)}
-        />
-        <MetaVeld
-          label="Huisnummer"
-          className="sm:col-span-1"
-          waarde={m.huisnummer}
-          zet={(v) => zetMeta("huisnummer", v)}
-        />
-        <MetaVeld
-          label="Postcode"
-          className="sm:col-span-2"
-          waarde={m.postcode}
-          zet={(v) => zetMeta("postcode", v)}
-        />
-        <MetaVeld
-          label="Plaats"
-          className="sm:col-span-3"
-          waarde={m.plaats}
-          zet={(v) => zetMeta("plaats", v)}
-        />
-        <MetaVeld
-          label="Peildatum"
-          type="date"
-          className="sm:col-span-3"
-          waarde={m.peildatum}
-          zet={(v) => zetMeta("peildatum", v)}
-        />
-        <div className="sm:col-span-6">
-          <EigenaarKeuze
-            klantId={m.klantId}
-            onKies={(id) => zetMeta("klantId", id)}
-            magToevoegen={rechten.magSchrijven}
+      <fieldset disabled={alleenLezen} className="m-0 min-w-0 border-0 p-0">
+        <div className="grid gap-3 sm:grid-cols-6">
+          <MetaVeld
+            label="Naam"
+            className="sm:col-span-6"
+            waarde={m.naam}
+            zet={(v) => zetMeta("naam", v)}
           />
+          <MetaVeld
+            label="Straat"
+            className="sm:col-span-3"
+            waarde={m.adres}
+            zet={(v) => zetMeta("adres", v)}
+          />
+          <MetaVeld
+            label="Huisnummer"
+            className="sm:col-span-1"
+            waarde={m.huisnummer}
+            zet={(v) => zetMeta("huisnummer", v)}
+          />
+          <MetaVeld
+            label="Postcode"
+            className="sm:col-span-2"
+            waarde={m.postcode}
+            zet={(v) => zetMeta("postcode", v)}
+          />
+          <MetaVeld
+            label="Plaats"
+            className="sm:col-span-3"
+            waarde={m.plaats}
+            zet={(v) => zetMeta("plaats", v)}
+          />
+          <MetaVeld
+            label="Peildatum"
+            type="date"
+            className="sm:col-span-3"
+            waarde={m.peildatum}
+            zet={(v) => zetMeta("peildatum", v)}
+          />
+          <div className="sm:col-span-6">
+            <EigenaarKeuze
+              klantId={m.klantId}
+              onKies={(id) => zetMeta("klantId", id)}
+              magToevoegen={rechten.magSchrijven}
+              alleenLezen={alleenLezen}
+            />
+          </div>
         </div>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={opslaan} disabled={bezig}>
-          Opslaan
-        </Button>
-        <Button
-          variant="outline"
-          disabled={bezig}
-          onClick={() => {
-            setVersieNaam("");
-            setVersieDialoog(true);
-          }}
-        >
-          Versie vastleggen
-        </Button>
+        {!alleenLezen && (
+          <>
+            <Button onClick={opslaan} disabled={bezig}>
+              Opslaan
+            </Button>
+            <Button
+              variant="outline"
+              disabled={bezig}
+              onClick={() => {
+                setVersieNaam("");
+                setVersieDialoog(true);
+              }}
+            >
+              Versie vastleggen
+            </Button>
+          </>
+        )}
         <Button variant="outline" onClick={() => setAdviesOpen(true)}>
           Verbeteradvies
         </Button>
-        <Button asChild variant="ghost">
-          <Link to="/wws">Nieuwe telling</Link>
-        </Button>
+        {!alleenLezen && !isNieuw && (
+          <Button variant="outline" onClick={() => setDelenOpen(true)}>
+            Delen
+          </Button>
+        )}
+        {rechten.magSchrijven && (
+          <Button asChild variant="ghost">
+            <Link to="/wws">Nieuwe telling</Link>
+          </Button>
+        )}
         <span className="text-sm text-muted-foreground" role="status" aria-label="Opslagstatus">
-          {dirty
-            ? "Niet-opgeslagen wijzigingen"
-            : isNieuw
-              ? "Nog niet opgeslagen"
-              : "Alles opgeslagen"}
+          {alleenLezen
+            ? "Alleen lezen"
+            : dirty
+              ? "Niet-opgeslagen wijzigingen"
+              : isNieuw
+                ? "Nog niet opgeslagen"
+                : "Alles opgeslagen"}
           {staat.basedOn !== null && <> · gebaseerd op versie {staat.basedOn}</>}
         </span>
       </div>
@@ -407,14 +461,30 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
 
   return (
     <>
-      <WwsCalculator input={staat.input} setInput={setInput} boven={paneel} />
+      <WwsCalculator
+        input={staat.input}
+        setInput={setInput}
+        boven={paneel}
+        alleenLezen={alleenLezen}
+      />
       <AdviesDialoog
         open={adviesOpen}
         onOpenChange={setAdviesOpen}
         input={staat.input}
         onToepassen={adviesToepassen}
         isAdmin={rechten.isAdmin}
+        magToepassen={!alleenLezen}
       />
+      {!alleenLezen && !isNieuw && (
+        <DelenDialoog
+          open={delenOpen}
+          onOpenChange={setDelenOpen}
+          tellingId={id}
+          ownerId={eigenaar.id}
+          userId={userId}
+          isAdmin={rechten.isAdmin}
+        />
+      )}
     </>
   );
 }

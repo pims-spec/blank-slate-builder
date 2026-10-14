@@ -242,9 +242,16 @@ export interface WwsCalculatorProps {
   setInput?: Dispatch<SetStateAction<WwsInput>>;
   /** Komt boven het formulier, onder de titel (bv. opslaan en versies) */
   boven?: ReactNode;
+  /** Alleen bekijken: alle velden uitgeschakeld */
+  alleenLezen?: boolean;
 }
 
-export default function WwsCalculator({ input, setInput, boven }: WwsCalculatorProps = {}) {
+export default function WwsCalculator({
+  input,
+  setInput,
+  boven,
+  alleenLezen = false,
+}: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
   const inp = input ?? eigenInp;
@@ -569,250 +576,173 @@ export default function WwsCalculator({ input, setInput, boven }: WwsCalculatorP
 
         {boven}
 
-        <Sectie titel="Woning">
-          <Veld label="Woningtype" className="max-w-xs">
-            <Keuze
-              value={inp.woningtype}
-              onChange={(v) =>
-                wijzig((d) => {
-                  d.woningtype = v as WwsInput["woningtype"];
-                })
-              }
-              opties={[
-                ["eengezins", "Eengezinswoning"],
-                ["meergezins", "Meergezinswoning"],
-              ]}
-            />
-          </Veld>
-        </Sectie>
-
-        <Sectie titel="Vertrekken" rubriek="1">
-          {ruimteLijst("vertrekken")}
-        </Sectie>
-        <Sectie titel="Overige ruimten" rubriek="2">
-          {ruimteLijst("overig")}
-          <p className="text-xs text-muted-foreground">
-            Verwarming en verkoeling (rubriek 3) volgen uit de vinkjes bij de ruimten.
-          </p>
-        </Sectie>
-
-        <Sectie titel="Energieprestatie" rubriek="4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Veld label="Grondslag">
+        <fieldset disabled={alleenLezen} className="m-0 min-w-0 border-0 p-0">
+          <Sectie titel="Woning">
+            <Veld label="Woningtype" className="max-w-xs">
               <Keuze
-                value={E.soort}
+                value={inp.woningtype}
                 onChange={(v) =>
                   wijzig((d) => {
-                    d.energie.soort = v as typeof E.soort;
+                    d.woningtype = v as WwsInput["woningtype"];
                   })
                 }
                 opties={[
-                  ["label", "Energielabel vanaf 2021 (NTA 8800)"],
-                  ["labelOud", "Energielabel (vóór 2015)"],
-                  ["index", "Energie-index (2015–2021)"],
-                  ["bouwjaar", "Bouwjaar (geen geldig label)"],
+                  ["eengezins", "Eengezinswoning"],
+                  ["meergezins", "Meergezinswoning"],
                 ]}
               />
             </Veld>
-            {(E.soort === "label" || E.soort === "labelOud") && (
-              <Veld label="Labelklasse">
+          </Sectie>
+
+          <Sectie titel="Vertrekken" rubriek="1">
+            {ruimteLijst("vertrekken")}
+          </Sectie>
+          <Sectie titel="Overige ruimten" rubriek="2">
+            {ruimteLijst("overig")}
+            <p className="text-xs text-muted-foreground">
+              Verwarming en verkoeling (rubriek 3) volgen uit de vinkjes bij de ruimten.
+            </p>
+          </Sectie>
+
+          <Sectie titel="Energieprestatie" rubriek="4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Veld label="Grondslag">
                 <Keuze
-                  value={E.label}
+                  value={E.soort}
                   onChange={(v) =>
                     wijzig((d) => {
-                      d.energie.label = v as typeof E.label;
+                      d.energie.soort = v as typeof E.soort;
                     })
                   }
                   opties={[
-                    ["", "Kies de labelklasse"],
-                    ...LABELS.map((l) => [l, l] as [string, string]),
-                    ["EPV", "Energieprestatievergoeding"],
+                    ["label", "Energielabel vanaf 2021 (NTA 8800)"],
+                    ["labelOud", "Energielabel (vóór 2015)"],
+                    ["index", "Energie-index (2015–2021)"],
+                    ["bouwjaar", "Bouwjaar (geen geldig label)"],
                   ]}
                 />
               </Veld>
-            )}
-            {E.soort === "index" && (
-              <Veld label="Energie-index">
-                <Keuze
-                  value={E.indexKlasse}
+              {(E.soort === "label" || E.soort === "labelOud") && (
+                <Veld label="Labelklasse">
+                  <Keuze
+                    value={E.label}
+                    onChange={(v) =>
+                      wijzig((d) => {
+                        d.energie.label = v as typeof E.label;
+                      })
+                    }
+                    opties={[
+                      ["", "Kies de labelklasse"],
+                      ...LABELS.map((l) => [l, l] as [string, string]),
+                      ["EPV", "Energieprestatievergoeding"],
+                    ]}
+                  />
+                </Veld>
+              )}
+              {E.soort === "index" && (
+                <Veld label="Energie-index">
+                  <Keuze
+                    value={E.indexKlasse}
+                    onChange={(v) =>
+                      wijzig((d) => {
+                        d.energie.indexKlasse = v;
+                      })
+                    }
+                    opties={[
+                      ["", "Kies de klasse"],
+                      ...INDEX_KLASSEN.map((k, x) => [String(x), k] as [string, string]),
+                      ["EPV", "Energieprestatievergoeding"],
+                    ]}
+                  />
+                </Veld>
+              )}
+              {E.soort !== "bouwjaar" && (
+                <Veld label="Registratiedatum">
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={E.datum}
+                    onChange={(e) =>
+                      wijzig((d) => {
+                        d.energie.datum = e.target.value;
+                      })
+                    }
+                  />
+                </Veld>
+              )}
+              <Veld label="Bouwjaar">
+                <Getal
+                  value={E.bouwjaar}
+                  placeholder=""
                   onChange={(v) =>
                     wijzig((d) => {
-                      d.energie.indexKlasse = v;
-                    })
-                  }
-                  opties={[
-                    ["", "Kies de klasse"],
-                    ...INDEX_KLASSEN.map((k, x) => [String(x), k] as [string, string]),
-                    ["EPV", "Energieprestatievergoeding"],
-                  ]}
-                />
-              </Veld>
-            )}
-            {E.soort !== "bouwjaar" && (
-              <Veld label="Registratiedatum">
-                <input
-                  type="date"
-                  className={inputCls}
-                  value={E.datum}
-                  onChange={(e) =>
-                    wijzig((d) => {
-                      d.energie.datum = e.target.value;
+                      d.energie.bouwjaar = v;
                     })
                   }
                 />
               </Veld>
-            )}
-            <Veld label="Bouwjaar">
+            </div>
+          </Sectie>
+
+          <Sectie titel="Keuken en sanitair" rubriek="5–6">
+            <p className="max-w-prose text-sm text-muted-foreground">
+              Keukens, badkamers en toiletten vul je in bij de ruimte zelf: kies bij de vertrekken
+              een Keuken, Woonkamer met open keuken, Badkamer of Slaapkamer met wastafel, en bij de
+              overige ruimten een Toiletruimte of Wasruimte.
+            </p>
+          </Sectie>
+
+          <Sectie titel="Woonvoorzieningen bij een handicap" rubriek="7">
+            <Veld label="Netto-investering (€)" className="max-w-xs">
               <Getal
-                value={E.bouwjaar}
-                placeholder=""
+                value={inp.handicap.investering}
                 onChange={(v) =>
                   wijzig((d) => {
-                    d.energie.bouwjaar = v;
+                    d.handicap.investering = v;
                   })
                 }
               />
             </Veld>
-          </div>
-        </Sectie>
+          </Sectie>
 
-        <Sectie titel="Keuken en sanitair" rubriek="5–6">
-          <p className="max-w-prose text-sm text-muted-foreground">
-            Keukens, badkamers en toiletten vul je in bij de ruimte zelf: kies bij de vertrekken een
-            Keuken, Woonkamer met open keuken, Badkamer of Slaapkamer met wastafel, en bij de
-            overige ruimten een Toiletruimte of Wasruimte.
-          </p>
-        </Sectie>
-
-        <Sectie titel="Woonvoorzieningen bij een handicap" rubriek="7">
-          <Veld label="Netto-investering (€)" className="max-w-xs">
-            <Getal
-              value={inp.handicap.investering}
-              onChange={(v) =>
-                wijzig((d) => {
-                  d.handicap.investering = v;
-                })
-              }
-            />
-          </Veld>
-        </Sectie>
-
-        <Sectie titel="Buitenruimten" rubriek="8">
-          {inp.buiten.ruimten.map((b, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_88px_auto]"
-            >
-              <Veld label="Soort">
-                <Keuze
-                  value={b.soort}
-                  opties={BUITEN_SOORTEN}
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.buiten.ruimten[i]!.soort = v as typeof b.soort;
-                    })
-                  }
-                />
-              </Veld>
-              <Veld label="Gebruik">
-                <Keuze
-                  value={b.groep}
-                  opties={[
-                    ["priv", "Privé"],
-                    ["gem", "Gemeenschappelijk"],
-                  ]}
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.buiten.ruimten[i]!.groep = v as "priv";
-                    })
-                  }
-                />
-              </Veld>
-              <Veld label="m²">
-                <Getal
-                  value={b.m2}
-                  placeholder="0,00"
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.buiten.ruimten[i]!.m2 = v;
-                    })
-                  }
-                />
-              </Veld>
-              <button
-                type="button"
-                className={weg}
-                onClick={() =>
-                  wijzig((d) => {
-                    d.buiten.ruimten.splice(i, 1);
-                  })
-                }
-              >
-                Verwijderen
-              </button>
-            </div>
-          ))}
-          <div className="flex flex-wrap items-end gap-3">
-            <button
-              type="button"
-              className={knopCls}
-              onClick={() =>
-                wijzig((d) => {
-                  d.buiten.ruimten.push({ soort: "balkon", groep: "priv", m2: "" });
-                })
-              }
-            >
-              Buitenruimte toevoegen
-            </button>
-            {inp.buiten.ruimten.some((b) => b.groep === "gem") && (
-              <Veld label="Adressen met gebruiksrecht (gemeenschappelijk)" className="w-64">
-                <Getal
-                  value={inp.buiten.gemAdressen}
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.buiten.gemAdressen = v;
-                    })
-                  }
-                />
-              </Veld>
-            )}
-          </div>
-        </Sectie>
-
-        <Sectie titel="Gemeenschappelijke ruimten" rubriek="9">
-          {(["vertrekken", "overig"] as const).map((g) =>
-            inp.gem[g].map((r, i) => (
+          <Sectie titel="Buitenruimten" rubriek="8">
+            {inp.buiten.ruimten.map((b, i) => (
               <div
-                key={g + i}
-                className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_88px_auto]"
+                key={i}
+                className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_88px_auto]"
               >
-                <Veld
-                  label={
-                    g === "vertrekken"
-                      ? "Gemeenschappelijk vertrek"
-                      : "Gemeenschappelijke overige ruimte"
-                  }
-                >
+                <Veld label="Soort">
                   <Keuze
-                    value={r.type}
-                    opties={(g === "vertrekken" ? VERTREK_TYPES : OVERIG_TYPES).map((t) => [
-                      t.k,
-                      t.l,
-                    ])}
+                    value={b.soort}
+                    opties={BUITEN_SOORTEN}
                     onChange={(v) =>
                       wijzig((d) => {
-                        d.gem[g][i]!.type = v as never;
+                        d.buiten.ruimten[i]!.soort = v as typeof b.soort;
+                      })
+                    }
+                  />
+                </Veld>
+                <Veld label="Gebruik">
+                  <Keuze
+                    value={b.groep}
+                    opties={[
+                      ["priv", "Privé"],
+                      ["gem", "Gemeenschappelijk"],
+                    ]}
+                    onChange={(v) =>
+                      wijzig((d) => {
+                        d.buiten.ruimten[i]!.groep = v as "priv";
                       })
                     }
                   />
                 </Veld>
                 <Veld label="m²">
                   <Getal
-                    value={r.m2}
+                    value={b.m2}
                     placeholder="0,00"
                     onChange={(v) =>
                       wijzig((d) => {
-                        d.gem[g][i]!.m2 = v;
+                        d.buiten.ruimten[i]!.m2 = v;
                       })
                     }
                   />
@@ -822,235 +752,314 @@ export default function WwsCalculator({ input, setInput, boven }: WwsCalculatorP
                   className={weg}
                   onClick={() =>
                     wijzig((d) => {
-                      d.gem[g].splice(i, 1);
+                      d.buiten.ruimten.splice(i, 1);
                     })
                   }
                 >
                   Verwijderen
                 </button>
               </div>
-            )),
-          )}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={knopCls}
-              onClick={() =>
-                wijzig((d) => {
-                  d.gem.vertrekken.push({ type: "overig", m2: "" });
-                })
-              }
-            >
-              Vertrek toevoegen
-            </button>
-            <button
-              type="button"
-              className={knopCls}
-              onClick={() =>
-                wijzig((d) => {
-                  d.gem.overig.push({ type: "berging_in", m2: "" });
-                })
-              }
-            >
-              Overige ruimte toevoegen
-            </button>
-          </div>
-          <div className="grid max-w-md grid-cols-2 gap-3">
-            <Veld label="Punten voorzieningen">
-              <Getal
-                value={inp.gem.voorzPunten}
-                onChange={(v) =>
+            ))}
+            <div className="flex flex-wrap items-end gap-3">
+              <button
+                type="button"
+                className={knopCls}
+                onClick={() =>
                   wijzig((d) => {
-                    d.gem.voorzPunten = v;
+                    d.buiten.ruimten.push({ soort: "balkon", groep: "priv", m2: "" });
                   })
                 }
-              />
-            </Veld>
-            <Veld label="Adressen met gebruiksrecht">
-              <Getal
-                value={inp.gem.adressen}
-                onChange={(v) =>
-                  wijzig((d) => {
-                    d.gem.adressen = v;
-                  })
-                }
-              />
-            </Veld>
-          </div>
-        </Sectie>
+              >
+                Buitenruimte toevoegen
+              </button>
+              {inp.buiten.ruimten.some((b) => b.groep === "gem") && (
+                <Veld label="Adressen met gebruiksrecht (gemeenschappelijk)" className="w-64">
+                  <Getal
+                    value={inp.buiten.gemAdressen}
+                    onChange={(v) =>
+                      wijzig((d) => {
+                        d.buiten.gemAdressen = v;
+                      })
+                    }
+                  />
+                </Veld>
+              )}
+            </div>
+          </Sectie>
 
-        <Sectie titel="Gemeenschappelijke parkeerruimten" rubriek="10">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <Veld label="Type I (9 p)">
-              <Getal
-                value={inp.parkeer.typeI}
-                onChange={(v) =>
+          <Sectie titel="Gemeenschappelijke ruimten" rubriek="9">
+            {(["vertrekken", "overig"] as const).map((g) =>
+              inp.gem[g].map((r, i) => (
+                <div
+                  key={g + i}
+                  className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_88px_auto]"
+                >
+                  <Veld
+                    label={
+                      g === "vertrekken"
+                        ? "Gemeenschappelijk vertrek"
+                        : "Gemeenschappelijke overige ruimte"
+                    }
+                  >
+                    <Keuze
+                      value={r.type}
+                      opties={(g === "vertrekken" ? VERTREK_TYPES : OVERIG_TYPES).map((t) => [
+                        t.k,
+                        t.l,
+                      ])}
+                      onChange={(v) =>
+                        wijzig((d) => {
+                          d.gem[g][i]!.type = v as never;
+                        })
+                      }
+                    />
+                  </Veld>
+                  <Veld label="m²">
+                    <Getal
+                      value={r.m2}
+                      placeholder="0,00"
+                      onChange={(v) =>
+                        wijzig((d) => {
+                          d.gem[g][i]!.m2 = v;
+                        })
+                      }
+                    />
+                  </Veld>
+                  <button
+                    type="button"
+                    className={weg}
+                    onClick={() =>
+                      wijzig((d) => {
+                        d.gem[g].splice(i, 1);
+                      })
+                    }
+                  >
+                    Verwijderen
+                  </button>
+                </div>
+              )),
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={knopCls}
+                onClick={() =>
                   wijzig((d) => {
-                    d.parkeer.typeI = v;
+                    d.gem.vertrekken.push({ type: "overig", m2: "" });
                   })
                 }
-              />
-            </Veld>
-            <Veld label="Type II (6 p)">
-              <Getal
-                value={inp.parkeer.typeII}
-                onChange={(v) =>
+              >
+                Vertrek toevoegen
+              </button>
+              <button
+                type="button"
+                className={knopCls}
+                onClick={() =>
                   wijzig((d) => {
-                    d.parkeer.typeII = v;
+                    d.gem.overig.push({ type: "berging_in", m2: "" });
                   })
                 }
-              />
-            </Veld>
-            <Veld label="Type III (4 p)">
-              <Getal
-                value={inp.parkeer.typeIII}
-                onChange={(v) =>
-                  wijzig((d) => {
-                    d.parkeer.typeIII = v;
-                  })
-                }
-              />
-            </Veld>
-            <Veld label="Laadpalen (2 p)">
-              <Getal
-                value={inp.parkeer.laadpalen}
-                onChange={(v) =>
-                  wijzig((d) => {
-                    d.parkeer.laadpalen = v;
-                  })
-                }
-              />
-            </Veld>
-            <Veld label="Adressen">
-              <Getal
-                value={inp.parkeer.adressen}
-                onChange={(v) =>
-                  wijzig((d) => {
-                    d.parkeer.adressen = v;
-                  })
-                }
-              />
-            </Veld>
-          </div>
-        </Sectie>
-
-        <Sectie titel="WOZ-waarde" rubriek="11">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Veld label="Soort">
-              <Keuze
-                value={inp.woz.soort}
-                onChange={(v) =>
-                  wijzig((d) => {
-                    d.woz.soort = v as "woz";
-                  })
-                }
-                opties={[
-                  ["woz", "WOZ-beschikking"],
-                  ["taxatie", `Taxatie (telt ${N.taxatiePct}%)`],
-                  ["minimum", "Minimum WOZ-waarde"],
-                ]}
-              />
-            </Veld>
-            {inp.woz.soort !== "minimum" && (
-              <Veld label="Waarde (€)">
+              >
+                Overige ruimte toevoegen
+              </button>
+            </div>
+            <div className="grid max-w-md grid-cols-2 gap-3">
+              <Veld label="Punten voorzieningen">
                 <Getal
-                  value={inp.woz.waarde}
+                  value={inp.gem.voorzPunten}
                   onChange={(v) =>
                     wijzig((d) => {
-                      d.woz.waarde = v;
+                      d.gem.voorzPunten = v;
                     })
                   }
                 />
               </Veld>
-            )}
-            <Veld label="Kengetallen van jaar">
-              <Keuze
-                value={inp.woz.jaar}
+              <Veld label="Adressen met gebruiksrecht">
+                <Getal
+                  value={inp.gem.adressen}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.gem.adressen = v;
+                    })
+                  }
+                />
+              </Veld>
+            </div>
+          </Sectie>
+
+          <Sectie titel="Gemeenschappelijke parkeerruimten" rubriek="10">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <Veld label="Type I (9 p)">
+                <Getal
+                  value={inp.parkeer.typeI}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.parkeer.typeI = v;
+                    })
+                  }
+                />
+              </Veld>
+              <Veld label="Type II (6 p)">
+                <Getal
+                  value={inp.parkeer.typeII}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.parkeer.typeII = v;
+                    })
+                  }
+                />
+              </Veld>
+              <Veld label="Type III (4 p)">
+                <Getal
+                  value={inp.parkeer.typeIII}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.parkeer.typeIII = v;
+                    })
+                  }
+                />
+              </Veld>
+              <Veld label="Laadpalen (2 p)">
+                <Getal
+                  value={inp.parkeer.laadpalen}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.parkeer.laadpalen = v;
+                    })
+                  }
+                />
+              </Veld>
+              <Veld label="Adressen">
+                <Getal
+                  value={inp.parkeer.adressen}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.parkeer.adressen = v;
+                    })
+                  }
+                />
+              </Veld>
+            </div>
+          </Sectie>
+
+          <Sectie titel="WOZ-waarde" rubriek="11">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Veld label="Soort">
+                <Keuze
+                  value={inp.woz.soort}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.woz.soort = v as "woz";
+                    })
+                  }
+                  opties={[
+                    ["woz", "WOZ-beschikking"],
+                    ["taxatie", `Taxatie (telt ${N.taxatiePct}%)`],
+                    ["minimum", "Minimum WOZ-waarde"],
+                  ]}
+                />
+              </Veld>
+              {inp.woz.soort !== "minimum" && (
+                <Veld label="Waarde (€)">
+                  <Getal
+                    value={inp.woz.waarde}
+                    onChange={(v) =>
+                      wijzig((d) => {
+                        d.woz.waarde = v;
+                      })
+                    }
+                  />
+                </Veld>
+              )}
+              <Veld label="Kengetallen van jaar">
+                <Keuze
+                  value={inp.woz.jaar}
+                  onChange={(v) =>
+                    wijzig((d) => {
+                      d.woz.jaar = v;
+                    })
+                  }
+                  opties={Object.keys(N.woz)
+                    .sort()
+                    .reverse()
+                    .map((j) => [j, j])}
+                />
+              </Veld>
+            </div>
+            <Vink
+              label="Nieuwbouw 2015–2019 (minimaal 40 WOZ-punten vanaf 110 punten)"
+              checked={inp.woz.nieuwbouw1519}
+              onChange={(b) =>
+                wijzig((d) => {
+                  d.woz.nieuwbouw1519 = b;
+                })
+              }
+            />
+            <Vink
+              label="Kengetal kleine nieuwbouw COROP"
+              checked={inp.woz.kleinCorop}
+              onChange={(b) =>
+                wijzig((d) => {
+                  d.woz.kleinCorop = b;
+                })
+              }
+            />
+          </Sectie>
+
+          <Sectie titel="Bijzondere voorzieningen" rubriek="12">
+            <Vink
+              label="Aanbelfunctie met video en audio"
+              checked={inp.bijz.aanbel}
+              onChange={(b) =>
+                wijzig((d) => {
+                  d.bijz.aanbel = b;
+                })
+              }
+            />
+            <Veld label="Eigen laadpalen" className="w-40">
+              <Getal
+                value={inp.bijz.laadpalen}
                 onChange={(v) =>
                   wijzig((d) => {
-                    d.woz.jaar = v;
+                    d.bijz.laadpalen = v;
                   })
                 }
-                opties={Object.keys(N.woz)
-                  .sort()
-                  .reverse()
-                  .map((j) => [j, j])}
               />
             </Veld>
-          </div>
-          <Vink
-            label="Nieuwbouw 2015–2019 (minimaal 40 WOZ-punten vanaf 110 punten)"
-            checked={inp.woz.nieuwbouw1519}
-            onChange={(b) =>
-              wijzig((d) => {
-                d.woz.nieuwbouw1519 = b;
-              })
-            }
-          />
-          <Vink
-            label="Kengetal kleine nieuwbouw COROP"
-            checked={inp.woz.kleinCorop}
-            onChange={(b) =>
-              wijzig((d) => {
-                d.woz.kleinCorop = b;
-              })
-            }
-          />
-        </Sectie>
-
-        <Sectie titel="Bijzondere voorzieningen" rubriek="12">
-          <Vink
-            label="Aanbelfunctie met video en audio"
-            checked={inp.bijz.aanbel}
-            onChange={(b) =>
-              wijzig((d) => {
-                d.bijz.aanbel = b;
-              })
-            }
-          />
-          <Veld label="Eigen laadpalen" className="w-40">
-            <Getal
-              value={inp.bijz.laadpalen}
-              onChange={(v) =>
+            <Vink
+              label={`Zorgwoning (+${N.zorgPct}%)`}
+              checked={inp.bijz.zorgwoning}
+              onChange={(b) =>
                 wijzig((d) => {
-                  d.bijz.laadpalen = v;
+                  d.bijz.zorgwoning = b;
                 })
               }
             />
-          </Veld>
-          <Vink
-            label={`Zorgwoning (+${N.zorgPct}%)`}
-            checked={inp.bijz.zorgwoning}
-            onChange={(b) =>
-              wijzig((d) => {
-                d.bijz.zorgwoning = b;
-              })
-            }
-          />
-        </Sectie>
+          </Sectie>
 
-        <Sectie titel="Monument en opslagen" rubriek="13">
-          <Veld label="Monument" className="max-w-sm">
-            <Keuze
-              value={inp.opslag.keuze}
-              onChange={(v) =>
+          <Sectie titel="Monument en opslagen" rubriek="13">
+            <Veld label="Monument" className="max-w-sm">
+              <Keuze
+                value={inp.opslag.keuze}
+                onChange={(v) =>
+                  wijzig((d) => {
+                    d.opslag.keuze = v as typeof d.opslag.keuze;
+                  })
+                }
+                opties={MONUMENT_KEUZES}
+              />
+            </Veld>
+            <Vink
+              label={`Nieuwbouw in de middensector (+${N.opslag.nieuwbouwPct}%)`}
+              checked={inp.opslag.nieuwbouw}
+              onChange={(b) =>
                 wijzig((d) => {
-                  d.opslag.keuze = v as typeof d.opslag.keuze;
+                  d.opslag.nieuwbouw = b;
                 })
               }
-              opties={MONUMENT_KEUZES}
             />
-          </Veld>
-          <Vink
-            label={`Nieuwbouw in de middensector (+${N.opslag.nieuwbouwPct}%)`}
-            checked={inp.opslag.nieuwbouw}
-            onChange={(b) =>
-              wijzig((d) => {
-                d.opslag.nieuwbouw = b;
-              })
-            }
-          />
-        </Sectie>
+          </Sectie>
+        </fieldset>
       </div>
 
       {/* ---------- resultaat ---------- */}
