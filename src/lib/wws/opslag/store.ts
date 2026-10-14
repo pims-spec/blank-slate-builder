@@ -13,7 +13,8 @@ import type { Bewerker, Telling, TellingDoc, Versie, VersieDoc } from "./types";
 
 type Db = SupabaseClient<Database>;
 
-const TELLING_VELDEN = "id, owner_id, data, updated_at, eigenaar:profiles(display_name, email)";
+const TELLING_VELDEN =
+  "id, owner_id, data, updated_at, eigenaar:profiles!tellingen_owner_id_fkey(display_name, email)";
 
 interface TellingRij {
   id: string;

@@ -84,7 +84,9 @@ describe("maakTellingStore", () => {
     }));
     const lijst = await maakTellingStore(db, N).lijst();
     expect(log[0]?.tabel).toBe("tellingen");
-    expect(stap(log[0], "select")?.[0]).toContain("profiles(display_name, email)");
+    expect(stap(log[0], "select")?.[0]).toContain(
+      "eigenaar:profiles!tellingen_owner_id_fkey(display_name, email)",
+    );
     expect(stap(log[0], "order")).toEqual(["updated_at", { ascending: false }]);
     expect(lijst.map((t) => [t.id, t.ownerId, t.ownerNaam])).toEqual([
       ["t1", "u1", "Anna"],
