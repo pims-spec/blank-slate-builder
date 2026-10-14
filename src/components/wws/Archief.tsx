@@ -168,7 +168,8 @@ export default function Archief({ isAdmin }: { isAdmin: boolean }) {
                   ? " en de opgeslagen versie"
                   : ` en alle ${teVerwijderen.t.aantalVersies} opgeslagen versies`
                 : ""}{" "}
-              worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.
+              {teVerwijderen && teVerwijderen.t.aantalVersies > 0 ? "worden" : "wordt"} definitief
+              verwijderd. Dit kan niet ongedaan worden gemaakt.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
