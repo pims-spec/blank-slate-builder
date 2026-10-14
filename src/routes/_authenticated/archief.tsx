@@ -21,8 +21,8 @@ function ArchiefPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin={data.isAdmin} />
-      {data.isMember ? (
+      <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
+      {data.heeftToegang ? (
         <Archief isAdmin={data.isAdmin} />
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">

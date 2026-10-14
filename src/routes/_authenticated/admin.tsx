@@ -2,10 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { allUsersQuery, myAccessQuery } from "@/lib/access";
+import { ROL_LABEL, rolWijzigingen, type AppRole, type Rol } from "@/lib/rollen";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -24,23 +24,42 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: Admin,
 });
 
+const KEUZES: [Exclude<Rol, null> | "", string][] = [
+  ["", "Wacht op toegang"],
+  ["member", "Collega"],
+  ["viewer", "Lezer (alleen bekijken)"],
+  ["admin", "Beheerder"],
+];
+
 function Admin() {
   const { user } = Route.useRouteContext();
   const { data: users } = useSuspenseQuery(allUsersQuery());
   const qc = useQueryClient();
 
-  const toggle = useMutation({
-    mutationFn: async ({ id, grant, role }: { id: string; grant: boolean; role: "member" | "admin" }) => {
-      const { error } = grant
-        ? await supabase.from("user_roles").insert({ user_id: id, role })
-        : await supabase.from("user_roles").delete().eq("user_id", id).eq("role", role);
-      if (error) throw error;
+  const zetRol = useMutation({
+    mutationFn: async ({ id, huidig, doel }: { id: string; huidig: AppRole[]; doel: Rol }) => {
+      // eigen rol nooit wijzigen: geen kijkrol voor jezelf, en je admin-rol blijft
+      if (id === user.id) throw new Error("Je kunt je eigen rol niet wijzigen.");
+      const { verwijder, voegToe } = rolWijzigingen(huidig, doel);
+      // eerst weghalen: de database weigert de kijkrol naast een andere rol
+      if (verwijder.length) {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", id)
+          .in("role", verwijder);
+        if (error) throw error;
+      }
+      if (voegToe.length) {
+        const { error } = await supabase
+          .from("user_roles")
+          .insert(voegToe.map((role) => ({ user_id: id, role })));
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["all-users"] });
-      toast.success("Bijgewerkt");
-    },
+    onSuccess: () => toast.success("Rol bijgewerkt"),
     onError: (e: Error) => toast.error(e.message),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["all-users"] }),
   });
 
   return (
@@ -49,7 +68,8 @@ function Admin() {
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-4xl text-foreground">Gebruikers</h1>
         <p className="mt-2 text-muted-foreground">
-          Nieuwe aanmeldingen hebben pas toegang nadat jij ze goedkeurt.
+          Nieuwe aanmeldingen hebben pas toegang nadat jij ze een rol geeft. Een lezer kan alles
+          bekijken, maar niets aanmaken, wijzigen of verwijderen.
         </p>
         <ul className="mt-8 divide-y divide-border rounded-xl border border-border bg-card">
           {users.map((u) => (
@@ -58,30 +78,36 @@ function Admin() {
                 <p className="font-medium text-foreground">{u.display_name}</p>
                 <p className="text-sm text-muted-foreground">{u.email}</p>
               </div>
-              <div className="flex items-center gap-2">
-                {u.isAdmin && <Badge>Beheerder</Badge>}
-                {u.isMember ? <Badge variant="secondary">Toegang</Badge> : <Badge variant="outline">Wacht</Badge>}
-                {u.id !== user.id && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant={u.isMember ? "outline" : "default"}
-                      disabled={toggle.isPending}
-                      onClick={() => toggle.mutate({ id: u.id, grant: !u.isMember, role: "member" })}
-                    >
-                      {u.isMember ? "Toegang intrekken" : "Toegang geven"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={toggle.isPending}
-                      onClick={() => toggle.mutate({ id: u.id, grant: !u.isAdmin, role: "admin" })}
-                    >
-                      {u.isAdmin ? "Geen beheerder" : "Maak beheerder"}
-                    </Button>
-                  </>
-                )}
-              </div>
+              {u.id === user.id ? (
+                <div className="flex items-center gap-2">
+                  <Badge>{u.rol ? ROL_LABEL[u.rol] : "Wacht"}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Je eigen rol kun je niet wijzigen
+                  </span>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="sr-only">Rol van {u.display_name || u.email}</span>
+                  <select
+                    className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={u.rol ?? ""}
+                    disabled={zetRol.isPending}
+                    onChange={(e) =>
+                      zetRol.mutate({
+                        id: u.id,
+                        huidig: u.roles,
+                        doel: (e.target.value || null) as Rol,
+                      })
+                    }
+                  >
+                    {KEUZES.map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </li>
           ))}
         </ul>

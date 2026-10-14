@@ -27,8 +27,8 @@ function WwsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin={data.isAdmin} />
-      {data.isMember ? (
+      <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
+      {data.heeftToegang ? (
         <TellingEditor
           tellingId={id}
           userId={user.id}

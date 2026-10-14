@@ -24,9 +24,9 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin={data.isAdmin} />
+      <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
       <main className="mx-auto max-w-5xl px-6 py-16">
-        {data.isMember ? (
+        {data.heeftToegang ? (
           <>
             <p className="text-sm uppercase tracking-widest text-muted-foreground">Welkom terug</p>
             <h1 className="mt-2 font-display text-5xl text-foreground">{name}</h1>
