@@ -1,10 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import { AppHeader } from "@/components/AppHeader";
-import WwsCalculator from "@/components/wws/WwsCalculator";
+import TellingEditor from "@/components/wws/TellingEditor";
 import { myAccessQuery } from "@/lib/access";
 
+const search = z.object({ id: z.string().optional() });
+
 export const Route = createFileRoute("/_authenticated/wws")({
+  validateSearch: search,
   head: () => ({
     meta: [
       { title: "Puntentelling — Werkplaats" },
@@ -17,13 +21,19 @@ export const Route = createFileRoute("/_authenticated/wws")({
 
 function WwsPage() {
   const { user } = Route.useRouteContext();
+  const { id } = Route.useSearch();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
+  const email = user.email ?? "";
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader isAdmin={data.isAdmin} />
       {data.isMember ? (
-        <WwsCalculator />
+        <TellingEditor
+          tellingId={id}
+          userId={user.id}
+          bewerker={{ id: user.id, naam: data.profile?.display_name || email, email }}
+        />
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">
           <div className="max-w-lg rounded-xl border border-border bg-card p-8">
