@@ -446,4 +446,4 @@ function calc(inp,N){
   return {rows,totaal,exact:r2(totaalExact),seg,maxHuur,opslagen:ops,opslagPct,maxHuurOpslag,warn,oppV,oppO,oppVraw,gOppV,gOppO,wozCapActief:!!capNote,wozCapFloor:floor186};
 }
 function getPath(obj,path){return path.split(".").reduce((o,k)=>o==null?o:o[k],obj);}
-module.exports={calc,DEFAULT_NORMEN,normalizeInput,huurVoorPunten,emptyTelling,clone,num,r2,fmt,LABELS,INDEX_KLASSEN,typeOf,facDefault,getPath};
+module.exports={calc,DEFAULT_NORMEN,normalizeInput,huurVoorPunten,emptyTelling,clone,num,r2,fmt,LABELS,INDEX_KLASSEN,typeOf,facDefault,getPath,facKind};
