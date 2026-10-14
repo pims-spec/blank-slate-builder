@@ -4,6 +4,7 @@ import { StrictMode, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
+import { rechtenVan } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
 const navigate = vi.fn();
@@ -37,7 +38,12 @@ function renderEditor(tellingId: string | undefined, userId = ADMIN.id) {
     // effecten twee keer (genest binnen een provider wordt alleen dubbel gerenderd)
     <StrictMode>
       <QueryClientProvider client={qc}>
-        <TellingEditor tellingId={tellingId} userId={userId} bewerker={ADMIN} />
+        <TellingEditor
+          tellingId={tellingId}
+          userId={userId}
+          bewerker={ADMIN}
+          rechten={rechtenVan(["admin", "member"])}
+        />
       </QueryClientProvider>
     </StrictMode>,
   );

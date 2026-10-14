@@ -1,4 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +25,8 @@ import {
   type KostenKey,
   type MaatregelKey,
 } from "@/lib/wws/advies";
-import { NORMEN } from "./tellingStore";
+import { useNormen } from "./NormenContext";
+import { instellingenStore } from "./tellingStore";
 
 const H_LABEL: Record<Haalbaarheid, string> = {
   eenvoudig: "Eenvoudig",
@@ -113,10 +116,19 @@ interface Props {
   input: WwsInput;
   /** "Toepassen op telling": de nieuwe invoer, het aantal maatregelen en de punten daarna */
   onToepassen: (input: WwsInput, n: number, punten: number) => void;
+  /** Admins kunnen de kosten als standaard voor iedereen opslaan */
+  isAdmin?: boolean;
 }
 
 /** Verbeteradvies: route naar de vrije sector, zoals het adviesvenster in wws-site.html. */
-export default function AdviesDialoog({ open, onOpenChange, input, onToepassen }: Props) {
+export default function AdviesDialoog({
+  open,
+  onOpenChange,
+  input,
+  onToepassen,
+  isAdmin = false,
+}: Props) {
+  const NORMEN = useNormen();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
@@ -128,13 +140,18 @@ export default function AdviesDialoog({ open, onOpenChange, input, onToepassen }
           </DialogDescription>
         </DialogHeader>
         {/* alleen gemonteerd zolang het venster open is: elke keer openen begint opnieuw */}
-        {open && <AdviesInhoud input={input} onToepassen={onToepassen} />}
+        {open && <AdviesInhoud input={input} onToepassen={onToepassen} isAdmin={isAdmin} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function AdviesInhoud({ input, onToepassen }: Pick<Props, "input" | "onToepassen">) {
+function AdviesInhoud({
+  input,
+  onToepassen,
+  isAdmin,
+}: Pick<Props, "input" | "onToepassen"> & { isAdmin: boolean }) {
+  const NORMEN = useNormen();
   const [inst, setInst] = useState<AdviesInstellingen>(() => standaardInstellingen(NORMEN));
   // Instellingen-tab: concept, wordt verwerkt bij elke herberekening (readAdviesInputs())
   const [conceptKosten, setConceptKosten] = useState<Record<KostenKey, string>>(() =>
@@ -144,8 +161,27 @@ function AdviesInhoud({ input, onToepassen }: Pick<Props, "input" | "onToepassen
   const [margeTekst, setMargeTekst] = useState(String(inst.marge));
   const [skip, setSkip] = useState<Record<number, boolean>>({});
 
-  const A = useMemo(() => berekenAdvies(input, NORMEN, inst), [input, inst]);
-  const S = useMemo(() => selectieResultaat(input, NORMEN, A, skip), [input, A, skip]);
+  const A = useMemo(() => berekenAdvies(input, NORMEN, inst), [input, inst, NORMEN]);
+  const S = useMemo(() => selectieResultaat(input, NORMEN, A, skip), [input, A, skip, NORMEN]);
+
+  // Kosten als standaard voor iedereen (alleen admins; de database staat het ook alleen hen toe)
+  const qc = useQueryClient();
+  const kostenOpslaan = useMutation({
+    mutationFn: () => {
+      const kosten = Object.fromEntries(
+        Object.entries(conceptKosten).map(([k, v]) => [k, num(v)]),
+      ) as Kosten;
+      return instellingenStore.slaNormenOp({
+        ...structuredClone(NORMEN),
+        kosten: { ...NORMEN.kosten, ...kosten },
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["normen"] });
+      toast.success("Kostenramingen opgeslagen als standaard");
+    },
+    onError: (e: Error) => toast.error("Opslaan lukte niet: " + e.message),
+  });
 
   /** Herberekenen met een wijziging; neemt ook het concept van de instellingen mee */
   const herbereken = (wijziging: Partial<AdviesInstellingen> = {}) => {
@@ -446,7 +482,18 @@ function AdviesInhoud({ input, onToepassen }: Pick<Props, "input" | "onToepassen
               </table>
             </div>
           </div>
-          <Button onClick={() => herbereken()}>Opnieuw berekenen</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => herbereken()}>Opnieuw berekenen</Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                disabled={kostenOpslaan.isPending}
+                onClick={() => kostenOpslaan.mutate()}
+              >
+                Kosten als standaard opslaan
+              </Button>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -524,7 +571,7 @@ function Melding({ ok = false, children }: { ok?: boolean; children: ReactNode }
 
 /** De drie situaties als het doel niet wordt gehaald (zie renderAdvies() in wws-site.html) */
 function NietGehaald({ eind, max, doel }: { eind: number; max: number; doel: number }) {
-  const grens = NORMEN.grensMidden + 1;
+  const grens = useNormen().grensMidden + 1;
   if (eind >= grens)
     return (
       <Melding ok>

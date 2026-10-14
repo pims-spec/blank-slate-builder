@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SEGMENT_NAMEN, calc, type Segment } from "@/lib/wws";
+import { SEGMENT_NAMEN, calc, type Normen, type Segment } from "@/lib/wws";
 import { tellingTitel, weergaveAdres, type Telling } from "@/lib/wws/opslag";
-import { NORMEN, tellingStore, tellingenQuery } from "./tellingStore";
+import { useNormen } from "./NormenContext";
+import { tellingStore, tellingenQuery } from "./tellingStore";
 
 interface Rij {
   t: Telling;
@@ -27,7 +28,7 @@ interface Rij {
 }
 
 /** Punten en segment live herberekenen met de huidige normen, zoals het archief in wws-site.html */
-function naarRij(t: Telling): Rij {
+function naarRij(t: Telling, NORMEN: Normen): Rij {
   let punten = t.laatstePunten;
   let seg: Segment | null = null;
   try {
@@ -56,7 +57,8 @@ export default function Archief({ isAdmin }: { isAdmin: boolean }) {
   const [zoek, setZoek] = useState("");
   const [teVerwijderen, setTeVerwijderen] = useState<Rij | null>(null);
 
-  const rijen = useMemo(() => (data ?? []).map(naarRij), [data]);
+  const NORMEN = useNormen();
+  const rijen = useMemo(() => (data ?? []).map((t) => naarRij(t, NORMEN)), [data, NORMEN]);
   const zichtbaar = useMemo(() => {
     const q = zoek.trim().toLowerCase();
     if (!q) return rijen;

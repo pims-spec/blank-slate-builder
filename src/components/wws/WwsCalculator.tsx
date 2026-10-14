@@ -1,7 +1,6 @@
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   BUITEN_SOORTEN,
-  DEFAULT_NORMEN,
   INDEX_KLASSEN,
   LABELS,
   MONUMENT_KEUZES,
@@ -20,8 +19,7 @@ import {
   type VoorzDef,
   type WwsInput,
 } from "@/lib/wws";
-
-const N = DEFAULT_NORMEN as unknown as Normen;
+import { useNormen } from "./NormenContext";
 
 // ---------- bouwstenen ----------
 const inputCls =
@@ -247,6 +245,7 @@ export interface WwsCalculatorProps {
 }
 
 export default function WwsCalculator({ input, setInput, boven }: WwsCalculatorProps = {}) {
+  const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
   const inp = input ?? eigenInp;
   const setInp = setInput ?? setEigenInp;
@@ -256,7 +255,7 @@ export default function WwsCalculator({ input, setInput, boven }: WwsCalculatorP
       f(d);
       return d;
     });
-  const res = useMemo(() => calc(inp, N), [inp]);
+  const res = useMemo(() => calc(inp, N), [inp, N]);
 
   /** Paneel met voorzieningen van een ruimte (keuken, badkamer, toilet, …) */
   const facPaneel = (fac: Fac, zetFac: (f: (x: Fac) => void) => void) => {

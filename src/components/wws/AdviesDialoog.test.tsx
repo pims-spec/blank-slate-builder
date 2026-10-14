@@ -1,13 +1,13 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, calc, legeInput, type Normen, type WwsInput } from "@/lib/wws";
 import { berekenAdvies, standaardInstellingen } from "@/lib/wws/advies";
 import AdviesDialoog from "./AdviesDialoog";
 
-vi.mock("./tellingStore", async () => {
-  const { DEFAULT_NORMEN } = await import("@/lib/wws");
-  return { NORMEN: DEFAULT_NORMEN, tellingStore: {} };
-});
+const instellingenStore = vi.hoisted(() => ({ slaNormenOp: vi.fn() }));
+vi.mock("./tellingStore", () => ({ tellingStore: {}, instellingenStore }));
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 
@@ -24,6 +24,9 @@ function woning(): WwsInput {
   return x;
 }
 
+const metQuery = (el: ReactElement) =>
+  render(<QueryClientProvider client={new QueryClient()}>{el}</QueryClientProvider>);
+
 const kpi = (titel: string) => screen.getByText(titel).parentElement!;
 
 describe("AdviesDialoog", () => {
@@ -31,7 +34,7 @@ describe("AdviesDialoog", () => {
     const x = woning();
     const A = berekenAdvies(x, N, standaardInstellingen(N));
     const onToepassen = vi.fn();
-    render(<AdviesDialoog open onOpenChange={() => {}} input={x} onToepassen={onToepassen} />);
+    metQuery(<AdviesDialoog open onOpenChange={() => {}} input={x} onToepassen={onToepassen} />);
 
     expect(within(kpi("Nu")).getByText(String(calc(x, N).totaal))).toBeInTheDocument();
     expect(within(kpi("Met selectie")).getByText(String(A.eind.totaal))).toBeInTheDocument();
@@ -52,10 +55,34 @@ describe("AdviesDialoog", () => {
   });
 
   it("marge verhoogt het doel", () => {
-    render(<AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} />);
+    metQuery(<AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} />);
     const marge = screen.getByLabelText("Marge in punten");
     fireEvent.change(marge, { target: { value: "5" } });
     fireEvent.blur(marge);
     expect(within(kpi("Doel")).getByText(String(N.grensMidden + 1 + 5))).toBeInTheDocument();
+  });
+
+  it("kosten als standaard opslaan: alleen voor admins, met de ingevulde kosten", async () => {
+    const { unmount } = metQuery(
+      <AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} />,
+    );
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Instellingen en kosten" }));
+    expect(screen.queryByRole("button", { name: "Kosten als standaard opslaan" })).toBeNull();
+    unmount();
+
+    instellingenStore.slaNormenOp.mockResolvedValue(undefined);
+    metQuery(
+      <AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} isAdmin />,
+    );
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Instellingen en kosten" }));
+    fireEvent.change(screen.getByLabelText("Kosten: Aanbelfunctie met video en audio"), {
+      target: { value: "1250" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Kosten als standaard opslaan" }));
+    await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalledTimes(1));
+    const n = instellingenStore.slaNormenOp.mock.calls[0]![0];
+    expect(n.kosten.aanbel).toBe(1250);
+    expect(n.kosten.labelStap).toBe(N.kosten["labelStap"]);
+    expect(n.grensMidden).toBe(N.grensMidden);
   });
 });

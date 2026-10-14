@@ -16,6 +16,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedArchiefRouteImport } from './routes/_authenticated/archief'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedNormenRouteImport } from './routes/_authenticated/normen'
 import { Route as AuthenticatedWwsRouteImport } from './routes/_authenticated/wws'
 
 const IndexRoute = IndexRouteImport.update({
@@ -52,6 +53,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNormenRoute = AuthenticatedNormenRouteImport.update({
+  id: '/normen',
+  path: '/normen',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedWwsRoute = AuthenticatedWwsRouteImport.update({
   id: '/wws',
   path: '/wws',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/archief': typeof AuthenticatedArchiefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/normen': typeof AuthenticatedNormenRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/archief': typeof AuthenticatedArchiefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/normen': typeof AuthenticatedNormenRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRoutesById {
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/archief': typeof AuthenticatedArchiefRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/normen': typeof AuthenticatedNormenRoute
   '/_authenticated/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/archief'
     | '/dashboard'
+    | '/normen'
     | '/wws'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/archief'
     | '/dashboard'
+    | '/normen'
     | '/wws'
   id:
     | '__root__'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/archief'
     | '/_authenticated/dashboard'
+    | '/_authenticated/normen'
     | '/_authenticated/wws'
   fileRoutesById: FileRoutesById
 }
@@ -176,6 +188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/normen': {
+      id: '/_authenticated/normen'
+      path: '/normen'
+      fullPath: '/normen'
+      preLoaderRoute: typeof AuthenticatedNormenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/wws': {
       id: '/_authenticated/wws'
       path: '/wws'
@@ -190,6 +209,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedArchiefRoute: typeof AuthenticatedArchiefRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedNormenRoute: typeof AuthenticatedNormenRoute
   AuthenticatedWwsRoute: typeof AuthenticatedWwsRoute
 }
 
@@ -197,6 +217,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedArchiefRoute: AuthenticatedArchiefRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedNormenRoute: AuthenticatedNormenRoute,
   AuthenticatedWwsRoute: AuthenticatedWwsRoute,
 }
 

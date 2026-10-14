@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { SEGMENT_NAMEN, type WwsInput } from "@/lib/wws";
+import type { Rechten } from "@/lib/rollen";
 import {
   legVersieVast,
   nieuweTellingStaat,
@@ -33,7 +34,8 @@ import {
 } from "@/lib/wws/opslag";
 import AdviesDialoog from "./AdviesDialoog";
 import WwsCalculator from "./WwsCalculator";
-import { NORMEN, tellingStore } from "./tellingStore";
+import { useNormen } from "./NormenContext";
+import { tellingStore } from "./tellingStore";
 
 const NIET_OPGESLAGEN = "Er zijn niet-opgeslagen wijzigingen. Toch doorgaan?";
 
@@ -48,6 +50,7 @@ interface Props {
   tellingId: string | undefined;
   userId: string;
   bewerker: Bewerker;
+  rechten: Rechten;
 }
 
 type Laden = "bezig" | "klaar" | "niet-gevonden";
@@ -56,8 +59,9 @@ type Laden = "bezig" | "klaar" | "niet-gevonden";
  * Een telling bewerken en opslaan: werkversie opslaan, een versie vastleggen en een
  * eerdere versie openen — zoals in wws-site.html.
  */
-export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
+export default function TellingEditor({ tellingId, userId, bewerker, rechten }: Props) {
   const navigate = useNavigate();
+  const NORMEN = useNormen();
   const queryClient = useQueryClient();
 
   const [id, setId] = useState(() => tellingId ?? crypto.randomUUID());
@@ -401,6 +405,7 @@ export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
         onOpenChange={setAdviesOpen}
         input={staat.input}
         onToepassen={adviesToepassen}
+        isAdmin={rechten.isAdmin}
       />
     </>
   );

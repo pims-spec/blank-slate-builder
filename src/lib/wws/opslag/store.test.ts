@@ -1,53 +1,12 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
-import type { Database } from "@/integrations/supabase/types";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { maakTellingDoc, nieuweTellingStaat, type TellingStaat } from "./doc";
+import { nepDb, stap, type Aanroep, type Antwoord } from "./nepDb";
 import { legVersieVast, maakTellingStore, slaWerkversieOp } from "./store";
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const NU = new Date("2026-10-14T10:00:00.000Z");
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
-
-interface Aanroep {
-  tabel: string;
-  stappen: [string, unknown[]][];
-}
-interface Antwoord {
-  data?: unknown;
-  error?: unknown;
-}
-
-/** Nep-Supabase: legt elke querybouwer-aanroep vast en geeft per query een antwoord. */
-function nepDb(antwoord: (a: Aanroep) => Antwoord = () => ({})) {
-  const log: Aanroep[] = [];
-  const db = {
-    from(tabel: string) {
-      const a: Aanroep = { tabel, stappen: [] };
-      log.push(a);
-      const bouwer: object = new Proxy(
-        {},
-        {
-          get(_doel, prop) {
-            if (prop === "then") {
-              const res = { data: null, error: null, ...antwoord(a) };
-              return (ok: (r: unknown) => unknown, fout: (e: unknown) => unknown) =>
-                Promise.resolve(res).then(ok, fout);
-            }
-            return (...args: unknown[]) => {
-              a.stappen.push([String(prop), args]);
-              return bouwer;
-            };
-          },
-        },
-      );
-      return bouwer;
-    },
-  };
-  return { db: db as unknown as SupabaseClient<Database>, log };
-}
-
-const stap = (a: Aanroep | undefined, naam: string) => a?.stappen.find(([s]) => s === naam)?.[1];
 
 function staat(versieCount = 0): TellingStaat {
   const s = nieuweTellingStaat("Pim", NU);
