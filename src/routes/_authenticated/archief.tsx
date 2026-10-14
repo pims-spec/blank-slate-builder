@@ -28,7 +28,11 @@ function ArchiefPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
+      <AppHeader
+        isAdmin={data.isAdmin}
+        heeftToegang={data.heeftToegang}
+        zietAlles={data.zietAlles}
+      />
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
           <Archief rechten={data} userId={user.id} />

@@ -18,6 +18,7 @@ import { Route as AuthenticatedArchiefRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEigenarenRouteImport } from './routes/_authenticated/eigenaren'
 import { Route as AuthenticatedNormenRouteImport } from './routes/_authenticated/normen'
+import { Route as AuthenticatedPortefeuilleRouteImport } from './routes/_authenticated/portefeuille'
 import { Route as AuthenticatedWwsRouteImport } from './routes/_authenticated/wws'
 
 const IndexRoute = IndexRouteImport.update({
@@ -64,6 +65,12 @@ const AuthenticatedNormenRoute = AuthenticatedNormenRouteImport.update({
   path: '/normen',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPortefeuilleRoute =
+  AuthenticatedPortefeuilleRouteImport.update({
+    id: '/portefeuille',
+    path: '/portefeuille',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWwsRoute = AuthenticatedWwsRouteImport.update({
   id: '/wws',
   path: '/wws',
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
   '/normen': typeof AuthenticatedNormenRoute
+  '/portefeuille': typeof AuthenticatedPortefeuilleRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRoutesByTo {
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
   '/normen': typeof AuthenticatedNormenRoute
+  '/portefeuille': typeof AuthenticatedPortefeuilleRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRoutesById {
@@ -103,6 +112,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/eigenaren': typeof AuthenticatedEigenarenRoute
   '/_authenticated/normen': typeof AuthenticatedNormenRoute
+  '/_authenticated/portefeuille': typeof AuthenticatedPortefeuilleRoute
   '/_authenticated/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRouteTypes {
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/eigenaren'
     | '/normen'
+    | '/portefeuille'
     | '/wws'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/eigenaren'
     | '/normen'
+    | '/portefeuille'
     | '/wws'
   id:
     | '__root__'
@@ -139,6 +151,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/eigenaren'
     | '/_authenticated/normen'
+    | '/_authenticated/portefeuille'
     | '/_authenticated/wws'
   fileRoutesById: FileRoutesById
 }
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNormenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/portefeuille': {
+      id: '/_authenticated/portefeuille'
+      path: '/portefeuille'
+      fullPath: '/portefeuille'
+      preLoaderRoute: typeof AuthenticatedPortefeuilleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/wws': {
       id: '/_authenticated/wws'
       path: '/wws'
@@ -230,6 +250,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEigenarenRoute: typeof AuthenticatedEigenarenRoute
   AuthenticatedNormenRoute: typeof AuthenticatedNormenRoute
+  AuthenticatedPortefeuilleRoute: typeof AuthenticatedPortefeuilleRoute
   AuthenticatedWwsRoute: typeof AuthenticatedWwsRoute
 }
 
@@ -239,6 +260,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEigenarenRoute: AuthenticatedEigenarenRoute,
   AuthenticatedNormenRoute: AuthenticatedNormenRoute,
+  AuthenticatedPortefeuilleRoute: AuthenticatedPortefeuilleRoute,
   AuthenticatedWwsRoute: AuthenticatedWwsRoute,
 }
 

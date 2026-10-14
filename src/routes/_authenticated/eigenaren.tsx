@@ -27,7 +27,11 @@ function EigenarenPage() {
   const { data: normen } = useSuspenseQuery(normenQuery());
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
+      <AppHeader
+        isAdmin={data.isAdmin}
+        heeftToegang={data.heeftToegang}
+        zietAlles={data.zietAlles}
+      />
       <NormenProvider normen={normen}>
         <Eigenaren rechten={data} />
       </NormenProvider>

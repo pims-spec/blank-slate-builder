@@ -32,7 +32,11 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
+      <AppHeader
+        isAdmin={data.isAdmin}
+        heeftToegang={data.heeftToegang}
+        zietAlles={data.zietAlles}
+      />
       <main className="mx-auto max-w-5xl px-6 py-16">
         {data.heeftToegang ? (
           <>

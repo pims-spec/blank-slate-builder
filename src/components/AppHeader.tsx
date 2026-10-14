@@ -6,10 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 export function AppHeader({
   isAdmin,
   heeftToegang = true,
+  zietAlles = false,
 }: {
   isAdmin?: boolean;
   /** Zonder rol: alleen Overzicht en Uitloggen */
   heeftToegang?: boolean;
+  /** Admin of kijkrol: ziet het dashboard */
+  zietAlles?: boolean;
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -37,6 +40,11 @@ export function AppHeader({
               <Button asChild variant="ghost" size="sm">
                 <Link to="/archief">Archief</Link>
               </Button>
+              {(zietAlles || isAdmin) && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/portefeuille">Dashboard</Link>
+                </Button>
+              )}
               <Button asChild variant="ghost" size="sm">
                 <Link to="/eigenaren">Eigenaren</Link>
               </Button>

@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import {
+  haalDashboardVersies,
   maakDelenStore,
   maakInstellingenStore,
   maakKlantenStore,
@@ -35,4 +36,11 @@ export const klantenQuery = () =>
   queryOptions({
     queryKey: ["klanten"],
     queryFn: () => klantenStore.lijst(),
+  });
+
+/** Versies voor het dashboard (alleen wat het nodig heeft, limiet 5000) */
+export const dashboardVersiesQuery = () =>
+  queryOptions({
+    queryKey: ["dashboard-versies"],
+    queryFn: () => haalDashboardVersies(supabase),
   });
