@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { maakTellingDoc, nieuweTellingStaat, type TellingStaat } from "./doc";
 import { nepDb, stap, type Aanroep, type Antwoord } from "./nepDb";
-import { legVersieVast, maakTellingStore, slaWerkversieOp } from "./store";
+import { haalDashboardVersies, legVersieVast, maakTellingStore, slaWerkversieOp } from "./store";
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const NU = new Date("2026-10-14T10:00:00.000Z");
@@ -211,5 +211,44 @@ describe("legVersieVast", () => {
       }),
     ).rejects.toBe(fout);
     expect(log.map((a) => a.tabel)).toEqual(["tellingen"]);
+  });
+});
+
+describe("dashboard: versies", () => {
+  it("één query met alleen nr, datum en opgeslagen resultaat; op volgorde van nr", async () => {
+    const { db, log } = nepDb(() => ({
+      data: [
+        {
+          telling_id: "t1",
+          nr: 1,
+          createdAt: "2026-01-02T10:00:00Z",
+          totaal: 150,
+          maxHuur: 900.5,
+          seg: "midden",
+        },
+        { telling_id: "t1", nr: 2, createdAt: null, totaal: null, maxHuur: null, seg: null },
+      ],
+    }));
+    const r = await haalDashboardVersies(db);
+    expect(log).toHaveLength(1);
+    expect(log[0]?.tabel).toBe("telling_versies");
+    const velden = stap(log[0], "select")?.[0] as string;
+    expect(velden).toContain("data->resultaat->totaal");
+    expect(velden).not.toMatch(/(^|[ ,])data([ ,]|$)/); // niet de hele data (invoer, normen)
+    expect(stap(log[0], "order")).toEqual(["nr", { ascending: true }]);
+    expect(stap(log[0], "limit")).toEqual([5000]);
+    expect(r.versies[0]).toEqual({
+      tellingId: "t1",
+      nr: 1,
+      createdAt: "2026-01-02T10:00:00Z",
+      resultaat: { totaal: 150, maxHuur: 900.5, seg: "midden" },
+    });
+    expect(r.limietBereikt).toBe(false);
+  });
+
+  it("limiet bereikt wordt gemeld", async () => {
+    const rij = { telling_id: "t", nr: 1, createdAt: null, totaal: 1, maxHuur: 1, seg: "laag" };
+    const { db } = nepDb(() => ({ data: [rij, rij, rij] }));
+    expect((await haalDashboardVersies(db, 3)).limietBereikt).toBe(true);
   });
 });

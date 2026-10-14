@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
+import type { DashboardVersie } from "../dashboard";
 import type { Normen } from "../normen";
+import type { Segment } from "../types";
 import {
   leesTellingDoc,
   leesVersieDoc,
@@ -115,6 +117,48 @@ export function maakTellingStore(db: Db, normen: Normen) {
 }
 
 export type TellingStore = ReturnType<typeof maakTellingStore>;
+
+/** Maximaal aantal versies voor het dashboard (zoals store.alleVersies() in wws-site.html) */
+export const DASHBOARD_VERSIE_LIMIET = 5000;
+
+/**
+ * Wat het dashboard van alle versies nodig heeft, in één query: alleen telling, nummer,
+ * datum en het opgeslagen resultaat (geen invoer of normen per versie). De bron gebruikt
+ * niets anders. Admins en de kijkrol zien via de RLS alle versies.
+ */
+export const DASHBOARD_VERSIE_VELDEN =
+  "telling_id, nr, createdAt:data->>createdAt, totaal:data->resultaat->totaal, maxHuur:data->resultaat->maxHuur, seg:data->resultaat->>seg";
+
+interface DashboardVersieRij {
+  telling_id: string;
+  nr: number;
+  createdAt: string | null;
+  totaal: number | null;
+  maxHuur: number | null;
+  seg: Segment | null;
+}
+
+export async function haalDashboardVersies(
+  db: Db,
+  limiet = DASHBOARD_VERSIE_LIMIET,
+): Promise<{ versies: DashboardVersie[]; limietBereikt: boolean }> {
+  const { data, error } = await db
+    .from("telling_versies")
+    .select(DASHBOARD_VERSIE_VELDEN)
+    .order("nr", { ascending: true })
+    .limit(limiet);
+  if (error) throw error;
+  const rijen = (data ?? []) as unknown as DashboardVersieRij[];
+  return {
+    versies: rijen.map((r) => ({
+      tellingId: r.telling_id,
+      nr: r.nr,
+      createdAt: r.createdAt,
+      resultaat: { totaal: r.totaal, maxHuur: r.maxHuur, seg: r.seg },
+    })),
+    limietBereikt: rijen.length >= limiet,
+  };
+}
 
 export interface OpslaanOpties {
   id: string;
