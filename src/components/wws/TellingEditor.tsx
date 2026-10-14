@@ -143,6 +143,9 @@ export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
     })();
     return () => {
       actief = false;
+      // Dit laden is afgebroken: vergeet het doel weer, anders slaat de volgende run het
+      // laden over (StrictMode draait dit effect in development direct een tweede keer).
+      if (geladenId.current === doel) geladenId.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tellingId]);

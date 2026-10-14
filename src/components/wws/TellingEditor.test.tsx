@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { StrictMode, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
@@ -33,9 +33,13 @@ const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
 function renderEditor(tellingId: string | undefined, userId = ADMIN.id) {
   const qc = new QueryClient();
   return render(
-    <QueryClientProvider client={qc}>
-      <TellingEditor tellingId={tellingId} userId={userId} bewerker={ADMIN} />
-    </QueryClientProvider>,
+    // StrictMode buitenaan, zoals TanStack Start in development: alleen dan draait React
+    // effecten twee keer (genest binnen een provider wordt alleen dubbel gerenderd)
+    <StrictMode>
+      <QueryClientProvider client={qc}>
+        <TellingEditor tellingId={tellingId} userId={userId} bewerker={ADMIN} />
+      </QueryClientProvider>
+    </StrictMode>,
   );
 }
 
