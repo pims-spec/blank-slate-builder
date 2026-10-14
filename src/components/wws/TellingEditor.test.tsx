@@ -23,10 +23,12 @@ const store = vi.hoisted(() => ({
   versies: vi.fn(),
   voegVersieToe: vi.fn(),
 }));
-vi.mock("./tellingStore", async () => {
-  const { DEFAULT_NORMEN } = await import("@/lib/wws");
-  return { NORMEN: DEFAULT_NORMEN, tellingStore: store };
-});
+const klantenStore = vi.hoisted(() => ({ lijst: vi.fn(), voegToe: vi.fn() }));
+vi.mock("./tellingStore", () => ({
+  tellingStore: store,
+  klantenStore,
+  klantenQuery: () => ({ queryKey: ["klanten"], queryFn: () => klantenStore.lijst() }),
+}));
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
@@ -54,6 +56,10 @@ beforeEach(() => {
   store.maakAan.mockResolvedValue(undefined);
   store.bewaar.mockResolvedValue(undefined);
   store.versies.mockResolvedValue([]);
+  klantenStore.lijst.mockResolvedValue([
+    { id: "k1", naam: "Amstel Wonen", pve: [] },
+    { id: "k2", naam: "Zeta Vastgoed", pve: [] },
+  ]);
   store.voegVersieToe.mockImplementation(async (_id: string, v: { nr: number }) => ({
     ...v,
     id: "v" + String(v.nr).padStart(4, "0"),
@@ -146,5 +152,28 @@ describe("TellingEditor", () => {
     store.haal.mockResolvedValue(null);
     renderEditor("bestaat-niet");
     expect(await screen.findByText(/bestaat niet \(meer\)/)).toBeInTheDocument();
+  });
+
+  it("eigenaar kiezen en een nieuwe eigenaar toevoegen; klantId gaat mee bij opslaan", async () => {
+    klantenStore.voegToe.mockResolvedValue({ id: "k9", naam: "Nieuw BV", pve: [] });
+    renderEditor(undefined);
+    fireEvent.click(await screen.findByRole("button", { name: "Eigenaar: geen" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Zeta Vastgoed" }));
+    expect(screen.getByRole("button", { name: "Eigenaar: Zeta Vastgoed" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.maakAan).toHaveBeenCalledTimes(1));
+    expect(store.maakAan.mock.calls[0]![1].meta.klantId).toBe("k2");
+
+    // nieuwe eigenaar: zoeken, toevoegen, meteen gekozen
+    fireEvent.click(screen.getByRole("button", { name: "Eigenaar: Zeta Vastgoed" }));
+    fireEvent.change(screen.getByLabelText("Zoek een eigenaar"), { target: { value: "Nieuw BV" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "+ ‘Nieuw BV’ toevoegen als nieuwe eigenaar" }),
+    );
+    await waitFor(() => expect(klantenStore.voegToe).toHaveBeenCalledWith("Nieuw BV"));
+    expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+      "Niet-opgeslagen wijzigingen",
+    );
   });
 });

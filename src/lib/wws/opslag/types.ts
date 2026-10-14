@@ -17,6 +17,8 @@ export interface TellingMeta {
   /** yyyy-mm-dd */
   peildatum: string;
   opsteller: string;
+  /** Gekoppelde eigenaar (klanten.id); leeg = geen eigenaar */
+  klantId: string;
   [extra: string]: unknown;
 }
 

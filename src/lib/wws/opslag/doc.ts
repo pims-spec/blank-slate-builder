@@ -8,7 +8,15 @@ type Obj = Record<string, unknown>;
 /** Ingelezen jsonb: dezelfde velden als T, maar nog niet gecontroleerd */
 type Los<T> = { [K in keyof T]?: unknown };
 type MetaVeld =
-  "naam" | "adres" | "postcode" | "huisnummer" | "plaats" | "bouwjaar" | "peildatum" | "opsteller";
+  | "naam"
+  | "adres"
+  | "postcode"
+  | "huisnummer"
+  | "plaats"
+  | "bouwjaar"
+  | "peildatum"
+  | "opsteller"
+  | "klantId";
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const tekst = (v: unknown): string =>
   typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
@@ -30,6 +38,7 @@ export function legeMeta(): TellingMeta {
     bouwjaar: "",
     peildatum: vandaag(),
     opsteller: "",
+    klantId: "",
   };
 }
 
@@ -94,6 +103,7 @@ export function leesMeta(raw: unknown): TellingMeta {
     bouwjaar: tekst(r.bouwjaar),
     peildatum: tekst(r.peildatum) || leeg.peildatum,
     opsteller: tekst(r.opsteller),
+    klantId: tekst(r.klantId),
   };
 }
 

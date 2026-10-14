@@ -33,6 +33,7 @@ import {
   type Versie,
 } from "@/lib/wws/opslag";
 import AdviesDialoog from "./AdviesDialoog";
+import EigenaarKeuze from "./EigenaarKeuze";
 import WwsCalculator from "./WwsCalculator";
 import { useNormen } from "./NormenContext";
 import { tellingStore } from "./tellingStore";
@@ -307,6 +308,13 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           waarde={m.peildatum}
           zet={(v) => zetMeta("peildatum", v)}
         />
+        <div className="sm:col-span-6">
+          <EigenaarKeuze
+            klantId={m.klantId}
+            onKies={(id) => zetMeta("klantId", id)}
+            magToevoegen={rechten.magSchrijven}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

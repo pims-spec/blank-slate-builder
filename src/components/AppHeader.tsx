@@ -37,6 +37,9 @@ export function AppHeader({
               <Button asChild variant="ghost" size="sm">
                 <Link to="/archief">Archief</Link>
               </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/eigenaren">Eigenaren</Link>
+              </Button>
             </>
           )}
           {isAdmin && (

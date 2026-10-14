@@ -16,6 +16,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedArchiefRouteImport } from './routes/_authenticated/archief'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedEigenarenRouteImport } from './routes/_authenticated/eigenaren'
 import { Route as AuthenticatedNormenRouteImport } from './routes/_authenticated/normen'
 import { Route as AuthenticatedWwsRouteImport } from './routes/_authenticated/wws'
 
@@ -53,6 +54,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEigenarenRoute = AuthenticatedEigenarenRouteImport.update({
+  id: '/eigenaren',
+  path: '/eigenaren',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedNormenRoute = AuthenticatedNormenRouteImport.update({
   id: '/normen',
   path: '/normen',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/archief': typeof AuthenticatedArchiefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/eigenaren': typeof AuthenticatedEigenarenRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/archief': typeof AuthenticatedArchiefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/eigenaren': typeof AuthenticatedEigenarenRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/archief': typeof AuthenticatedArchiefRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/eigenaren': typeof AuthenticatedEigenarenRoute
   '/_authenticated/normen': typeof AuthenticatedNormenRoute
   '/_authenticated/wws': typeof AuthenticatedWwsRoute
 }
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/archief'
     | '/dashboard'
+    | '/eigenaren'
     | '/normen'
     | '/wws'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/archief'
     | '/dashboard'
+    | '/eigenaren'
     | '/normen'
     | '/wws'
   id:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/archief'
     | '/_authenticated/dashboard'
+    | '/_authenticated/eigenaren'
     | '/_authenticated/normen'
     | '/_authenticated/wws'
   fileRoutesById: FileRoutesById
@@ -188,6 +200,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/eigenaren': {
+      id: '/_authenticated/eigenaren'
+      path: '/eigenaren'
+      fullPath: '/eigenaren'
+      preLoaderRoute: typeof AuthenticatedEigenarenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/normen': {
       id: '/_authenticated/normen'
       path: '/normen'
@@ -209,6 +228,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedArchiefRoute: typeof AuthenticatedArchiefRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEigenarenRoute: typeof AuthenticatedEigenarenRoute
   AuthenticatedNormenRoute: typeof AuthenticatedNormenRoute
   AuthenticatedWwsRoute: typeof AuthenticatedWwsRoute
 }
@@ -217,6 +237,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedArchiefRoute: AuthenticatedArchiefRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEigenarenRoute: AuthenticatedEigenarenRoute,
   AuthenticatedNormenRoute: AuthenticatedNormenRoute,
   AuthenticatedWwsRoute: AuthenticatedWwsRoute,
 }
