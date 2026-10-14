@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   BUITEN_SOORTEN,
   DEFAULT_NORMEN,
@@ -238,8 +238,18 @@ function Voorzieningen({
 }
 
 // ---------- hoofdcomponent ----------
-export default function WwsCalculator() {
-  const [inp, setInp] = useState<WwsInput>(legeInput);
+export interface WwsCalculatorProps {
+  /** Gecontroleerd gebruik: de invoer komt van buiten (bv. een opgeslagen telling) */
+  input?: WwsInput;
+  setInput?: Dispatch<SetStateAction<WwsInput>>;
+  /** Komt boven het formulier, onder de titel (bv. opslaan en versies) */
+  boven?: ReactNode;
+}
+
+export default function WwsCalculator({ input, setInput, boven }: WwsCalculatorProps = {}) {
+  const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
+  const inp = input ?? eigenInp;
+  const setInp = setInput ?? setEigenInp;
   const wijzig = (f: (d: WwsInput) => void) =>
     setInp((prev) => {
       const d = structuredClone(prev);
@@ -557,6 +567,8 @@ export default function WwsCalculator() {
             Normen: {N.naam}.
           </p>
         </header>
+
+        {boven}
 
         <Sectie titel="Woning">
           <Veld label="Woningtype" className="max-w-xs">
