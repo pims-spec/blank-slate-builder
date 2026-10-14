@@ -9,7 +9,7 @@ import {
 } from "./klanten";
 import { nepDb, stap } from "./nepDb";
 
-const K = (id: string, naam: string): Klant => ({ id, naam, pve: [] });
+const K = (id: string, naam: string): Klant => ({ id, naam, pves: [] });
 const KLANTEN = [K("k2", "Zeta Vastgoed"), K("k1", "Amstel Wonen"), K("k3", "Ébène BV")];
 
 describe("klanten (eigenaren): store", () => {
@@ -46,6 +46,35 @@ describe("klanten (eigenaren): store", () => {
     expect(stap(goed.log[0], "eq")).toEqual(["id", "k1"]);
     await maakKlantenStore(goed.db).verwijder("k1");
     expect(stap(goed.log[1], "delete")).toEqual([]);
+  });
+});
+
+describe("klanten: PvE's", () => {
+  it("lijst: PvE's uit klanten.pve, ook een oud los PvE-object", async () => {
+    const oud = { keuken: { actief: true, keuken: { lengte: ">=2", voorz: {} } } };
+    const { db } = nepDb(() => ({
+      data: [
+        { id: "k1", naam: "A", pve: [{ id: "p1", naam: "Basis", toilet: { actief: true } }] },
+        { id: "k2", naam: "B", pve: oud },
+        { id: "k3", naam: "C", pve: null },
+      ],
+    }));
+    const [a, b, c] = await maakKlantenStore(db).lijst();
+    expect(a!.pves).toEqual([{ id: "p1", naam: "Basis", toilet: { actief: true } }]);
+    expect(b!.pves).toHaveLength(1);
+    expect(b!.pves[0]).toMatchObject({ naam: "Standaard", keuken: oud.keuken });
+    expect(typeof b!.pves[0]!.id).toBe("string");
+    expect(c!.pves).toEqual([]);
+  });
+
+  it("PvE's opslaan: update van kolom pve; 0 rijen (geen admin) is een fout", async () => {
+    const pves = [{ id: "p1", naam: "Basis", indeling: { slaapkamers: "3" } }];
+    const goed = nepDb(() => ({ data: [{ id: "k1" }] }));
+    await maakKlantenStore(goed.db).slaPvesOp("k1", pves);
+    expect(stap(goed.log[0], "update")).toEqual([{ pve: pves }]);
+    expect(stap(goed.log[0], "eq")).toEqual(["id", "k1"]);
+    const leeg = nepDb(() => ({ data: [] }));
+    await expect(maakKlantenStore(leeg.db).slaPvesOp("k1", pves)).rejects.toThrow(/beheerder/);
   });
 });
 

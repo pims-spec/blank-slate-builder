@@ -7,7 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { SEGMENT_NAMEN, type WwsInput } from "@/lib/wws";
+import { SEGMENT_NAMEN, type OverigeRuimte, type Vertrek, type WwsInput } from "@/lib/wws";
+import { actievePves, pasPveOpFac, pasPveToe, pveVoorTelling } from "@/lib/wws/pve";
 import { magTellingBewerken, type Rechten } from "@/lib/rollen";
 import {
   legVersieVast,
@@ -35,9 +36,10 @@ import {
 import AdviesDialoog from "./AdviesDialoog";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
+import PveToepassenDialoog, { type PveVraag } from "./PveToepassenDialoog";
 import WwsCalculator from "./WwsCalculator";
 import { useNormen } from "./NormenContext";
-import { tellingStore } from "./tellingStore";
+import { klantenQuery, tellingStore } from "./tellingStore";
 
 const NIET_OPGESLAGEN = "Er zijn niet-opgeslagen wijzigingen. Toch doorgaan?";
 
@@ -79,6 +81,8 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [versieDialoog, setVersieDialoog] = useState(false);
   const [adviesOpen, setAdviesOpen] = useState(false);
   const [delenOpen, setDelenOpen] = useState(false);
+  const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
+  const { data: klanten = [] } = useQuery(klantenQuery());
   const [versieNaam, setVersieNaam] = useState("");
 
   const [dirty, setDirtyState] = useState(false);
@@ -234,6 +238,61 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     );
   }
 
+  // ---------- PvE van de eigenaar ----------
+  const klant = klanten.find((k) => k.id === staat.meta.klantId) ?? null;
+  // laatste meta voor pasRuimteAan (die draait binnen een state-update van de calculator)
+  const metaRef = useRef(staat.meta);
+  metaRef.current = staat.meta;
+
+  /** Eigenaar gekozen in het formulier: heeft die een actief PvE, dan vragen of het moet */
+  function eigenaarGekozen(id: string) {
+    zetMeta("klantId", id);
+    const k = klanten.find((x) => x.id === id);
+    if (k && actievePves(k.pves).length) setPveVraag({ klant: k, pveId: "" });
+  }
+
+  /** Na bevestiging: alleen ruimten die nog op standaardwaarden staan — bevestigPveToepassen() */
+  function pveToepassen(vraag: PveVraag, pveId: string) {
+    const pve = vraag.klant.pves.find((p) => p.id === pveId);
+    setPveVraag(null);
+    if (!pve) return;
+    const r = pasPveToe(staat.input, pve);
+    setStaat((s) => ({ ...s, input: r.input, meta: { ...s.meta, pveId: pve.id } }));
+    setDirty(true);
+    if (r.aangepast)
+      toast(
+        "PvE toegepast: " +
+          r.aangepast +
+          " onderdeel" +
+          (r.aangepast > 1 ? "en" : "") +
+          " overgenomen van ‘" +
+          pve.naam +
+          "’ (" +
+          vraag.klant.naam +
+          ")" +
+          (r.overgeslagen ? " (" + r.overgeslagen + " al ingevuld, overgeslagen)" : "") +
+          ". Controleer de gemarkeerde ruimten.",
+      );
+    else
+      toast(
+        r.overgeslagen
+          ? "Niets overgenomen: die ruimten waren al ingevuld."
+          : "Deze telling heeft nog geen keuken-, badkamer- of toiletruimte om het PvE op toe te passen.",
+      );
+  }
+
+  /**
+   * Stil aanvullen van één ruimte na een gebruikersactie in het formulier (soort gewijzigd of
+   * ruimte toegevoegd) — pasPveOpNieuweRuimte(). Niet bij laden, versie openen of het
+   * verbeteradvies: die paden roepen dit niet aan.
+   */
+  const pasRuimteAan = (_groep: "vertrekken" | "overig", ruimte: Vertrek | OverigeRuimte) => {
+    const meta = metaRef.current;
+    const k = klanten.find((x) => x.id === meta.klantId);
+    if (!k) return;
+    pasPveOpFac(ruimte.fac, pveVoorTelling(k.pves, meta.pveId));
+  };
+
   // Alleen-lezen: de kijkrol, of een telling die met je gedeeld is (niet eigenaar, geen admin).
   // Zelfde regel als mag_telling_bewerken() in de database.
   const alleenLezen = isNieuw
@@ -350,10 +409,21 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           <div className="sm:col-span-6">
             <EigenaarKeuze
               klantId={m.klantId}
-              onKies={(id) => zetMeta("klantId", id)}
+              onKies={eigenaarGekozen}
               magToevoegen={rechten.magSchrijven}
               alleenLezen={alleenLezen}
             />
+            {!alleenLezen && klant && actievePves(klant.pves).length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-1"
+                onClick={() => setPveVraag({ klant, pveId: m.pveId })}
+              >
+                PvE opnieuw toepassen
+              </Button>
+            )}
           </div>
         </div>
       </fieldset>
@@ -466,6 +536,12 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         setInput={setInput}
         boven={paneel}
         alleenLezen={alleenLezen}
+        pasRuimteAan={pasRuimteAan}
+      />
+      <PveToepassenDialoog
+        vraag={pveVraag}
+        onSluit={() => setPveVraag(null)}
+        onToepassen={pveToepassen}
       />
       <AdviesDialoog
         open={adviesOpen}

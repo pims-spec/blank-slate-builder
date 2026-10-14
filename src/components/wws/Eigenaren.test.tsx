@@ -30,8 +30,8 @@ function toon(roles: AppRole[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   klantenStore.lijst.mockResolvedValue([
-    { id: "k1", naam: "Amstel Wonen", pve: [] },
-    { id: "k2", naam: "Zeta Vastgoed", pve: [] },
+    { id: "k1", naam: "Amstel Wonen", pves: [] },
+    { id: "k2", naam: "Zeta Vastgoed", pves: [] },
   ]);
   tellingStore.lijst.mockResolvedValue([t("k1"), t("k1"), t("k2"), t("")]);
 });

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
+import { normaliseerPves, type Pve } from "../pve";
 
 type Db = SupabaseClient<Database>;
 
@@ -11,11 +12,17 @@ type Db = SupabaseClient<Database>;
 export interface Klant {
   id: string;
   naam: string;
-  /** PvE's van deze eigenaar (fase 2b-2); nu nog ongebruikt */
-  pve: unknown;
+  /** PvE's van deze eigenaar, genormaliseerd uit klanten.pve */
+  pves: Pve[];
 }
 
 const VELDEN = "id, naam, pve";
+
+const uid = () => crypto.randomUUID();
+
+function naarKlant(rij: { id: string; naam: string; pve: unknown }): Klant {
+  return { id: rij.id, naam: rij.naam, pves: normaliseerPves(rij.pve, uid) };
+}
 
 function vriendelijk(e: { code?: string; message?: string }): Error {
   if (e.code === "23505") return new Error("Er bestaat al een eigenaar met deze naam.");
@@ -28,7 +35,7 @@ export function maakKlantenStore(db: Db) {
     async lijst(): Promise<Klant[]> {
       const { data, error } = await db.from("klanten").select(VELDEN).order("naam");
       if (error) throw error;
-      return sorteerKlanten(data ?? []);
+      return sorteerKlanten((data ?? []).map(naarKlant));
     },
 
     /** created_by zet de database (auth.uid()); de RLS eist dat ook */
@@ -37,7 +44,7 @@ export function maakKlantenStore(db: Db) {
       if (!n) throw new Error("Vul een naam in.");
       const { data, error } = await db.from("klanten").insert({ naam: n }).select(VELDEN).single();
       if (error) throw vriendelijk(error);
-      return data;
+      return naarKlant(data);
     },
 
     async hernoem(id: string, naam: string): Promise<void> {
@@ -50,6 +57,17 @@ export function maakKlantenStore(db: Db) {
         .select("id");
       if (error) throw vriendelijk(error);
       if (!data?.length) throw new Error("Alleen een beheerder kan een eigenaar hernoemen.");
+    },
+
+    /** De PvE's van een eigenaar opslaan (alleen admin; 0 rijen = geen rechten) */
+    async slaPvesOp(id: string, pves: readonly Pve[]): Promise<void> {
+      const { data, error } = await db
+        .from("klanten")
+        .update({ pve: pves as unknown as Json })
+        .eq("id", id)
+        .select("id");
+      if (error) throw vriendelijk(error);
+      if (!data?.length) throw new Error("Alleen een beheerder kan PvE's wijzigen.");
     },
 
     /** Gekoppelde tellingen blijven bestaan; hun klantId verwijst daarna naar niets */

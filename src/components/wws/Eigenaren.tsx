@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Rechten } from "@/lib/rollen";
 import { aantalGekoppeld, bestaatKlant, type Klant } from "@/lib/wws/opslag";
+import { actievePves } from "@/lib/wws/pve";
+import PveBeheer from "./PveBeheer";
 import { klantenQuery, klantenStore, tellingenQuery } from "./tellingStore";
 
 const tellingenTekst = (n: number) => (n === 1 ? "1 telling" : n + " tellingen");
@@ -30,6 +32,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
   const [nieuw, setNieuw] = useState("");
   const [bewerk, setBewerk] = useState<{ id: string; naam: string } | null>(null);
   const [teVerwijderen, setTeVerwijderen] = useState<Klant | null>(null);
+  const [pveOpen, setPveOpen] = useState<string | null>(null);
 
   const ververs = () => qc.invalidateQueries({ queryKey: ["klanten"] });
   const fout = (e: Error) => toast.error(e.message);
@@ -133,12 +136,23 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
                 </form>
               ) : (
                 <>
-                  <span className="flex-1 font-medium">{k.naam}</span>
+                  <span className="flex-1 font-medium">
+                    {k.naam}
+                    <PveBadge n={actievePves(k.pves).length} />
+                  </span>
                   <span className="text-sm text-muted-foreground">
                     {tellingenTekst(aantalGekoppeld(tellingen, k.id))}
                   </span>
                   {rechten.isAdmin && (
                     <span className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-expanded={pveOpen === k.id}
+                        onClick={() => setPveOpen(pveOpen === k.id ? null : k.id)}
+                      >
+                        {pveOpen === k.id ? "PvE's verbergen" : "PvE's beheren"}
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -158,6 +172,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
                   )}
                 </>
               )}
+              {rechten.isAdmin && pveOpen === k.id && <PveBeheer klant={k} />}
             </li>
           ))}
         </ul>
@@ -188,5 +203,15 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
         </AlertDialogContent>
       </AlertDialog>
     </main>
+  );
+}
+
+/** Hoeveel PvE's van deze eigenaar iets ingesteld hebben — pveBadge() in wws-site.html */
+function PveBadge({ n }: { n: number }) {
+  if (!n) return null;
+  return (
+    <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs font-normal text-muted-foreground">
+      {n === 1 ? "PvE ingesteld" : n + " PvE's ingesteld"}
+    </span>
   );
 }

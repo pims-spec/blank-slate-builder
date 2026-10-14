@@ -15,6 +15,8 @@ import {
   num,
   type Fac,
   type NumLike,
+  type OverigeRuimte,
+  type Vertrek,
   type Normen,
   type VoorzDef,
   type WwsInput,
@@ -244,6 +246,12 @@ export interface WwsCalculatorProps {
   boven?: ReactNode;
   /** Alleen bekijken: alle velden uitgeschakeld */
   alleenLezen?: boolean;
+  /**
+   * Na een gebruikersactie op een ruimte (soort gewijzigd, ruimte toegevoegd): de ruimte
+   * aanvullen, bv. uit het PvE van de eigenaar. Muteert de ruimte. Alleen vanuit het formulier,
+   * nooit bij het laden of bij "Toepassen op telling".
+   */
+  pasRuimteAan?: (groep: "vertrekken" | "overig", ruimte: Vertrek | OverigeRuimte) => void;
 }
 
 export default function WwsCalculator({
@@ -251,6 +259,7 @@ export default function WwsCalculator({
   setInput,
   boven,
   alleenLezen = false,
+  pasRuimteAan,
 }: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
@@ -464,6 +473,7 @@ export default function WwsCalculator({
                       const x = d[groep][i]!;
                       x.type = v as never;
                       ensureFac(groep, x, false);
+                      pasRuimteAan?.(groep, x);
                     })
                   }
                 />
@@ -526,10 +536,22 @@ export default function WwsCalculator({
             </div>
             {r.fac && (
               <div className="mt-3 space-y-3 border-t border-border pt-3">
+                {r.fac.uitPve && (
+                  <p
+                    className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1 text-xs"
+                    role="note"
+                  >
+                    Overgenomen uit het standaard PvE van deze eigenaar. Controleer dit ter plekke
+                    en pas aan waar nodig.
+                  </p>
+                )}
                 {facPaneel(r.fac, (f) =>
                   wijzig((d) => {
                     const x = d[groep][i]!.fac;
-                    if (x) f(x);
+                    if (!x) return;
+                    f(x);
+                    // met de hand aangepast: geen PvE-markering meer (zoals in wws-site.html)
+                    delete x.uitPve;
                   }),
                 )}
               </div>
@@ -550,6 +572,8 @@ export default function WwsCalculator({
                   verkoeld: false,
                 });
               else d.overig.push({ type: "berging_in", naam: "", m2: "", verwarmd: false });
+              const nieuw = d[groep][d[groep].length - 1]!;
+              pasRuimteAan?.(groep, nieuw);
             })
           }
         >

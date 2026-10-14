@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
-import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
+import { maakTellingDoc, maakVersie, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
+import { facDefault, type WwsInput } from "@/lib/wws";
+import type { Pve } from "@/lib/wws/pve";
 import { rechtenVan, type AppRole } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
@@ -37,6 +39,17 @@ vi.mock("./tellingStore", () => ({
   klantenQuery: () => ({ queryKey: ["klanten"], queryFn: () => klantenStore.lijst() }),
 }));
 
+// Het verbeteradvies zelf is elders getest; hier alleen "Toepassen op telling" met een
+// vooraf bepaalde uitkomst, om te zien dat de editor die ongewijzigd overneemt.
+const advies = vi.hoisted(() => ({ input: null as unknown }));
+vi.mock("./AdviesDialoog", () => ({
+  default: ({ onToepassen }: { onToepassen: (i: unknown, n: number, p: number) => void }) => (
+    <button type="button" onClick={() => onToepassen(advies.input, 1, 99)}>
+      Advies toepassen (test)
+    </button>
+  ),
+}));
+
 const N = DEFAULT_NORMEN as unknown as Normen;
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
 
@@ -68,8 +81,8 @@ beforeEach(() => {
   store.bewaar.mockResolvedValue(undefined);
   store.versies.mockResolvedValue([]);
   klantenStore.lijst.mockResolvedValue([
-    { id: "k1", naam: "Amstel Wonen", pve: [] },
-    { id: "k2", naam: "Zeta Vastgoed", pve: [] },
+    { id: "k1", naam: "Amstel Wonen", pves: [] },
+    { id: "k2", naam: "Zeta Vastgoed", pves: [] },
   ]);
   store.voegVersieToe.mockImplementation(async (_id: string, v: { nr: number }) => ({
     ...v,
@@ -166,7 +179,7 @@ describe("TellingEditor", () => {
   });
 
   it("eigenaar kiezen en een nieuwe eigenaar toevoegen; klantId gaat mee bij opslaan", async () => {
-    klantenStore.voegToe.mockResolvedValue({ id: "k9", naam: "Nieuw BV", pve: [] });
+    klantenStore.voegToe.mockResolvedValue({ id: "k9", naam: "Nieuw BV", pves: [] });
     renderEditor(undefined);
     fireEvent.click(await screen.findByRole("button", { name: "Eigenaar: geen" }));
     fireEvent.click(await screen.findByRole("option", { name: "Zeta Vastgoed" }));
@@ -254,5 +267,156 @@ describe("TellingEditor", () => {
     await waitFor(() => expect(delenStore.deel).toHaveBeenCalledWith("t-anna", "bob"));
     fireEvent.click(screen.getByRole("checkbox", { name: /Cas/ }));
     await waitFor(() => expect(delenStore.ontdeel).toHaveBeenCalledWith("t-anna", "cas"));
+  });
+
+  // ---------- PvE ----------
+  const PVE: Pve = {
+    id: "p1",
+    naam: "Standaard",
+    badkamer: {
+      actief: true,
+      san: {
+        toiletStaand: 0,
+        toiletHang: 1,
+        wastafel: 2,
+        meerpers: 0,
+        douche: 1,
+        bad: 1,
+        badDouche: 0,
+        eisenOk: true,
+        voorz: { handdoekrad: "1" },
+      },
+    },
+    toilet: { actief: true, toilet: { toilet: "hangend", fontein: true } },
+  };
+
+  /** Eigen telling, gekoppeld aan eigenaar k1 met actief PvE p1, met onbewerkte ruimten */
+  function tellingMetPve(): Telling {
+    const s = nieuweTellingStaat("Beheerder");
+    s.meta = { ...s.meta, naam: "PvE-test", klantId: "k1", pveId: "p1" };
+    s.input.vertrekken.push(
+      { type: "slaapkamer", m2: 12, verwarmd: true },
+      { type: "badkamer", m2: 5, verwarmd: true, fac: facDefault("badkamer", false) },
+    );
+    s.input.overig.push({
+      type: "toilet",
+      m2: 1.2,
+      verwarmd: false,
+      fac: facDefault("toilet", false),
+    });
+    return {
+      ...maakTellingDoc(s, N, null),
+      id: "t-pve",
+      ownerId: ADMIN.id,
+      ownerNaam: "Beheerder",
+      gewijzigdOp: "2026-10-14T10:00:00Z",
+    };
+  }
+
+  function metPve() {
+    klantenStore.lijst.mockResolvedValue([{ id: "k1", naam: "Amstel Wonen", pves: [PVE] }]);
+    store.haal.mockResolvedValue(tellingMetPve());
+  }
+
+  const opgeslagenInput = () => store.bewaar.mock.calls.at(-1)![1].input as WwsInput;
+
+  it("PvE: type wijzigen in het formulier vult de ruimte stil aan; met de hand aanpassen haalt de markering weg", async () => {
+    metPve();
+    renderEditor("t-pve");
+    await screen.findByRole("button", { name: "Eigenaar: Amstel Wonen" });
+    // slaapkamer (eerste vertrek) wordt badkamer
+    fireEvent.change(screen.getAllByLabelText("Soort ruimte")[0]!, {
+      target: { value: "badkamer" },
+    });
+    expect(await screen.findAllByText(/Overgenomen uit het standaard PvE/)).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    const fac = opgeslagenInput().vertrekken[0]!.fac;
+    expect(fac).toEqual({ kind: "badkamer", san: PVE.badkamer!.san, uitPve: true });
+    // de al bestaande, onbewerkte badkamer en toiletruimte zijn NIET stil aangepast
+    expect(opgeslagenInput().vertrekken[1]!.fac).toEqual(facDefault("badkamer", false));
+    expect(opgeslagenInput().overig[0]!.fac).toEqual(facDefault("toilet", false));
+
+    // een voorziening van die badkamer met de hand wijzigen: markering weg
+    fireEvent.change(screen.getAllByLabelText("Douche")[0]!, { target: { value: "2" } });
+    expect(screen.queryByText(/Overgenomen uit het standaard PvE/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(2));
+    expect(opgeslagenInput().vertrekken[0]!.fac).not.toHaveProperty("uitPve");
+  });
+
+  it("PvE: 'Toepassen op telling' uit het verbeteradvies neemt de invoer ongewijzigd over", async () => {
+    metPve();
+    const t = tellingMetPve();
+    const na = structuredClone(t.input);
+    // wat het advies doet: extra toiletruimte en een badkamer, allebei op standaardwaarden
+    na.overig.push({
+      type: "toilet",
+      m2: "1,2",
+      verwarmd: false,
+      fac: facDefault("toilet", false),
+    });
+    na.vertrekken.push({
+      type: "badkamer",
+      m2: 4,
+      verwarmd: true,
+      fac: facDefault("badkamer", false),
+    });
+    advies.input = na;
+    renderEditor("t-pve");
+    await screen.findByRole("button", { name: "Eigenaar: Amstel Wonen" });
+    fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    expect(opgeslagenInput()).toEqual(na);
+    expect(JSON.stringify(opgeslagenInput())).not.toContain("uitPve");
+  });
+
+  it("PvE: een versie openen neemt de invoer van die versie ongewijzigd over", async () => {
+    metPve();
+    const t = tellingMetPve();
+    const v = maakVersie(
+      {
+        meta: t.meta,
+        input: t.input,
+        versieCount: 0,
+        aantalVersies: 0,
+        basedOn: null,
+        createdAt: "",
+      },
+      N,
+      "Oud",
+    );
+    store.versies.mockResolvedValue([{ ...v, id: "v0001" }]);
+    renderEditor("t-pve");
+    fireEvent.click(await screen.findByRole("button", { name: "Openen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    expect(opgeslagenInput()).toEqual(v.input);
+    expect(JSON.stringify(opgeslagenInput())).not.toContain("uitPve");
+  });
+
+  it("PvE: eigenaar kiezen vraagt om toepassen; alleen onbewerkte ruimten, met pveId", async () => {
+    klantenStore.lijst.mockResolvedValue([{ id: "k1", naam: "Amstel Wonen", pves: [PVE] }]);
+    const t = tellingMetPve();
+    t.meta = { ...t.meta, klantId: "", pveId: "" };
+    // de toiletruimte is al met de hand ingevuld
+    t.input.overig[0]!.fac = { kind: "toilet", toilet: { toilet: "staand", fontein: true } };
+    store.haal.mockResolvedValue(t);
+    renderEditor("t-pve");
+    fireEvent.click(await screen.findByRole("button", { name: "Eigenaar: geen" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Amstel Wonen" }));
+    expect(await screen.findByText("PvE toepassen?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Toepassen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    const doc = store.bewaar.mock.calls[0]![1];
+    expect(doc.meta).toMatchObject({ klantId: "k1", pveId: "p1" });
+    expect(doc.input.vertrekken[1].fac).toEqual({
+      kind: "badkamer",
+      san: PVE.badkamer!.san,
+      uitPve: true,
+    });
+    expect(doc.input.overig[0].fac).toEqual(t.input.overig[0]!.fac);
   });
 });

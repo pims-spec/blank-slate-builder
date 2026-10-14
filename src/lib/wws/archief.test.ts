@@ -16,8 +16,8 @@ import type { Telling } from "./opslag/types";
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const KLANTEN = [
-  { id: "k1", naam: "Amstel Wonen", pve: [] },
-  { id: "k2", naam: "Zeta Vastgoed", pve: [] },
+  { id: "k1", naam: "Amstel Wonen", pves: [] },
+  { id: "k2", naam: "Zeta Vastgoed", pves: [] },
 ];
 
 function telling(
