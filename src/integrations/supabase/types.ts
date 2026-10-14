@@ -41,6 +41,70 @@ export type Database = {
         }
         Relationships: []
       }
+      telling_versies: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          nr: number
+          telling_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          nr: number
+          telling_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          nr?: number
+          telling_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telling_versies_telling_id_fkey"
+            columns: ["telling_id"]
+            isOneToOne: false
+            referencedRelation: "tellingen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tellingen: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tellingen_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -71,6 +135,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mag_telling_bewerken: { Args: { _telling_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "member"
