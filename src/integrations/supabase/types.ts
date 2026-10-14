@@ -138,7 +138,7 @@ export type Database = {
       mag_telling_bewerken: { Args: { _telling_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "member"
+      app_role: "admin" | "member" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -266,7 +266,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "member"],
+      app_role: ["admin", "member", "viewer"],
     },
   },
 } as const
