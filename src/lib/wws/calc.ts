@@ -24,12 +24,12 @@ import type { CalcOpties, FacBadkamer, Rij, Segment, WwsInput, WwsResultaat } fr
 
 const clone = <T>(o: T): T => JSON.parse(JSON.stringify(o));
 
-interface KeukenAgg {
+export interface KeukenAgg {
   lengte: string;
   voorz: Record<string, unknown>;
   ruimte: string;
 }
-interface SanAgg {
+export interface SanAgg {
   toiletStaandApart: number;
   toiletHangApart: number;
   toiletStaandBad: number;
@@ -102,7 +102,7 @@ export function normaliseer(input: WwsInput): WwsInput {
 }
 
 /** Telt de voorzieningen per ruimte op tot keukens + sanitair-totalen (deriveFac). */
-function deriveFac(inp: WwsInput): { keukens: KeukenAgg[]; san: SanAgg } {
+export function deriveFac(inp: WwsInput): { keukens: KeukenAgg[]; san: SanAgg } {
   const keukens: KeukenAgg[] = [];
   const agg: SanAgg = {
     toiletStaandApart: 0,

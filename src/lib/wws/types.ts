@@ -159,6 +159,24 @@ export interface BuitenRuimte {
   maten?: Maat[];
 }
 
+/** Eén labelstap uit een geüpload verduurzamingsadvies (input.energieAdvies in wws-site.html) */
+export interface EnergieAdviesMaatregel {
+  vanLabel: string;
+  naarLabel: string;
+  omschrijving?: string[];
+  kostenMin?: NumLike;
+  kostenMax?: NumLike;
+  besparingMin?: NumLike;
+  besparingMax?: NumLike;
+}
+
+/** Geüpload verduurzamingsadvies; het verbeteradvies gebruikt de labelstappen hieruit. */
+export interface EnergieAdvies {
+  bestand?: string;
+  geuploadOp?: string;
+  maatregelen?: EnergieAdviesMaatregel[];
+}
+
 export type MonumentKeuze = "geen" | "gemprov" | "stads" | "rijks_voor" | "rijks_na";
 
 export interface WwsInput {
@@ -201,6 +219,8 @@ export interface WwsInput {
     nieuwbouw: boolean;
   };
   facV?: number;
+  /** Geüpload verduurzamingsadvies (nog geen upload in deze app; oude tellingen kunnen het hebben) */
+  energieAdvies?: EnergieAdvies;
 }
 
 // ---------- uitvoer ----------

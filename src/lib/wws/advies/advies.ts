@@ -1,0 +1,512 @@
+// Verbeteradvies — regel voor regel overgezet uit candidates(), runAdvies(),
+// selectieResultaat() en berekenRouteVoorDoel() in wws-site.html.
+//
+// Verschillen met de bron (bewust, zonder ander resultaat):
+// - geen globale state: invoer, normen en instellingen gaan erin, de uitkomst komt eruit;
+// - de invoer wordt nooit gewijzigd. De bron werkt op normalizeInput(clone(...)) en leest
+//   daarna bijwerkingen daarvan (x.san, fac per ruimte, energie, opslag.monument); hier werkt
+//   elke stap op normaliseer(...) en komt x.san uit deriveFac();
+// - x._origLabel is een parameter in plaats van een veld op de invoer;
+// - "vandaag" (datum van een nieuw label) is een optie, default: nu.
+// advies.vergelijk.test.ts vergelijkt de uitkomst met de originele code.
+
+import { INDEX_KLASSEN, LABELS, num, r2 } from "../basis";
+import { calc, deriveFac, normaliseer } from "../calc";
+import { DEFAULT_NORMEN, type Normen } from "../normen";
+import type { WwsInput } from "../types";
+import {
+  energieVanOmschrijving,
+  MAATREGELEN,
+  volgendeLabelVoorIndexOfBouwjaar,
+} from "./maatregelen";
+import type {
+  AdviesBron,
+  AdviesInstellingen,
+  AdviesResultaat,
+  AdviesStap,
+  Haalbaarheid,
+  Kandidaat,
+  Kosten,
+  MaatregelKey,
+  RouteResultaat,
+  SelectieResultaat,
+  Toepassing,
+} from "./types";
+
+export const H_FACTOR: Record<Haalbaarheid, number> = { eenvoudig: 1, gemiddeld: 1.3, lastig: 2.5 };
+const RANK: Record<Haalbaarheid, number> = { eenvoudig: 0, gemiddeld: 1, lastig: 2 };
+
+const labelIndex = (l: string) => (LABELS as readonly string[]).indexOf(l);
+
+/** Standaardinstellingen, zoals openAdvies(): kosten uit de normen, laadpaal uit. */
+export function standaardInstellingen(N: Normen): AdviesInstellingen {
+  return {
+    kosten: {
+      ...(DEFAULT_NORMEN.kosten as unknown as Kosten),
+      ...(N.kosten as Partial<Kosten>),
+    },
+    uit: { laadpaal: true },
+    marge: 0,
+    labelsprong: false,
+    lastig: false,
+    forced: [],
+  };
+}
+
+export interface AdviesOpties {
+  /** yyyy-mm-dd voor een nieuw op te nemen label; default: vandaag */
+  vandaag?: string;
+}
+
+const vandaagVan = (o: AdviesOpties) => o.vandaag ?? new Date().toISOString().slice(0, 10);
+
+/** safeApply(): maatregel toepassen; een fout laat de invoer ongewijzigd. Geeft genormaliseerde invoer terug. */
+function pasToe(f: Toepassing, x: WwsInput): WwsInput {
+  const y = structuredClone(x);
+  try {
+    f(y);
+    return normaliseer(y);
+  } catch {
+    // zoals safeApply(): de bron vangt de fout af; wat vóór de fout al gewijzigd was blijft
+    return normaliseer(y);
+  }
+}
+
+/** Alle maatregelen die vanuit x punten opleveren, goedkoopst (per punt, gewogen) eerst. */
+export function kandidaten(
+  x0: WwsInput,
+  N: Normen,
+  inst: Pick<AdviesInstellingen, "kosten" | "uit" | "lastig">,
+  alles: boolean,
+  origLabel: string | undefined,
+  vandaag: string,
+): Kandidaat[] {
+  const x = normaliseer(x0);
+  const base = calc(x, N).exact;
+  const ctx = { K: inst.kosten, N, san: deriveFac(x).san, origLabel, vandaag };
+  const out: Kandidaat[] = [];
+  for (const m of MAATREGELEN) {
+    if (inst.uit[m.key]) continue;
+    for (const c of m.gen(x, ctx)) {
+      const h = c.h || m.h || "gemiddeld";
+      if (!alles && h === "lastig" && !inst.lastig) continue;
+      const y = pasToe(c.a, x);
+      const g = r2(calc(y, N).exact - base);
+      if (g > 0.009)
+        out.push({
+          key: m.key,
+          o: c.o,
+          c: c.c,
+          g,
+          nominal: c.nominal,
+          h,
+          hr: c.hr || m.hr || "",
+          ratio: c.c / g,
+          score: (c.c / g) * H_FACTOR[h],
+          apply: c.a,
+          bron: c.bron,
+          omschrijving: c.omschrijving,
+          kostenMin: c.kostenMin,
+          kostenMax: c.kostenMax,
+          besparingMin: c.besparingMin,
+          besparingMax: c.besparingMax,
+        });
+    }
+  }
+  return out.sort((a, b) => a.score - b.score);
+}
+
+/** Losse maatregel in de route, vóór het samenvoegen per soort */
+interface Stap extends AdviesBron {
+  key: MaatregelKey;
+  forced?: true;
+  o: string;
+  g: number;
+  c: number;
+  h: Haalbaarheid;
+  hr: string;
+  tot: number;
+  apply: Toepassing;
+}
+
+const bronVan = (c: AdviesBron): AdviesBron => ({
+  bron: c.bron,
+  omschrijving: c.omschrijving,
+  kostenMin: c.kostenMin,
+  kostenMax: c.kostenMax,
+  besparingMin: c.besparingMin,
+  besparingMax: c.besparingMax,
+});
+
+interface KernOpties {
+  doel: number;
+  /** berekenRouteVoorDoel: de stappen van optie 1 gaan vast voorop */
+  baseOptie?: { stappen: AdviesStap[] } | undefined;
+  /** berekenRouteVoorDoel zet g.naarLabel bij de labelstap */
+  metNaarLabel: boolean;
+  vandaag: string;
+}
+
+/** Het gedeelde deel van runAdvies() en berekenRouteVoorDoel(). */
+function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: KernOpties) {
+  const { doel, baseOptie, vandaag } = o;
+  const K = inst.kosten,
+    uit = inst.uit;
+  const begin = normaliseer(input);
+  let x = begin;
+  const origLabel = x.energie.label;
+  const start = calc(x, N);
+  const stappen: Stap[] = [];
+  let guard = 0;
+  const eerste = kandidaten(begin, N, inst, true, undefined, vandaag);
+
+  // Optie 2 bouwt voort op optie 1: die maatregelen gaan eerst en blijven staan.
+  if (baseOptie) {
+    baseOptie.stappen.forEach((g) =>
+      g.applies.forEach((f) => {
+        const b = calc(x, N).exact;
+        x = pasToe(f, x);
+        const R = calc(x, N);
+        const n = g.applies.length;
+        stappen.push({
+          key: g.key,
+          forced: true,
+          o: g.o,
+          g: r2(R.exact - b),
+          c: g.c / n,
+          h: g.h!,
+          hr: g.hr!,
+          tot: R.totaal,
+          apply: f,
+          bron: g.bron,
+          omschrijving: g.omschrijving,
+          kostenMin: g.kostenMin / n,
+          kostenMax: g.kostenMax / n,
+          besparingMin: g.besparingMin / n,
+          besparingMax: g.besparingMax / n,
+        });
+      }),
+    );
+  }
+  // Zelf gekozen maatregelen uit "Alle maatregelen" gaan altijd mee
+  inst.forced.forEach((fk) => {
+    const c = eerste.find((z) => z.key + "|" + z.o === fk);
+    if (!c) return;
+    const b = calc(x, N).exact;
+    x = pasToe(c.apply, x);
+    const R = calc(x, N);
+    stappen.push({
+      key: c.key,
+      forced: true,
+      o: c.o,
+      g: r2(R.exact - b),
+      c: c.c,
+      h: c.h,
+      hr: c.hr,
+      tot: R.totaal,
+      apply: c.apply,
+      ...bronVan(c),
+    });
+  });
+  // "1 labelsprong": precies één stap verbetering van het energielabel (niet opnieuw bij optie 2)
+  if (
+    inst.labelsprong &&
+    !baseOptie &&
+    (x.energie.soort === "label" || x.energie.soort === "labelOud")
+  ) {
+    const i0 = labelIndex(x.energie.label);
+    if (i0 > 0) {
+      const target = LABELS[i0 - 1]!;
+      const applyFn: Toepassing = (y) => {
+        y.energie.label = target;
+      };
+      const b = calc(x, N).exact;
+      x = pasToe(applyFn, x);
+      const R = calc(x, N);
+      stappen.push({
+        key: "label",
+        forced: true,
+        o: "Energielabel " + LABELS[i0] + " naar " + target,
+        g: r2(R.exact - b),
+        c: K.labelStap,
+        h: "gemiddeld",
+        hr: "Isolatie, glas of installatie; nieuw label laten opnemen",
+        tot: R.totaal,
+        apply: applyFn,
+      });
+    }
+  } else if (
+    inst.labelsprong &&
+    !baseOptie &&
+    (x.energie.soort === "index" || x.energie.soort === "bouwjaar")
+  ) {
+    const target = volgendeLabelVoorIndexOfBouwjaar(x, N);
+    if (target) {
+      const van = energieVanOmschrijving(x.energie);
+      const applyFn: Toepassing = (y) => {
+        y.energie = {
+          soort: "label",
+          label: target,
+          indexKlasse: "",
+          bouwjaar: "",
+          datum: vandaag,
+        };
+      };
+      const b = calc(x, N).exact;
+      x = pasToe(applyFn, x);
+      const R = calc(x, N);
+      stappen.push({
+        key: "label",
+        forced: true,
+        o:
+          "Nieuw energielabel (vanaf 2021, NTA 8800) laten opnemen: " +
+          van +
+          " naar klasse " +
+          target,
+        g: r2(R.exact - b),
+        c: K.labelStap,
+        h: "gemiddeld",
+        hr: "Energieprestatie laten opnemen via een erkende EP-adviseur (NTA 8800)",
+        tot: R.totaal,
+        apply: applyFn,
+      });
+    }
+  }
+
+  while (calc(x, N).totaal < doel && guard++ < 40) {
+    const c = kandidaten(x, N, inst, false, origLabel, vandaag);
+    if (!c.length) break;
+    const best = c[0]!;
+    x = pasToe(best.apply, x);
+    const R = calc(x, N);
+    stappen.push({
+      key: best.key,
+      o: best.o,
+      g: best.g,
+      c: best.c,
+      h: best.h,
+      hr: best.hr,
+      tot: R.totaal,
+      apply: best.apply,
+      ...bronVan(best),
+    });
+  }
+  // Overbodige maatregelen schrappen, duurste eerst
+  let route = stappen;
+  if (calc(x, N).totaal >= doel) {
+    const order = stappen
+      .map((_st, i) => i)
+      .filter((i) => !stappen[i]!.forced)
+      .sort((a, b) => stappen[b]!.c - stappen[a]!.c);
+    const keep = new Set(stappen.map((_st, i) => i));
+    for (const i of order) {
+      keep.delete(i);
+      let y = begin;
+      stappen.forEach((st, k) => {
+        if (keep.has(k)) y = pasToe(st.apply, y);
+      });
+      if (calc(y, N).totaal < doel) keep.add(i);
+    }
+    route = stappen.filter((_st, k) => keep.has(k));
+    x = begin;
+    let prev = calc(x, N).exact;
+    for (const st of route) {
+      x = pasToe(st.apply, x);
+      const R = calc(x, N);
+      st.g = r2(R.exact - prev);
+      prev = R.exact;
+      st.tot = R.totaal;
+    }
+  }
+  // Samenvoegen per soort maatregel
+  const groep: AdviesStap[] = [];
+  for (const st of route) {
+    let g = groep.find((q) => q.key === st.key);
+    if (!g) {
+      g = {
+        key: st.key,
+        o: "",
+        c: 0,
+        g: 0,
+        tot: 0,
+        applies: [],
+        delen: [],
+        forced: false,
+        omschrijving: [],
+        kostenMin: 0,
+        kostenMax: 0,
+        besparingMin: 0,
+        besparingMax: 0,
+      };
+      groep.push(g);
+    }
+    if (st.forced) g.forced = true;
+    if (!g.h || RANK[st.h] > RANK[g.h]) {
+      g.h = st.h;
+      g.hr = st.hr;
+    }
+    g.c += st.c;
+    g.applies.push(st.apply);
+    if (!g.delen.includes(st.o)) g.delen.push(st.o);
+    if (st.bron) g.bron = st.bron;
+    (st.omschrijving || []).forEach((oms) => {
+      if (!g.omschrijving.includes(oms)) g.omschrijving.push(oms);
+    });
+    g.kostenMin += num(st.kostenMin);
+    g.kostenMax += num(st.kostenMax);
+    g.besparingMin += num(st.besparingMin);
+    g.besparingMax += num(st.besparingMax);
+  }
+  const origSoort = begin.energie.soort;
+  const vanLabel = begin.energie.label;
+  const vanOmschrijving = energieVanOmschrijving(begin.energie);
+  x = begin;
+  let prevE = calc(x, N).exact;
+  for (const g of groep) {
+    g.applies.forEach((f) => {
+      x = pasToe(f, x);
+    });
+    const R = calc(x, N);
+    g.g = r2(R.exact - prevE);
+    prevE = R.exact;
+    g.tot = R.totaal;
+    if (g.key === "label") {
+      if (o.metNaarLabel) g.naarLabel = x.energie.label;
+      if (origSoort === "label" || origSoort === "labelOud") {
+        g.o = "Energielabel " + vanLabel + " naar " + x.energie.label;
+        const d = labelIndex(vanLabel) - labelIndex(x.energie.label);
+        g.h = d >= 3 ? "lastig" : "gemiddeld";
+        g.hr =
+          g.bron === "advies" && g.omschrijving.length
+            ? g.omschrijving.join("; ")
+            : d >= 3
+              ? "Grote renovatie: gevel, dak en installatie"
+              : "Isolatie, glas of installatie; nieuw label laten opnemen";
+        if (g.bron !== "advies") g.c = Math.max(0, d) * K.labelStap;
+      } else {
+        // Startpunt was energie-index of bouwjaar: de kosten van de losse stappen laten staan
+        // (geen "labelafstand" om op te herberekenen).
+        g.o =
+          "Nieuw energielabel (vanaf 2021, NTA 8800) laten opnemen: " +
+          vanOmschrijving +
+          " naar label " +
+          x.energie.label;
+        g.h = "gemiddeld";
+        g.hr = "Energieprestatie laten opnemen via een erkende EP-adviseur (NTA 8800)";
+      }
+    } else if (g.key === "indexKlasse") {
+      // (de maatregel "indexKlasse" levert sinds 2021 geen kandidaten meer; letterlijk overgenomen)
+      const vanIndex = Number(begin.energie.indexKlasse);
+      g.o =
+        "Energie-index " +
+        INDEX_KLASSEN[vanIndex] +
+        " naar " +
+        INDEX_KLASSEN[Number(x.energie.indexKlasse)];
+      const d = vanIndex - Number(x.energie.indexKlasse);
+      g.h = d >= 3 ? "lastig" : "gemiddeld";
+      g.hr =
+        d >= 3
+          ? "Grote renovatie: gevel, dak en installatie"
+          : "Isolatie, glas of installatie; nieuwe energie-index laten vaststellen";
+      g.c = Math.max(0, d) * K.labelStap;
+    } else g.o = g.delen.join("; ");
+  }
+  return {
+    begin,
+    start,
+    eerste,
+    groep,
+    x,
+    eind: calc(x, N),
+    uit,
+    origSoort,
+    vanLabel,
+    vanOmschrijving,
+  };
+}
+
+/**
+ * Goedkoopste route naar de vrije sector (plus marge) — runAdvies() in wws-site.html.
+ * Doel: N.grensMidden + 1 + marge.
+ */
+export function berekenAdvies(
+  input: WwsInput,
+  N: Normen,
+  inst: AdviesInstellingen,
+  opties: AdviesOpties = {},
+): AdviesResultaat {
+  const vandaag = vandaagVan(opties);
+  const doel = N.grensMidden + 1 + (inst.marge || 0);
+  const k = routeKern(input, N, inst, { doel, metNaarLabel: false, vandaag });
+  // Absoluut plafond: wat is maximaal haalbaar, ook met de lastige maatregelen?
+  let xMax = k.begin;
+  let guardMax = 0;
+  while (calc(xMax, N).totaal < doel && guardMax++ < 40) {
+    const c = kandidaten(xMax, N, inst, true, undefined, vandaag);
+    if (!c.length) break;
+    xMax = pasToe(c[0]!.apply, xMax);
+  }
+  return {
+    start: k.start,
+    eind: k.eind,
+    stappen: k.groep,
+    los: k.eerste,
+    input: k.x,
+    doel,
+    gehaald: k.eind.totaal >= doel,
+    maxHaalbaar: calc(xMax, N).totaal,
+  };
+}
+
+/**
+ * Route naar een gegeven doel, eventueel voortbouwend op een eerdere route (optie 2 bouwt
+ * voort op optie 1) — berekenRouteVoorDoel() in wws-site.html, voor het adviesrapport.
+ */
+export function berekenRoute(
+  input: WwsInput,
+  N: Normen,
+  inst: AdviesInstellingen,
+  doel: number,
+  baseOptie?: RouteResultaat,
+  opties: AdviesOpties = {},
+): RouteResultaat {
+  const k = routeKern(input, N, inst, {
+    doel,
+    baseOptie,
+    metNaarLabel: true,
+    vandaag: vandaagVan(opties),
+  });
+  return {
+    start: k.start,
+    eind: k.eind,
+    stappen: k.groep,
+    doel,
+    gehaald: k.eind.totaal >= doel,
+    kosten: k.groep.reduce((s, g) => s + g.c, 0),
+    input: k.x,
+    vanLabel: k.vanLabel,
+    vanOmschrijving: k.vanOmschrijving,
+    origSoort: k.origSoort,
+  };
+}
+
+/** De route met alleen de aangevinkte stappen (overslaan[k] = true: stap k niet) — selectieResultaat(). */
+export function selectieResultaat(
+  input: WwsInput,
+  N: Normen,
+  advies: Pick<AdviesResultaat, "stappen">,
+  overslaan: Readonly<Record<number, boolean>> = {},
+): SelectieResultaat {
+  let y = normaliseer(input);
+  let c = 0,
+    n = 0;
+  advies.stappen.forEach((g, k) => {
+    if (overslaan[k]) return;
+    g.applies.forEach((f) => {
+      y = pasToe(f, y);
+    });
+    c += g.c;
+    n++;
+  });
+  return { input: y, R: calc(y, N), kosten: c, n };
+}
