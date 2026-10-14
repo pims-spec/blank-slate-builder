@@ -19,6 +19,8 @@ export interface TellingMeta {
   opsteller: string;
   /** Gekoppelde eigenaar (klanten.id); leeg = geen eigenaar */
   klantId: string;
+  /** Toegepast PvE van die eigenaar; leeg = geen */
+  pveId: string;
   [extra: string]: unknown;
 }
 

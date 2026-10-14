@@ -74,10 +74,14 @@ export type Aanrecht = "<1" | "1-2" | ">=2";
 
 export interface FacKeuken {
   kind: "keuken";
+  /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
+  uitPve?: boolean;
   keuken: { lengte: Aanrecht; voorz: Partial<Record<KeukenVoorzKey, VoorzWaarde>> };
 }
 export interface FacBadkamer {
   kind: "badkamer";
+  /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
+  uitPve?: boolean;
   san: {
     toiletStaand: NumLike;
     toiletHang: NumLike;
@@ -93,14 +97,20 @@ export interface FacBadkamer {
 }
 export interface FacSlaapSan {
   kind: "slaap_san";
+  /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
+  uitPve?: boolean;
   san: { wastafel: NumLike; meerpers: NumLike; douche: NumLike; bad: NumLike; badDouche: NumLike };
 }
 export interface FacToilet {
   kind: "toilet";
+  /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
+  uitPve?: boolean;
   toilet: { toilet: "geen" | "staand" | "hangend"; fontein: boolean };
 }
 export interface FacWas {
   kind: "was";
+  /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
+  uitPve?: boolean;
   was: { wastafel: boolean };
 }
 export type Fac = FacKeuken | FacBadkamer | FacSlaapSan | FacToilet | FacWas;

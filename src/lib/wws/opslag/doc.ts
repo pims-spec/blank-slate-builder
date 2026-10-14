@@ -16,7 +16,8 @@ type MetaVeld =
   | "bouwjaar"
   | "peildatum"
   | "opsteller"
-  | "klantId";
+  | "klantId"
+  | "pveId";
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const tekst = (v: unknown): string =>
   typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
@@ -39,6 +40,7 @@ export function legeMeta(): TellingMeta {
     peildatum: vandaag(),
     opsteller: "",
     klantId: "",
+    pveId: "",
   };
 }
 
@@ -104,6 +106,7 @@ export function leesMeta(raw: unknown): TellingMeta {
     peildatum: tekst(r.peildatum) || leeg.peildatum,
     opsteller: tekst(r.opsteller),
     klantId: tekst(r.klantId),
+    pveId: tekst(r.pveId),
   };
 }
 
