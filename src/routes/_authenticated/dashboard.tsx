@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
+import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
+import { controleStatus } from "@/lib/wws/opslag";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -13,14 +15,20 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { property: "og:description", content: "Je persoonlijke overzicht in Werkplaats." },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(myAccessQuery(context.user.id)),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(myAccessQuery(context.user.id)),
+      context.queryClient.ensureQueryData(normenQuery()),
+    ]),
   component: Dashboard,
 });
 
 function Dashboard() {
   const { user } = Route.useRouteContext();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
+  const { data: normen } = useSuspenseQuery(normenQuery());
   const name = data.profile?.display_name ?? user.email;
+  const controle = data.isAdmin ? controleStatus(normen.gecontroleerd) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,12 +38,34 @@ function Dashboard() {
           <>
             <p className="text-sm uppercase tracking-widest text-muted-foreground">Welkom terug</p>
             <h1 className="mt-2 font-display text-5xl text-foreground">{name}</h1>
-            <p className="mt-6 max-w-lg text-muted-foreground">
-              Je hebt toegang. Begin een nieuwe WWS-puntentelling.
-            </p>
-            <Button asChild className="mt-8">
-              <Link to="/wws">Puntentelling openen</Link>
-            </Button>
+            {data.isViewer ? (
+              <>
+                <p className="mt-6 max-w-lg text-muted-foreground">
+                  Je hebt een kijkrol: je kunt alle tellingen bekijken, maar niets wijzigen.
+                </p>
+                <Button asChild className="mt-8">
+                  <Link to="/archief">Archief bekijken</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="mt-6 max-w-lg text-muted-foreground">
+                  Je hebt toegang. Begin een nieuwe WWS-puntentelling.
+                </p>
+                <Button asChild className="mt-8">
+                  <Link to="/wws">Puntentelling openen</Link>
+                </Button>
+              </>
+            )}
+            {controle?.nodig && (
+              <div className="mt-10 max-w-lg rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm">
+                <p className="font-medium">Tijd voor de maandelijkse controle van de normen</p>
+                <p className="mt-1">{controle.reden}</p>
+                <Button asChild variant="outline" size="sm" className="mt-3">
+                  <Link to="/normen">Naar de normen</Link>
+                </Button>
+              </div>
+            )}
           </>
         ) : (
           <div className="max-w-lg rounded-xl border border-border bg-card p-8">

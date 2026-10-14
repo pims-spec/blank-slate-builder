@@ -31,7 +31,7 @@ function ArchiefPage() {
       <AppHeader isAdmin={data.isAdmin} heeftToegang={data.heeftToegang} />
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
-          <Archief isAdmin={data.isAdmin} />
+          <Archief rechten={data} userId={user.id} />
         </NormenProvider>
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">
