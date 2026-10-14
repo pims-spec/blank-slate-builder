@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      instellingen: {
+        Row: {
+          data: Json
+          key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          data: Json
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          data?: Json
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instellingen_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      klanten: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          naam: string
+          pve: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          naam: string
+          pve?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          naam?: string
+          pve?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "klanten_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -40,6 +104,49 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      telling_shares: {
+        Row: {
+          created_at: string
+          gedeeld_door: string | null
+          telling_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gedeeld_door?: string | null
+          telling_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gedeeld_door?: string | null
+          telling_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telling_shares_gedeeld_door_fkey"
+            columns: ["gedeeld_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telling_shares_telling_id_fkey"
+            columns: ["telling_id"]
+            isOneToOne: false
+            referencedRelation: "tellingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telling_shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       telling_versies: {
         Row: {
@@ -135,7 +242,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      heeft_een_rol: { Args: { _user_id: string }; Returns: boolean }
+      heeft_schrijfrol: { Args: { _user_id: string }; Returns: boolean }
+      is_gedeeld_met_mij: { Args: { _telling_id: string }; Returns: boolean }
       mag_telling_bewerken: { Args: { _telling_id: string }; Returns: boolean }
+      mag_telling_zien: { Args: { _telling_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "member" | "viewer"
