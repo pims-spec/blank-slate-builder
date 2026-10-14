@@ -31,6 +31,7 @@ import {
   type TellingStaat,
   type Versie,
 } from "@/lib/wws/opslag";
+import AdviesDialoog from "./AdviesDialoog";
 import WwsCalculator from "./WwsCalculator";
 import { NORMEN, tellingStore } from "./tellingStore";
 
@@ -70,6 +71,7 @@ export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
   const [laden, setLaden] = useState<Laden>(tellingId ? "bezig" : "klaar");
   const [bezig, setBezig] = useState(false);
   const [versieDialoog, setVersieDialoog] = useState(false);
+  const [adviesOpen, setAdviesOpen] = useState(false);
   const [versieNaam, setVersieNaam] = useState("");
 
   const [dirty, setDirtyState] = useState(false);
@@ -210,6 +212,21 @@ export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
     }
   }
 
+  /** "Toepassen op telling": in de werkversie, nog niet opgeslagen */
+  function adviesToepassen(input: WwsInput, n: number, punten: number) {
+    setStaat((s) => ({ ...s, input }));
+    setDirty(true);
+    setAdviesOpen(false);
+    toast(
+      n +
+        " maatregel" +
+        (n > 1 ? "en" : "") +
+        " toegepast (" +
+        punten +
+        " punten). Sla de telling op, of leg een nieuwe versie vast.",
+    );
+  }
+
   function versieOpenen(v: Versie) {
     if (dirtyRef.current && !window.confirm(NIET_OPGESLAGEN)) return;
     setStaat((s) => openVersieInStaat(s, v));
@@ -302,6 +319,9 @@ export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
         >
           Versie vastleggen
         </Button>
+        <Button variant="outline" onClick={() => setAdviesOpen(true)}>
+          Verbeteradvies
+        </Button>
         <Button asChild variant="ghost">
           <Link to="/wws">Nieuwe telling</Link>
         </Button>
@@ -373,7 +393,17 @@ export default function TellingEditor({ tellingId, userId, bewerker }: Props) {
     </section>
   );
 
-  return <WwsCalculator input={staat.input} setInput={setInput} boven={paneel} />;
+  return (
+    <>
+      <WwsCalculator input={staat.input} setInput={setInput} boven={paneel} />
+      <AdviesDialoog
+        open={adviesOpen}
+        onOpenChange={setAdviesOpen}
+        input={staat.input}
+        onToepassen={adviesToepassen}
+      />
+    </>
+  );
 }
 
 function MetaVeld({
