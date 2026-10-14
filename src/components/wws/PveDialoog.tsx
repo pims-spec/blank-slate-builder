@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { fmt, type VoorzDef } from "@/lib/wws";
+import { OVERIG_TYPES, VERTREK_TYPES, fmt, type VoorzDef } from "@/lib/wws";
+import { autoVerwarmd } from "@/lib/wws/indeling";
 import { pveVoorFormulier, type Pve, type PveWerk } from "@/lib/wws/pve";
 import { useNormen } from "./NormenContext";
 
@@ -206,6 +207,17 @@ function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
         </label>
       </Onderdeel>
 
+      <IndelingWensen
+        waarde={werk.indeling}
+        zet={(f) =>
+          zet((w) => {
+            const ind = (w.indeling && typeof w.indeling === "object" ? w.indeling : {}) as Wensen;
+            f(ind);
+            w.indeling = ind;
+          })
+        }
+      />
+
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
           Annuleren
@@ -287,5 +299,120 @@ function Voorzieningen({
         ))}
       </div>
     </div>
+  );
+}
+
+interface Wensen {
+  apartToilet?: string;
+  wasruimte?: string;
+  keuken?: string;
+  slaapkamers?: string;
+  verwarmd?: Record<string, boolean>;
+  [extra: string]: unknown;
+}
+
+/**
+ * Indelingswensen voor het indelingsadvies: welke ruimten worden voorgesteld, niet hun
+ * uitrusting — het indeling-deel van renderKlantPve() in wws-site.html.
+ */
+function IndelingWensen({
+  waarde,
+  zet,
+}: {
+  waarde: unknown;
+  zet: (f: (w: Wensen) => void) => void;
+}) {
+  const w = (waarde && typeof waarde === "object" ? waarde : {}) as Wensen;
+  const keuze = (
+    label: string,
+    veld: "apartToilet" | "wasruimte" | "keuken",
+    opties: [string, string][],
+  ) => (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <select
+        className={selCls}
+        value={w[veld] || "auto"}
+        onChange={(e) => zet((x) => void (x[veld] = e.target.value))}
+      >
+        {opties.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const verwarmd = (key: "vertrekken" | "overig", t: { k: string; l: string }) => {
+    const k = key + ":" + t.k;
+    const aan =
+      w.verwarmd && Object.prototype.hasOwnProperty.call(w.verwarmd, k)
+        ? !!w.verwarmd[k]
+        : autoVerwarmd(key, t.k);
+    return (
+      <label key={k} className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className={vinkCls}
+          checked={aan}
+          onChange={(e) =>
+            zet((x) => {
+              x.verwarmd = { ...(x.verwarmd || {}), [k]: e.target.checked };
+            })
+          }
+        />
+        {t.l}
+      </label>
+    );
+  };
+  return (
+    <fieldset className="space-y-3 rounded-md border border-border p-3">
+      <legend className="px-1 text-sm font-medium">
+        Indelingswensen (voor het indelingsadvies)
+      </legend>
+      <p className="text-xs text-muted-foreground">
+        Dit gaat niet over de uitrusting hierboven, maar over welke ruimten het indelingsadvies
+        voorstelt wanneer je dit PvE daar kiest.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {keuze("Aparte toiletruimte", "apartToilet", [
+          ["auto", "Standaard (aparte toiletruimte)"],
+          ["ja", "Altijd een aparte toiletruimte"],
+          ["nee", "Geen aparte toiletruimte — toilet in de badkamer"],
+        ])}
+        {keuze("Aparte wasruimte", "wasruimte", [
+          ["auto", "Standaard (alleen als die er al was)"],
+          ["ja", "Altijd een aparte wasruimte toevoegen"],
+          ["nee", "Nooit een aparte wasruimte"],
+        ])}
+        {keuze("Keuken", "keuken", [
+          ["auto", "Standaard (aparte keuken)"],
+          ["apart", "Altijd een aparte keuken"],
+          ["open", "Woonkamer met open keuken (geen losse keukenruimte)"],
+        ])}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Gewenst aantal slaapkamers (optioneel)</span>
+          <Input
+            inputMode="numeric"
+            placeholder="bijv. 3"
+            value={w.slaapkamers ?? ""}
+            onChange={(e) => zet((x) => void (x.slaapkamers = e.target.value))}
+          />
+        </label>
+      </div>
+      <div>
+        <p className="text-xs font-medium text-muted-foreground">
+          Standaard verwarmd bij het indelingsadvies
+        </p>
+        <p className="mb-1 text-xs text-muted-foreground">
+          Bepaalt of een voorgestelde ruimte van dit type als verwarmd wordt meegeteld. Vink uit wat
+          normaal niet wordt verwarmd.
+        </p>
+        <div className="grid gap-1 sm:grid-cols-2">
+          {VERTREK_TYPES.map((t) => verwarmd("vertrekken", t))}
+          {OVERIG_TYPES.map((t) => verwarmd("overig", t))}
+        </div>
+      </div>
+    </fieldset>
   );
 }
