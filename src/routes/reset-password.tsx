@@ -1,0 +1,43 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+
+export const Route = createFileRoute("/reset-password")({
+  head: () => ({
+    meta: [
+      { title: "Nieuw wachtwoord — Werkplaats" },
+      { name: "description", content: "Stel een nieuw wachtwoord in voor Werkplaats." },
+      { property: "og:title", content: "Nieuw wachtwoord — Werkplaats" },
+      { property: "og:description", content: "Stel een nieuw wachtwoord in voor Werkplaats." },
+    ],
+  }),
+  component: ResetPassword,
+});
+
+function ResetPassword() {
+  const navigate = useNavigate();
+  const [password, setPassword] = useState("");
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return toast.error(error.message);
+    toast.success("Wachtwoord bijgewerkt");
+    navigate({ to: "/dashboard" });
+  }
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-4">
+        <h1 className="font-display text-4xl text-foreground">Nieuw wachtwoord</h1>
+        <div className="space-y-2">
+          <Label htmlFor="pw">Wachtwoord</Label>
+          <Input id="pw" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        <Button type="submit" className="w-full">Opslaan</Button>
+      </form>
+    </div>
+  );
+}
