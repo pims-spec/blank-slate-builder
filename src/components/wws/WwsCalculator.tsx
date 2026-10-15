@@ -13,9 +13,11 @@ import {
   fmt,
   legeInput,
   num,
+  r2,
   type Fac,
   type NumLike,
   type OverigeRuimte,
+  type Segment,
   type Vertrek,
   type Normen,
   type VoorzDef,
@@ -31,6 +33,13 @@ import {
 } from "@/lib/wws/ruimteInvoer";
 import type { Maat } from "@/lib/wws/types";
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
+import {
+  MINDER_DAN_40,
+  exactTekst,
+  huurLabel,
+  opslagTekst,
+  segmentSchaal,
+} from "@/lib/wws/samenvatting";
 import { useNormen } from "./NormenContext";
 import Uitleg from "./Uitleg";
 
@@ -1287,27 +1296,43 @@ export default function WwsCalculator({
             <span className="text-5xl font-semibold tabular-nums tracking-tight">{res.totaal}</span>
             <span className="text-sm text-muted-foreground">punten</span>
           </div>
-          <p className="mt-1 text-lg font-medium">{SEGMENT_NAMEN[res.seg]}</p>
-          <dl className="mt-4 space-y-1 border-t border-border pt-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Maximale kale huur</dt>
-              <dd className="font-medium tabular-nums">
-                {res.maxHuur !== null ? eur(res.maxHuurOpslag ?? res.maxHuur) : "—"}
-              </dd>
+          <p className="text-xs text-muted-foreground">{exactTekst(res.exact)}</p>
+          <SegmentBalk totaal={res.totaal} N={N} />
+          <p className="mt-3">
+            <span
+              className={
+                "inline-block rounded-full px-3 py-0.5 text-sm font-medium text-white " +
+                SEG_KLEUR[res.seg]
+              }
+            >
+              {SEGMENT_NAMEN[res.seg]}
+            </span>
+          </p>
+          {/* renderSum(): het bedrag zonder opslag, met de opslagen eronder */}
+          <div className="mt-3 rounded-lg bg-muted/60 px-4 py-3 text-sm">
+            <div className="text-xs text-muted-foreground">{huurLabel(res.seg)}</div>
+            <div>
+              <b className="text-base tabular-nums">
+                {res.maxHuur !== null ? eur(res.maxHuur) : "—"}
+              </b>
+              <span className="text-xs text-muted-foreground"> per maand</span>
             </div>
-            {res.opslagen.map(([naam, pct]) => (
-              <div key={naam} className="flex justify-between text-muted-foreground">
-                <dt>incl. opslag {naam.toLowerCase()}</dt>
-                <dd className="tabular-nums">+{pct}%</dd>
-              </div>
-            ))}
-            {res.maxHuurOpslag !== null && res.maxHuur !== null && (
-              <div className="flex justify-between text-muted-foreground">
-                <dt>Zonder opslag</dt>
-                <dd className="tabular-nums">{eur(res.maxHuur)}</dd>
+            {res.opslagPct > 0 && res.maxHuurOpslag !== null && res.maxHuur !== null && (
+              <div className="mt-2 space-y-0.5 border-t border-border pt-2">
+                <div className="flex justify-between gap-2">
+                  <span>{opslagTekst(res.opslagen)}</span>
+                  <span className="tabular-nums">{eur(r2(res.maxHuurOpslag - res.maxHuur))}</span>
+                </div>
+                <div className="flex justify-between gap-2 font-semibold">
+                  <span>Inclusief opslagen</span>
+                  <span className="tabular-nums">{eur(res.maxHuurOpslag)}</span>
+                </div>
               </div>
             )}
-          </dl>
+            {res.seg !== "hoog" && res.totaal < 40 && (
+              <div className="mt-1.5 text-xs text-muted-foreground">{MINDER_DAN_40}</div>
+            )}
+          </div>
 
           {res.warn.length > 0 && (
             <ul
@@ -1344,6 +1369,42 @@ export default function WwsCalculator({
           </table>
         </div>
       </aside>
+    </div>
+  );
+}
+
+const SEG_KLEUR: Record<Segment, string> = {
+  laag: "bg-seg-laag",
+  midden: "bg-seg-midden",
+  hoog: "bg-seg-hoog",
+};
+
+/** Gekleurde segmentbalk met de markering van het totaal — .segwrap in wws-site.html */
+function SegmentBalk({ totaal, N }: { totaal: number; N: Normen }) {
+  const s = segmentSchaal(totaal, N);
+  return (
+    <div className="mt-2">
+      <div className="relative pt-5">
+        <div
+          className="absolute top-0 -translate-x-1/2 text-[11px] font-bold tabular-nums"
+          style={{ left: s.marker + "%" }}
+          aria-hidden="true"
+        >
+          {totaal}
+          <div className="mx-auto mt-0.5 h-[18px] w-0.5 bg-foreground" />
+        </div>
+        <div className="flex h-3 overflow-hidden rounded-full" aria-hidden="true">
+          <span className="bg-seg-laag" style={{ width: s.laag + "%" }} />
+          <span className="bg-seg-midden" style={{ width: s.midden + "%" }} />
+          <span className="flex-1 bg-seg-hoog" />
+        </div>
+      </div>
+      <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+        <span>0</span>
+        <span>t/m {N.grensLaag}</span>
+        <span>t/m {N.grensMidden}</span>
+        <span>{s.max}</span>
+      </div>
     </div>
   );
 }

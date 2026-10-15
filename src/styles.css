@@ -53,6 +53,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-seg-laag: var(--seg-laag);
+  --color-seg-midden: var(--seg-midden);
+  --color-seg-hoog: var(--seg-hoog);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -89,6 +92,10 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  /* segmenten (sociale huur, middenhuur, vrije sector), zoals wws-site.html */
+  --seg-laag: oklch(0.626 0.193 23.03);
+  --seg-midden: oklch(0.728 0.178 44.71);
+  --seg-hoog: oklch(0.641 0.133 157.68);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -124,6 +131,9 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  --seg-laag: oklch(0.712 0.181 21.66);
+  --seg-midden: oklch(0.78 0.141 48.72);
+  --seg-hoog: oklch(0.735 0.136 159.28);
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);

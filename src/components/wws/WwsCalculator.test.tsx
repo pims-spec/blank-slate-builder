@@ -1,6 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { legeInput, type WwsInput } from "@/lib/wws";
 import WwsCalculator from "./WwsCalculator";
+
+function metInvoer(f: (i: WwsInput) => void) {
+  const i = legeInput();
+  f(i);
+  render(<WwsCalculator input={i} setInput={() => {}} />);
+}
 
 describe("WwsCalculator", () => {
   it("rekent live mee als er een vertrek wordt toegevoegd", () => {
@@ -43,5 +50,42 @@ describe("WwsCalculator", () => {
     const m2 = screen.getAllByPlaceholderText("0,00")[0]!;
     fireEvent.change(m2, { target: { value: "1,5" } });
     expect(screen.getByText("Kleiner dan 2 m²: geen oppervlaktepunten.")).toBeInTheDocument();
+  });
+
+  describe("samenvattingspaneel (renderSum)", () => {
+    it("vrije sector: huurprijs zonder wettelijke maximale huur, exact-regel en segmentbalk", () => {
+      metInvoer((i) => {
+        i.vertrekken.push({ type: "woonkamer", m2: 300, verwarmd: true });
+      });
+      expect(
+        screen.getByText("Huurprijs volgens WWS (vrije sector, geen wettelijke maximale huur)"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Vrije sector")).toBeInTheDocument();
+      expect(screen.getByText(/afgerond op hele punten$/)).toBeInTheDocument();
+      expect(screen.getByText("t/m 143")).toBeInTheDocument();
+      expect(screen.getByText("t/m 186")).toBeInTheDocument();
+      expect(screen.getByText("per maand", { exact: false })).toBeInTheDocument();
+      expect(screen.queryByText(/Minder dan 40 punten/)).toBeNull();
+    });
+
+    it("onder de 40 punten: maximale kale huur met de melding uit de bron", () => {
+      metInvoer(() => {});
+      expect(
+        screen.getByText("Maximale kale huur (huurprijstabel 1 januari 2026)"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Minder dan 40 punten: het laagste bedrag uit de tabel."),
+      ).toBeInTheDocument();
+    });
+
+    it("opslagen: één regel met het bedrag, en inclusief opslagen", () => {
+      metInvoer((i) => {
+        i.vertrekken.push({ type: "woonkamer", m2: 150, verwarmd: true });
+        i.opslag.keuze = "gemprov";
+        i.opslag.monument = "gemprov";
+      });
+      expect(screen.getByText(/^\d+% gemeentelijk of provinciaal monument$/)).toBeInTheDocument();
+      expect(screen.getByText("Inclusief opslagen")).toBeInTheDocument();
+    });
   });
 });
