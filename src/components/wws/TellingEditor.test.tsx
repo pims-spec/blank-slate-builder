@@ -51,6 +51,13 @@ vi.mock("./AdviesDialoog", () => ({
   ),
 }));
 
+// Downloads: de PDF wordt echt gemaakt (jsPDF), alleen het opslaan in de browser is nep
+const bewaar = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wws/pdf/laden", async (orig) => ({
+  ...(await orig<typeof import("@/lib/wws/pdf/laden")>()),
+  bewaarBestand: bewaar,
+}));
+
 const N = DEFAULT_NORMEN as unknown as Normen;
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
 
@@ -231,6 +238,26 @@ describe("TellingEditor", () => {
     renderEditor(undefined, "lezer-1", ["viewer"]);
     expect(screen.getByText(/Met de kijkrol kun je geen nieuwe telling maken/)).toBeInTheDocument();
     expect(store.maakAan).not.toHaveBeenCalled();
+  });
+
+  it("kijkrol: PDF van de werkversie en van een versie downloaden, zonder iets op te slaan", async () => {
+    const t = tellingVanAnna();
+    t.meta.naam = "TEST woning";
+    store.haal.mockResolvedValue(t);
+    const v = maakVersie(nieuweTellingStaat("Anna"), N, "Eerste", new Date("2026-03-04T10:00:00Z"));
+    store.versies.mockResolvedValue([{ ...v, id: "v0001" }]);
+    renderEditor("t-anna", "lezer-1", ["viewer"]);
+    fireEvent.click(await screen.findByRole("button", { name: "PDF van huidige stand" }));
+    await waitFor(() => expect(bewaar).toHaveBeenCalledTimes(1));
+    expect(bewaar.mock.calls[0]![0]).toBe("WWS_TEST_woning_werkversie.pdf");
+    expect(bewaar.mock.calls[0]![1]).toBeInstanceOf(Blob);
+    fireEvent.click(screen.getByRole("button", { name: "PDF van versie 1" }));
+    await waitFor(() => expect(bewaar).toHaveBeenCalledTimes(2));
+    // een versie-PDF gebruikt de gegevens van die versie (hier zonder naam of adres), zoals de bron
+    expect(bewaar.mock.calls[1]![0]).toBe("WWS_puntentelling_v1.pdf");
+    expect(store.bewaar).not.toHaveBeenCalled();
+    expect(store.maakAan).not.toHaveBeenCalled();
+    expect(store.voegVersieToe).not.toHaveBeenCalled();
   });
 
   it("gedeelde telling: een collega kan hem bekijken, niet aanpassen of verder delen", async () => {

@@ -39,6 +39,8 @@ import { zoekAdres } from "@/lib/wws/opzoeken/opzoeken.functions";
 import { adresOpzoekenNodig, adresToepassen, adresZoekVelden } from "@/lib/wws/opzoeken/pdok";
 import AdviesDialoog from "./AdviesDialoog";
 import EnergielabelOphalen from "./EnergielabelOphalen";
+import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
+import { useDownload } from "./useDownload";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
@@ -90,6 +92,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
   const [indelingOpen, setIndelingOpen] = useState(false);
   const { data: klanten = [] } = useQuery(klantenQuery());
+  const download = useDownload();
   const [versieNaam, setVersieNaam] = useState("");
 
   const [dirty, setDirtyState] = useState(false);
@@ -539,6 +542,17 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
             </Button>
           </>
         )}
+        <Button
+          variant="outline"
+          disabled={download.bezig === "werkversie"}
+          onClick={() =>
+            download.pdf("werkversie", (lib) =>
+              maakTellingPdf(lib, { meta: staat.meta, input: staat.input, normen: NORMEN }),
+            )
+          }
+        >
+          {download.bezig === "werkversie" ? "PDF maken…" : "PDF van huidige stand"}
+        </Button>
         <Button variant="outline" onClick={() => setAdviesOpen(true)}>
           Verbeteradvies
         </Button>
@@ -582,6 +596,25 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
                 <span className="text-muted-foreground">{datumTijd(v.createdAt)}</span>
                 <Button size="sm" variant="ghost" onClick={() => versieOpenen(v)}>
                   Openen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={"PDF van versie " + v.nr}
+                  disabled={download.bezig === v.id}
+                  onClick={() =>
+                    download.pdf(v.id, (lib) =>
+                      // met de normen van toen, zoals de bron (mergeNormen(v.normen))
+                      maakTellingPdf(lib, {
+                        meta: v.meta,
+                        input: v.input,
+                        normen: v.normen,
+                        versie: v,
+                      }),
+                    )
+                  }
+                >
+                  PDF
                 </Button>
               </li>
             ))}
@@ -656,6 +689,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         open={adviesOpen}
         onOpenChange={setAdviesOpen}
         input={staat.input}
+        meta={staat.meta}
         onToepassen={adviesToepassen}
         isAdmin={rechten.isAdmin}
         magToepassen={!alleenLezen}

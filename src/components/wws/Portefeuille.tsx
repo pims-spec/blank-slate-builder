@@ -5,7 +5,11 @@ import type { Rechten } from "@/lib/rollen";
 import { eur, fmt } from "@/lib/wws";
 import { berekenDashboard, histogram, type Dashboard } from "@/lib/wws/dashboard";
 import { DASHBOARD_VERSIE_LIMIET, tellingTitel, type Telling } from "@/lib/wws/opslag";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { maakDashboardPdf } from "@/lib/wws/pdf/rapporten";
 import { useNormen } from "./NormenContext";
+import { useDownload } from "./useDownload";
 import { dashboardVersiesQuery, klantenQuery, tellingenQuery } from "./tellingStore";
 
 const datumKort = (d: Date) =>
@@ -18,6 +22,7 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
   const versies = useQuery(dashboardVersiesQuery());
   const { data: klanten = [] } = useQuery(klantenQuery());
   const [klantId, setKlantId] = useState("");
+  const download = useDownload();
 
   const D = useMemo(
     () =>
@@ -33,6 +38,25 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
   }, [tellingen.data]);
 
   const fout = tellingen.error ?? versies.error;
+
+  /** PDF van het dashboard, voor de gekozen eigenaar — makeDashboardPdf() */
+  function pdf() {
+    if (!D) return;
+    if (!D.totaal) {
+      toast("Niets om te exporteren: geen tellingen voor deze keuze.");
+      return;
+    }
+    void download.pdf("dashboard", (lib) =>
+      maakDashboardPdf(lib, {
+        S: D,
+        normen: N,
+        klantId,
+        klantNaam: klanten.find((k) => k.id === klantId)?.naam ?? "",
+        isAdmin: rechten.isAdmin,
+        eigenaarNaam: collegaNaam,
+      }),
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -58,6 +82,9 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
             ))}
           </select>
         </label>
+        <Button variant="outline" onClick={pdf} disabled={!D || !!download.bezig}>
+          {download.bezig ? "PDF maken…" : "Dashboard als PDF"}
+        </Button>
       </div>
 
       {versies.data?.limietBereikt && (

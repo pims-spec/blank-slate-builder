@@ -25,7 +25,10 @@ import {
   type KostenKey,
   type MaatregelKey,
 } from "@/lib/wws/advies";
+import type { TellingMeta } from "@/lib/wws/opslag";
+import { maakAdviesPdf, maakRoutePdf } from "@/lib/wws/pdf/rapporten";
 import { useNormen } from "./NormenContext";
+import { useDownload } from "./useDownload";
 import { instellingenStore } from "./tellingStore";
 
 const H_LABEL: Record<Haalbaarheid, string> = {
@@ -114,6 +117,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** De werkversie van de telling */
   input: WwsInput;
+  /** Woninggegevens voor de PDF's; zonder meta geen PDF-knoppen */
+  meta?: TellingMeta | undefined;
   /** "Toepassen op telling": de nieuwe invoer, het aantal maatregelen en de punten daarna */
   onToepassen: (input: WwsInput, n: number, punten: number) => void;
   /** Admins kunnen de kosten als standaard voor iedereen opslaan */
@@ -127,6 +132,7 @@ export default function AdviesDialoog({
   open,
   onOpenChange,
   input,
+  meta,
   onToepassen,
   isAdmin = false,
   magToepassen = true,
@@ -146,6 +152,7 @@ export default function AdviesDialoog({
         {open && (
           <AdviesInhoud
             input={input}
+            meta={meta}
             onToepassen={onToepassen}
             isAdmin={isAdmin}
             magToepassen={magToepassen}
@@ -158,11 +165,13 @@ export default function AdviesDialoog({
 
 function AdviesInhoud({
   input,
+  meta,
   onToepassen,
   isAdmin,
   magToepassen,
-}: Pick<Props, "input" | "onToepassen"> & { isAdmin: boolean; magToepassen: boolean }) {
+}: Pick<Props, "input" | "meta" | "onToepassen"> & { isAdmin: boolean; magToepassen: boolean }) {
   const NORMEN = useNormen();
+  const download = useDownload();
   const [inst, setInst] = useState<AdviesInstellingen>(() => standaardInstellingen(NORMEN));
   // Instellingen-tab: concept, wordt verwerkt bij elke herberekening (readAdviesInputs())
   const [conceptKosten, setConceptKosten] = useState<Record<KostenKey, string>>(() =>
@@ -508,11 +517,39 @@ function AdviesInhoud({
         </TabsContent>
       </Tabs>
 
-      {magToepassen && (
-        <DialogFooter>
-          <Button disabled={!S.n} onClick={() => onToepassen(S.input, S.n, S.R.totaal)}>
-            {S.n ? `Toepassen op telling (${S.n})` : "Toepassen op telling"}
-          </Button>
+      {(magToepassen || meta) && (
+        <DialogFooter className="flex-wrap gap-2">
+          {meta && (
+            <>
+              <Button
+                variant="outline"
+                disabled={!!download.bezig}
+                onClick={() =>
+                  download.pdf("route", (lib) =>
+                    maakRoutePdf(lib, { meta, input, normen: NORMEN, advies: A, overslaan: skip }),
+                  )
+                }
+              >
+                {download.bezig === "route" ? "PDF maken…" : "Route als PDF"}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!!download.bezig}
+                onClick={() =>
+                  download.pdf("advies", (lib) =>
+                    maakAdviesPdf(lib, { meta, input, normen: NORMEN, inst }),
+                  )
+                }
+              >
+                {download.bezig === "advies" ? "PDF maken…" : "Huidig + 2 adviesopties als PDF"}
+              </Button>
+            </>
+          )}
+          {magToepassen && (
+            <Button disabled={!S.n} onClick={() => onToepassen(S.input, S.n, S.R.totaal)}>
+              {S.n ? `Toepassen op telling (${S.n})` : "Toepassen op telling"}
+            </Button>
+          )}
         </DialogFooter>
       )}
     </div>

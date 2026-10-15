@@ -58,6 +58,61 @@ De code volgt wws-site.html (bron van waarheid). Verschillen met de tekstspecifi
   gebruikt nu nog vandaag, net als de bron.
 - De migratie van zeer oude tellingen (zonder `facV`) is niet overgezet: de database is vers.
 
+## PDF's en Excel-export (fase 4b)
+
+```
+src/lib/wws/pdf/stijl.ts      kleuren, pdfTxt, wozCapNoteText, facSummary, voettekst
+src/lib/wws/pdf/delen.ts      bouwstenen (pdfGaugeCard, pdfTellingBody, pdfBanner, …)
+src/lib/wws/pdf/rapporten.ts  maakTellingPdf / maakRoutePdf / maakAdviesPdf / maakDashboardPdf
+src/lib/wws/pdf/laden.ts      jsPDF en SheetJS pas laden bij een download; bewaarBestand()
+src/lib/wws/excel.ts          maakArchiefExcel (exporteerArchiefExcel)
+reference/wws-site-pdf.cjs    letterlijke uitsnede van de PDF- en Excel-code, alleen voor de tests
+```
+
+**Bibliotheken.** De bron laadt jsPDF 2.5.1, jspdf-autotable 3.8.2 en xlsx 0.18.5 via een CDN.
+
+- `jspdf` **4.2.1** (gepind): de oudste versie zonder bekende kwetsbaarheden. Alle versies
+  t/m 4.2.0 hebben advisories, waaronder PDF- en HTML-injectie en DoS.
+- `jspdf-autotable` **5.0.8**: past bij jsPDF 4 (peer `^2 || ^3 || ^4`). Gebruikt als
+  `autoTable(doc, …)` in plaats van `doc.autoTable(…)`.
+- `xlsx` **0.20.3** van de officiële SheetJS-CDN (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`).
+  - Waarom niet npm: `xlsx` op npm staat stil op 0.18.5, met de bekende prototype-pollution
+    (CVE-2023-30533) en ReDoS (CVE-2024-22363).
+  - Waarom 0.20.3: daarin zijn beide verholpen, en de API is gelijk aan die van de bron
+    (`json_to_sheet`, `!cols`), zodat de export één-op-één te vergelijken is.
+  - Waarom geen ExcelJS: 4.4.0 is sinds 2023 niet bijgewerkt en heeft verouderde afhankelijkheden.
+- `pdfjs-dist` 6.3.289: alleen als devDependency, om in de tests tekst uit de PDF's te halen.
+
+**Verificatie.**
+
+- `pdf/pdf.vergelijk.test.ts` draait de letterlijke bronfuncties en de nieuwe code op dezelfde
+  willekeurige tellingen: 120 puntentellingen (werkversie en versies), 40 routes,
+  30 adviesrapporten en 40 dashboards. Van elke PDF wordt per pagina de tekst uitgelezen; die
+  moet exact gelijk zijn, net als het aantal pagina's en de bestandsnaam.
+- `excel.vergelijk.test.ts` doet hetzelfde voor 60 archieven: alle cellen, celtypes en
+  kolombreedtes.
+- Beide kanten draaien op dezelfde, actuele jsPDF en SheetJS; de oude code via `applyPlugin`.
+  De kwetsbare oude versies komen zo nergens in het project.
+
+**Overgenomen eigenaardigheden van de bron** (bewust gelijk gehouden; voorstel tot correctie
+staat open):
+
+- **Tekens buiten het standaardlettertype.** De ingebouwde Helvetica van jsPDF kent geen "≤".
+  Een tekst met "≤" wordt in de PDF als losse, gespatieerde letters getekend
+  ("1 , 4 < E I ≤ 1 , 8 …"). Het gaat om de energie-indexklassen, bijvoorbeeld "1,4 < EI ≤ 1,8".
+  `pdfTxt` vervangt alleen ² en –.
+- **Route-PDF ("Route als PDF").**
+  - De route krijgt geen begin-soort mee. Met een labelstap toont de energiekaart daardoor
+    "Van undefined naar nieuw energielabel ?".
+  - Het "?" komt doordat het adviesdialoog geen eindlabel per stap bijhoudt.
+- **`pdfSamenvattingPagina`** wijst in de bron toe aan een `const` als de plattegrond niet
+  gelezen kan worden; dat zou gooien. Hier is dat een `let`. Dit is de enige aanpassing in de
+  uitsnede, daar gemarkeerd.
+- **`makePdf(…, opts)`** (routeInfo, labelOverride, …) wordt door de bron nergens gebruikt en is
+  niet overgezet.
+- **Plattegrond.** Die komt in fase 4c uit Storage. De PDF-functies nemen hem al als parameter
+  (`plattegrond`, een JPEG-data-URL).
+
 ## Bewuste afwijkingen van wws-site.html
 
 Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De vergelijkingstests

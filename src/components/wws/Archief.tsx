@@ -28,7 +28,9 @@ import {
   type ArchiefRij,
 } from "@/lib/wws/archief";
 import { useNormen } from "./NormenContext";
+import { maakArchiefExcel } from "@/lib/wws/excel";
 import { klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
+import { useDownload } from "./useDownload";
 
 const datumTijd = (iso: string) =>
   new Date(iso).toLocaleString("nl-NL", { dateStyle: "medium", timeStyle: "short" });
@@ -50,6 +52,7 @@ export default function Archief({ rechten, userId }: Props) {
   const [zoek, setZoek] = useState("");
   const [filters, setFilters] = useState<ArchiefFilters>(LEGE_FILTERS);
   const [teVerwijderen, setTeVerwijderen] = useState<ArchiefRij | null>(null);
+  const download = useDownload();
 
   const rijen = useMemo(
     () => (data ?? []).map((t) => archiefRij(t, NORMEN, klanten)),
@@ -136,6 +139,26 @@ export default function Archief({ rechten, userId }: Props) {
             onChange={(e) => setZoek(e.target.value)}
             className="w-72"
           />
+          <Button
+            variant="outline"
+            disabled={!!download.bezig || !data}
+            onClick={() =>
+              download.excel("excel", (XLSX) =>
+                // de tellingen die nu (met zoekopdracht en filters) zichtbaar zijn
+                maakArchiefExcel(
+                  XLSX,
+                  zichtbaar.map((r) => r.t),
+                  NORMEN,
+                  {
+                    klantNaam: (id) => (id ? (klanten.find((k) => k.id === id)?.naam ?? "") : ""),
+                    collegaNaam: (t) => t.ownerNaam || "Onbekende gebruiker",
+                  },
+                ),
+              )
+            }
+          >
+            {download.bezig ? "Exporteren…" : "Exporteren (.xlsx)"}
+          </Button>
           {rechten.magSchrijven && (
             <Button asChild>
               <Link to="/wws">Nieuwe telling</Link>
