@@ -8,16 +8,19 @@ import { normaliseer } from "../calc";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { genereer } from "../testdata";
 import { maakRoutePdf, maakTellingPdf } from "./rapporten";
-import { pdfTekst, willekeurigeMeta } from "./testhulp";
+import { binnenTekenset, nieuwDoc } from "./stijl";
+import { INTER, bytesVan, pdfTekst, willekeurigeMeta } from "./testhulp";
 
 const LIB = { jsPDF, autoTable };
+/** Zoals in de app: met het ingesloten huisstijl-lettertype */
+const LIB_HUISSTIJL = { jsPDF, autoTable, lettertype: INTER };
 const N = DEFAULT_NORMEN as unknown as Normen;
 
 /** Losse, gespatieerde letters: zo tekent jsPDF een tekst met een teken buiten zijn lettertype */
 const gespatieerd = (t: string) => /^(\S ){2,}\S$/.test(t);
 
 describe("bewuste afwijkingen in de PDF's", () => {
-  it('"≤" wordt "<=" in plaats van losse letters', async () => {
+  it('huisstijl: Inter ingesloten, "≤" gewoon "≤" (de bron tekent losse letters)', async () => {
     const input = normaliseer(genereer(1));
     input.energie = {
       soort: "index",
@@ -33,10 +36,44 @@ describe("bewuste afwijkingen in de PDF's", () => {
     ).flat();
     expect(bron.some(gespatieerd), "de bron tekent losse letters").toBe(true);
 
-    const nu = (await pdfTekst(maakTellingPdf(LIB, { meta, input, normen: N }).blob)).flat();
+    const pdf = maakTellingPdf(LIB_HUISSTIJL, { meta, input, normen: N }).blob;
+    const nu = (await pdfTekst(pdf)).flat();
+    expect(nu.some(gespatieerd)).toBe(false);
+    expect(nu.some((t) => t.includes("1,4 < EI ≤ 1,8"))).toBe(true);
+    const ruw = new TextDecoder("latin1").decode(await bytesVan(pdf));
+    expect(ruw).toContain("/FontFile2"); // ingesloten TrueType
+    expect(ruw).toMatch(/\/BaseFont\s*\/Inter/);
+  });
+
+  it("huisstijl: elke keuze voor helvetica (ook van autotable) wordt Inter; bron-getrouw niet", () => {
+    const doc = binnenTekenset(false, () => nieuwDoc(LIB_HUISSTIJL));
+    for (const [stijl, verwacht] of [
+      ["normal", "normal"],
+      ["bold", "bold"],
+      ["italic", "normal"],
+    ] as const) {
+      doc.setFont("helvetica", stijl);
+      expect([doc.getFont().fontName, doc.getFont().fontStyle]).toEqual(["Inter", verwacht]);
+    }
+    const bron = binnenTekenset(true, () => nieuwDoc(LIB_HUISSTIJL));
+    bron.setFont("helvetica", "bold");
+    expect(bron.getFont().fontName).toBe("helvetica");
+  });
+
+  it('zonder lettertype (laden mislukt): Helvetica, en "≤" wordt "<=" i.p.v. losse letters', async () => {
+    const input = normaliseer(genereer(1));
+    input.energie = {
+      soort: "index",
+      label: "",
+      indexKlasse: "4",
+      datum: "2018-05-01",
+      bouwjaar: "",
+    };
+    const nu = (
+      await pdfTekst(maakTellingPdf(LIB, { meta: willekeurigeMeta(1), input, normen: N }).blob)
+    ).flat();
     expect(nu.some(gespatieerd)).toBe(false);
     expect(nu.some((t) => t.includes("1,4 < EI <= 1,8"))).toBe(true);
-    expect(nu.join(" ")).not.toContain("≤");
   });
 
   it("route-PDF: beginsituatie en eindlabel ingevuld (geen undefined en ?)", async () => {

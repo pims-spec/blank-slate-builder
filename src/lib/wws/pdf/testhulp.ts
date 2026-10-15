@@ -1,6 +1,8 @@
 // Alleen voor tests: tekst uit een PDF halen (pdfjs-dist, devDependency) en willekeurige
 // woninggegevens maken. Niet importeren vanuit de app.
+import { readFileSync } from "node:fs";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { Lettertype } from "./stijl";
 import { legeMeta } from "../opslag/doc";
 import type { TellingMeta } from "../opslag/types";
 import { rng } from "../testdata";
@@ -53,3 +55,9 @@ export function willekeurigeMeta(seed: number): TellingMeta {
     opsteller: kans(0.7) ? kies(["Pim", "Collega Één"]) : "",
   };
 }
+
+/** Het ingesloten huisstijl-lettertype, zoals laden.ts het in de browser ophaalt */
+export const INTER: Lettertype = {
+  regular: readFileSync("vendor/fonts/inter-4.1/Inter-Regular.ttf").toString("base64"),
+  bold: readFileSync("vendor/fonts/inter-4.1/Inter-Bold.ttf").toString("base64"),
+};

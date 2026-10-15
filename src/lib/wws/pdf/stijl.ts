@@ -9,9 +9,16 @@ import type { Normen } from "../normen";
 import type { Fac, FacBadkamer, FacKind, Segment, WwsResultaat } from "../types";
 
 export type Doc = jsPDF;
+/** Ingesloten huisstijl-lettertype (Inter 4.1, vendor/fonts), als base64-TTF */
+export interface Lettertype {
+  regular: string;
+  bold: string;
+}
 export interface PdfLib {
   jsPDF: typeof jsPDF;
   autoTable: typeof AutoTable;
+  /** Zonder lettertype: Helvetica, zoals de bron */
+  lettertype?: Lettertype | undefined;
 }
 export type RGB = [number, number, number];
 
@@ -31,31 +38,34 @@ export const PDF_SEGC: Record<Segment, RGB> = {
   hoog: [48, 164, 108],
 };
 /**
- * jsPDF's standaardlettertype kent geen ², – en ≤. De bron vervangt alleen ² en –; een tekst met
- * "≤" (de energie-indexklassen) wordt dan als losse, gespatieerde letters getekend.
- * Bewuste afwijking: buiten `binnenTekenset(true, …)` wordt "≤" ook vervangen, door "<=".
- * (Fase 5: met een ingesloten huisstijl-lettertype kan "≤" terug.)
+ * jsPDF's standaardlettertype (Helvetica) kent geen ², – en ≤. De bron vervangt alleen ² en –;
+ * een tekst met "≤" (de energie-indexklassen) wordt dan als losse, gespatieerde letters getekend.
+ * De app sluit daarom Inter in (het huisstijl-lettertype, zie `nieuwDoc`); dat kent "≤", dus
+ * die blijft staan. Alleen als Inter niet geladen kon worden, wordt "≤" nog "<=".
  */
-let veiligeTekens = true;
+let bronModus = false;
+let interActief = false;
 export const pdfTxt = (s: unknown) => {
   const t = String(s ?? "")
     .replace(/²/g, "2")
     .replace(/–/g, "-");
-  return veiligeTekens ? t.replace(/≤/g, "<=") : t;
+  return !bronModus && !interActief ? t.replace(/≤/g, "<=") : t;
 };
 
 /**
- * Draait het maken van een PDF bron-getrouw (zonder de bewuste afwijkingen) of niet. Alleen de
- * vergelijkingstests gebruiken bronGetrouw = true. Het maken van een PDF is synchroon, dus de
- * instelling geldt precies voor die ene PDF.
+ * Draait het maken van een PDF bron-getrouw (Helvetica, zonder de bewuste afwijkingen) of in de
+ * huisstijl. Alleen de vergelijkingstests gebruiken bronGetrouw = true. Het maken van een PDF is
+ * synchroon, dus de instelling geldt precies voor die ene PDF.
  */
 export function binnenTekenset<T>(bronGetrouw: boolean | undefined, maak: () => T): T {
-  const oud = veiligeTekens;
-  veiligeTekens = !bronGetrouw;
+  const [oudBron, oudInter] = [bronModus, interActief];
+  bronModus = !!bronGetrouw;
+  interActief = false;
   try {
     return maak();
   } finally {
-    veiligeTekens = oud;
+    bronModus = oudBron;
+    interActief = oudInter;
   }
 }
 
@@ -67,9 +77,34 @@ export function tabel(lib: PdfLib, doc: Doc, opts: UserOptions): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 }
 
-/** Nieuwe A4 zoals in de bron */
-export const nieuwDoc = (lib: PdfLib) =>
-  new lib.jsPDF({ unit: "mm", format: "a4", compress: true });
+/** Nieuwe A4 zoals in de bron; in de huisstijl met Inter in plaats van Helvetica */
+export function nieuwDoc(lib: PdfLib): Doc {
+  const doc = new lib.jsPDF({ unit: "mm", format: "a4", compress: true });
+  if (!bronModus && lib.lettertype) {
+    metInter(doc, lib.lettertype);
+    interActief = true;
+  }
+  return doc;
+}
+
+export const HUISSTIJL_FONT = "Inter";
+
+/**
+ * Inter (Regular en Bold) in het document, en elke keuze voor "helvetica" — ook die van
+ * jspdf-autotable — wordt Inter. Schuin bestaat niet in de ingesloten set; dat wordt gewoon.
+ */
+function metInter(doc: Doc, l: Lettertype) {
+  doc.addFileToVFS("Inter-Regular.ttf", l.regular);
+  doc.addFont("Inter-Regular.ttf", HUISSTIJL_FONT, "normal");
+  doc.addFileToVFS("Inter-Bold.ttf", l.bold);
+  doc.addFont("Inter-Bold.ttf", HUISSTIJL_FONT, "bold");
+  const zet = doc.setFont.bind(doc);
+  doc.setFont = ((naam: string, stijl?: string, gewicht?: string | number) =>
+    naam === "helvetica"
+      ? zet(HUISSTIJL_FONT, /bold/.test(stijl ?? "") ? "bold" : "normal")
+      : zet(naam, stijl, gewicht)) as Doc["setFont"];
+  doc.setFont("helvetica", "normal");
+}
 
 /** Voettekst "GoHome gohome.io  Pagina i van n" vanaf pagina `vanaf` */
 export function voettekst(doc: Doc, vanaf: number) {

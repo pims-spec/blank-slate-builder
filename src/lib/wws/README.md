@@ -222,12 +222,24 @@ De vergelijkingstest (`pdf.vergelijk.test.ts`) maakt de PDF's met `bronGetrouw: 
 de bron. De app laat die optie weg, en dan gelden de afwijkingen hieronder. Ze hebben eigen tests
 in `pdf.afwijkingen.test.ts`.
 
-- **"≤" wordt "<="** (`pdfTxt` in `stijl.ts`).
-  - Het probleem: de ingebouwde Helvetica van jsPDF kent geen "≤". In de bron werd een tekst
-    met "≤" als losse, gespatieerde letters getekend. Het gaat om de energie-indexklassen,
-    zoals "1,4 < EI ≤ 1,8", in de telling-PDF bij elke telling met een energie-index en in de
-    adviesroutes.
-  - Fase 5: als het huisstijl-lettertype wordt ingesloten, kan "≤" terug.
+- **Huisstijl-lettertype Inter, en "≤" weer gewoon "≤"** (fase 5b; `nieuwDoc` en `pdfTxt` in
+  `stijl.ts`, laden in `laden.ts`). Dit vervangt de vroegere afwijking "≤ wordt <=".
+  - **Het probleem:** de ingebouwde Helvetica van jsPDF kent geen "≤". In de bron werd een tekst
+    met "≤" als losse letters getekend. Het gaat om de energie-indexklassen, zoals
+    "1,4 < EI ≤ 1,8", in de telling-PDF en in de adviesroutes.
+  - **Nu:** de app sluit Inter Regular en Bold in en gebruikt die voor alle tekst, ook in de
+    tabellen. Daarmee blijft "≤" gewoon staan. Elke keuze voor "helvetica" wordt Inter. Schuin
+    zit niet in de ingesloten set, dus die tekst wordt gewoon.
+  - **Gevolg:** Inter is iets breder dan Helvetica, waardoor een lange regel soms op een andere
+    plek afbreekt dan in de oude tool. De tekst zelf blijft gelijk. Gemeten op 40 willekeurige
+    woningen: 37 telling-PDF's hebben exact dezelfde tekst, 2 verschillen alleen in "≤" en 1
+    breekt één woord anders af. Het aantal pagina's is overal gelijk.
+  - **Terugval:** lukt het laden van het lettertype niet, dan wordt de PDF met Helvetica gemaakt
+    en wordt "≤" weer "<=", zodat een download niet mislukt.
+  - **Herkomst lettertype:** Inter 4.1 van de officiële release (github.com/rsms/inter), met het
+    licentiebestand (SIL Open Font License) in `vendor/fonts/inter-4.1/`. De release publiceert
+    geen eigen checksum. Daarom is de zip twee keer apart gedownload; beide downloads waren
+    gelijk en de zip-CRC klopte. De SHA-256 van zip en bestanden staat in `SHA256SUMS`.
 - **Route-PDF ("Route als PDF"): de beginsituatie** (`routeAanvullen` in `rapporten.ts`).
   - Het probleem: de bron gaf de route geen begin-soort mee. Met een labelstap toonde de
     energiekaart daardoor "Van undefined naar nieuw energielabel …".
