@@ -17,8 +17,8 @@ export function Woordmerk({
       <span className="text-[1.6em] font-bold leading-none tracking-[-0.06em] text-foreground">
         {alleenG ? "G" : "GoHome"}
       </span>
-      {!alleenG && <span className="font-medium tracking-wide text-muted-foreground">WWS</span>}
-      <span className="sr-only">{alleenG ? "GoHome WWS" : ""}</span>
+      {!alleenG && <span className="font-medium tracking-wide text-muted-foreground">Advice</span>}
+      <span className="sr-only">{alleenG ? "GoHome Advice" : ""}</span>
     </span>
   );
 }
