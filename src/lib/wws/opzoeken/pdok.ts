@@ -87,3 +87,23 @@ export function adresToepassen(meta: TellingMeta, a: PdokAdres): TellingMeta | n
   if (!String(m.naam || "").trim()) m.naam = weergaveAdres(m);
   return m;
 }
+
+/**
+ * Postcode en huisnummer uit het venster "Nieuwe telling" — nieuweTellingDoorgaan(): postcode
+ * zonder spaties in hoofdletters moet 1234AB zijn, het huisnummer moet met cijfers beginnen
+ * (toevoeging mag). Geeft de postcode als "1234 AB" en het huisnummer zoals ingevuld, of null.
+ */
+export function nieuweTellingAdres(
+  postcode: string,
+  huisnummer: string,
+): { postcode: string; huisnummer: string } | null {
+  const pc = String(postcode || "")
+    .replace(/\s+/g, "")
+    .toUpperCase();
+  const hn = String(huisnummer || "").trim();
+  if (!/^\d{4}[A-Z]{2}$/.test(pc) || !/^\d+/.test(hn)) return null;
+  return { postcode: pc.slice(0, 4) + " " + pc.slice(4), huisnummer: hn };
+}
+
+export const NIEUWE_TELLING_ONGELDIG =
+  "Vul een geldige postcode (1234 AB) en huisnummer in, of klik op ‘Overslaan voor nu’.";

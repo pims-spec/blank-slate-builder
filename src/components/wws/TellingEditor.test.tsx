@@ -58,6 +58,13 @@ vi.mock("@/lib/wws/pdf/laden", async (orig) => ({
   bewaarBestand: bewaar,
 }));
 
+// Adres opzoeken (PDOK) via de server function: nep
+const zoekAdres = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wws/opzoeken/opzoeken.functions", () => ({
+  zoekAdres,
+  zoekEnergielabel: vi.fn(),
+}));
+
 const N = DEFAULT_NORMEN as unknown as Normen;
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
 
@@ -101,6 +108,7 @@ beforeEach(() => {
 describe("TellingEditor", () => {
   it("nieuwe telling: Opslaan maakt hem aan en zet ?id= in de adresbalk", async () => {
     renderEditor(undefined);
+    fireEvent.click(await screen.findByRole("button", { name: "Overslaan voor nu" }));
     fireEvent.change(screen.getByLabelText("Straat"), { target: { value: "Da Costastraat" } });
     expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
       "Niet-opgeslagen wijzigingen",
@@ -153,6 +161,7 @@ describe("TellingEditor", () => {
 
   it("versie vastleggen met een naam, en daarna een versie openen", async () => {
     renderEditor(undefined);
+    fireEvent.click(await screen.findByRole("button", { name: "Overslaan voor nu" }));
     fireEvent.change(screen.getByLabelText("Straat"), { target: { value: "Straat" } });
     fireEvent.click(screen.getByRole("button", { name: "Versie vastleggen" }));
     fireEvent.change(screen.getByLabelText("Naam van de versie"), {
@@ -189,6 +198,7 @@ describe("TellingEditor", () => {
   it("eigenaar kiezen en een nieuwe eigenaar toevoegen; klantId gaat mee bij opslaan", async () => {
     klantenStore.voegToe.mockResolvedValue({ id: "k9", naam: "Nieuw BV", pves: [] });
     renderEditor(undefined);
+    fireEvent.click(await screen.findByRole("button", { name: "Overslaan voor nu" }));
     fireEvent.click(await screen.findByRole("button", { name: "Eigenaar: geen" }));
     fireEvent.click(await screen.findByRole("option", { name: "Zeta Vastgoed" }));
     expect(screen.getByRole("button", { name: "Eigenaar: Zeta Vastgoed" })).toBeInTheDocument();
@@ -496,5 +506,54 @@ describe("TellingEditor", () => {
       "Alles opgeslagen",
     );
     expect(screen.getByRole("button", { name: "Eigenaar: geen" })).toBeInTheDocument();
+  });
+
+  describe("venster Nieuwe telling (#dlgNieuweTelling)", () => {
+    it("Doorgaan: postcode en huisnummer ingevuld, adres meteen opgezocht; opsteller = gebruiker", async () => {
+      zoekAdres.mockResolvedValue({ ok: true, data: { straat: "Damrak", plaats: "Amsterdam" } });
+      renderEditor(undefined);
+      expect(await screen.findByRole("heading", { name: "Nieuwe telling" })).toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText("1234 AB"), { target: { value: "1012lg" } });
+      fireEvent.change(screen.getByPlaceholderText("12 A"), { target: { value: "1 A" } });
+      fireEvent.click(screen.getByRole("button", { name: "Doorgaan" }));
+      await waitFor(() =>
+        expect(zoekAdres).toHaveBeenCalledWith({ data: { postcode: "1012LG", huisnummer: "1" } }),
+      );
+      await waitFor(() => expect(screen.getByLabelText("Straat")).toHaveValue("Damrak"));
+      expect(screen.getByLabelText("Postcode")).toHaveValue("1012 LG");
+      expect(screen.getByLabelText("Huisnummer")).toHaveValue("1 A");
+      expect(screen.getByLabelText("Plaats")).toHaveValue("Amsterdam");
+      expect(screen.getByLabelText("Naam")).toHaveValue("Damrak 1 A, Amsterdam");
+      fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+      await waitFor(() => expect(store.maakAan).toHaveBeenCalledTimes(1));
+      expect(store.maakAan.mock.calls[0]![1].meta.opsteller).toBe(ADMIN.naam);
+    });
+
+    it("ongeldige invoer: melding van de bron, venster blijft open", async () => {
+      renderEditor(undefined);
+      fireEvent.change(await screen.findByPlaceholderText("1234 AB"), {
+        target: { value: "1234" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Doorgaan" }));
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        "Vul een geldige postcode (1234 AB) en huisnummer in, of klik op ‘Overslaan voor nu’.",
+      );
+      expect(screen.getByRole("heading", { name: "Nieuwe telling" })).toBeInTheDocument();
+      expect(zoekAdres).not.toHaveBeenCalled();
+    });
+
+    it("Overslaan voor nu: lege telling, niets opgezocht; geen venster bij een bestaande telling of de kijkrol", async () => {
+      const { unmount } = renderEditor(undefined);
+      fireEvent.click(await screen.findByRole("button", { name: "Overslaan voor nu" }));
+      await waitFor(() =>
+        expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull(),
+      );
+      expect(screen.getByLabelText("Postcode")).toHaveValue("");
+      expect(zoekAdres).not.toHaveBeenCalled();
+      unmount();
+
+      renderEditor(undefined, "lezer-1", ["viewer"]);
+      expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+    });
   });
 });

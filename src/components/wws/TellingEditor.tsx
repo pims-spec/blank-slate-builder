@@ -42,6 +42,7 @@ import EnergielabelOphalen from "./EnergielabelOphalen";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
 import PlattegrondDialoog from "./PlattegrondDialoog";
+import NieuweTellingDialoog from "./NieuweTellingDialoog";
 import {
   heeftPlattegrond,
   plattegrondOpslag,
@@ -102,6 +103,8 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
   const [indelingOpen, setIndelingOpen] = useState(false);
   const [plattegrondOpen, setPlattegrondOpen] = useState(false);
+  /** Venster "Nieuwe telling" (postcode + huisnummer) — bij elke nieuwe, lege telling */
+  const [vraagAdres, setVraagAdres] = useState(!tellingId && rechten.magSchrijven);
   /** Nieuwe plattegrond, nog niet opgeslagen: gaat bij Opslaan naar Storage */
   const [nieuwBeeld, setNieuwBeeld] = useState<NieuwBeeld | null>(null);
   /** Pad van de plattegrond zoals die nu is opgeslagen (om na vervangen op te ruimen) */
@@ -144,6 +147,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         setVersies([]);
         setNieuwBeeld(null);
         opgeslagenPad.current = null;
+        setVraagAdres(rechten.magSchrijven);
         setDirty(false);
         setLaden("klaar");
       }
@@ -218,7 +222,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
    * Na het typen van postcode of huisnummer: straat en plaats opzoeken bij PDOK als die nog
    * leeg zijn — vulAdresAutomatischIn(). Alleen na een gebruikersactie, niet bij het laden.
    */
-  function planAdresOpzoeken() {
+  function planAdresOpzoeken(wacht = 500) {
     clearTimeout(adresTimer.current);
     adresTimer.current = setTimeout(async () => {
       const meta = staatRef.current.meta;
@@ -247,7 +251,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
       } catch {
         meld(adresFoutMelding("geen_verbinding"));
       }
-    }, 500);
+    }, wacht);
   }
 
   /** EP-Online-label overnemen in de werkversie — applyEpLabel() */
@@ -393,6 +397,17 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           : "") +
         " Sla de telling op, of leg een nieuwe versie vast.",
     );
+  }
+
+  /**
+   * "Doorgaan" in het venster Nieuwe telling — nieuweTellingDoorgaan()/maakNieuweTelling(): de
+   * telling krijgt postcode en huisnummer, en het adres wordt meteen opgezocht (PDOK).
+   */
+  function nieuweTellingDoorgaan(postcode: string, huisnummer: string) {
+    setVraagAdres(false);
+    setStaat((s) => ({ ...s, meta: { ...s.meta, postcode, huisnummer } }));
+    setDirty(true);
+    planAdresOpzoeken(0);
   }
 
   /** Ingelezen plattegrond overnemen: in de werkversie; de afbeelding gaat bij Opslaan naar Storage */
@@ -772,6 +787,13 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
 
   return (
     <>
+      {isNieuw && rechten.magSchrijven && (
+        <NieuweTellingDialoog
+          open={vraagAdres}
+          onDoorgaan={nieuweTellingDoorgaan}
+          onOverslaan={() => setVraagAdres(false)}
+        />
+      )}
       <WwsCalculator
         input={staat.input}
         setInput={setInput}

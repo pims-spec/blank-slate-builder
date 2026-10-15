@@ -179,3 +179,23 @@ describe("EP-Online", () => {
     expect(leesEpAntwoord(Array(51).fill({ Energieklasse: "A" }))).toBeNull();
   });
 });
+
+describe("venster Nieuwe telling (nieuweTellingDoorgaan)", () => {
+  it("zelfde validatie en opmaak als de bron", async () => {
+    const { nieuweTellingAdres } = await import("./pdok");
+    expect(nieuweTellingAdres("1234ab", " 12 A ")).toEqual({
+      postcode: "1234 AB",
+      huisnummer: "12 A",
+    });
+    expect(nieuweTellingAdres("1234 AB", "12-2")).toEqual({
+      postcode: "1234 AB",
+      huisnummer: "12-2",
+    });
+    expect(nieuweTellingAdres("1234 A", "12")).toBeNull();
+    expect(nieuweTellingAdres("123456", "12")).toBeNull();
+    expect(nieuweTellingAdres("1234AB", "A12")).toBeNull();
+    expect(nieuweTellingAdres("1234AB", "")).toBeNull();
+    // de bron accepteert ook 0123: alleen \d{4}[A-Z]{2}
+    expect(nieuweTellingAdres("0123AB", "1")).toEqual({ postcode: "0123 AB", huisnummer: "1" });
+  });
+});
