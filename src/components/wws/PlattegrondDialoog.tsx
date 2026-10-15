@@ -150,7 +150,12 @@ export function PlattegrondInlezen({
       }
       setR(r.data);
       setK({ ...standaardKeuzes(r.data), vervangen: vastVervangen });
-      setStatus("Klaar. Controleer de ruimten en neem ze over.");
+      // runIndPlat() in de Blanco-start zegt "ga door" (daar heet de knop Doorgaan)
+      setStatus(
+        vastVervangen
+          ? "Klaar. Controleer de ruimten en ga door."
+          : "Klaar. Controleer de ruimten en neem ze over.",
+      );
     } finally {
       setBezig(false);
     }
