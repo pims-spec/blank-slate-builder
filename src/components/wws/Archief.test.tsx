@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,11 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
 }));
 
-const tellingStore = vi.hoisted(() => ({ lijst: vi.fn(), verwijder: vi.fn() }));
+const tellingStore = vi.hoisted(() => ({
+  lijst: vi.fn(),
+  verwijder: vi.fn(),
+  zetFavoriet: vi.fn(),
+}));
 const klantenStore = vi.hoisted(() => ({ lijst: vi.fn() }));
 vi.mock("./tellingStore", () => ({
   tellingStore,
@@ -86,5 +90,54 @@ describe("Archief", () => {
     expect(screen.queryByText("Van Anna")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Filters wissen" }));
     expect(screen.getByText("Van Anna")).toBeTruthy();
+  });
+
+  it("favorieten: ster zet favoriet; favorieten eerst, dan op naam; niet bij een gedeelde telling", async () => {
+    // de nep-opslag onthoudt de favoriet, zoals de database
+    tellingStore.zetFavoriet.mockImplementation(async (t: Telling, aan: boolean) => {
+      const huidig = (await tellingStore.lijst()) as Telling[];
+      tellingStore.lijst.mockResolvedValue(
+        huidig.map((x) => (x.id === t.id ? { ...x, meta: { ...x.meta, favoriet: aan } } : x)),
+      );
+    });
+    toon(["member"], "bob");
+    await screen.findByText("Eigen telling");
+    const namen = () =>
+      screen
+        .getAllByRole("row")
+        .slice(1)
+        .map((r) => r.querySelector("td:nth-child(2) a")?.textContent);
+    expect(namen()).toEqual(["Eigen telling", "Van Anna"]);
+    expect(
+      within(rijVan("Van Anna")).getByRole("button", { name: /Markeren als favoriet/ }),
+    ).toBeDisabled();
+    fireEvent.click(
+      within(rijVan("Eigen telling")).getByRole("button", { name: /Markeren als favoriet/ }),
+    );
+    await waitFor(() => expect(tellingStore.zetFavoriet).toHaveBeenCalledTimes(1));
+    expect(tellingStore.zetFavoriet.mock.calls[0]![0].id).toBe("t1");
+    expect(tellingStore.zetFavoriet.mock.calls[0]![1]).toBe(true);
+    expect(
+      await within(rijVan("Eigen telling")).findByRole("button", { name: /Favoriet verwijderen/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("admin: favoriet bovenaan binnen de groep", async () => {
+    const lijst: Telling[] = [
+      telling("t1", "Bbb", "bob", "Bob"),
+      {
+        ...telling("t2", "Zzz", "bob", "Bob"),
+        meta: { ...telling("t2", "Zzz", "bob", "Bob").meta, favoriet: true },
+      },
+      telling("t3", "Aaa", "bob", "Bob"),
+    ];
+    tellingStore.lijst.mockResolvedValue(lijst);
+    toon(["admin"], "admin");
+    await screen.findByText("Zzz");
+    const namen = screen
+      .getAllByRole("row")
+      .map((r) => r.querySelector("td:nth-child(2) a")?.textContent)
+      .filter(Boolean);
+    expect(namen).toEqual(["Zzz", "Aaa", "Bbb"]);
   });
 });

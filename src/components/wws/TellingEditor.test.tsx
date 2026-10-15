@@ -639,4 +639,69 @@ describe("TellingEditor", () => {
       expect(screen.queryByRole("button", { name: "Versie 1 verwijderen" })).toBeNull();
     });
   });
+
+  describe("dupliceren en verwijderen vanuit de editor", () => {
+    function eigenTelling(): Telling {
+      const st = nieuweTellingStaat("Beheerder");
+      st.meta.naam = "Woning A";
+      st.meta.adres = "Straat";
+      st.input.vertrekken.push({ type: "woonkamer", m2: 30, verwarmd: true });
+      const t = {
+        ...maakTellingDoc({ ...st, versieCount: 2, aantalVersies: 2 }, N, null),
+        id: "t-a",
+        ownerId: ADMIN.id,
+        ownerNaam: "Beheerder",
+        gewijzigdOp: "2026-10-14T10:00:00Z",
+      };
+      store.haal.mockResolvedValue(t);
+      return t;
+    }
+
+    it("dupliceren: nieuwe telling '(kopie)' zonder versies; Opslaan maakt een nieuwe aan", async () => {
+      eigenTelling();
+      store.maakAan.mockResolvedValue(undefined);
+      renderEditor("t-a");
+      fireEvent.click(await screen.findByRole("button", { name: "Dupliceren" }));
+      await waitFor(() => expect(screen.getByLabelText("Naam")).toHaveValue("Woning A (kopie)"));
+      expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+        "Niet-opgeslagen wijzigingen",
+      );
+      expect(navigate).toHaveBeenCalledWith({ to: "/wws" });
+      expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+      await waitFor(() => expect(store.maakAan).toHaveBeenCalledTimes(1));
+      const [nieuwId, doc] = store.maakAan.mock.calls[0]!;
+      expect(nieuwId).not.toBe("t-a");
+      expect(doc).toMatchObject({ versieCount: 0, aantalVersies: 0, basedOn: null });
+      expect(doc.input.vertrekken).toHaveLength(1);
+      expect(store.bewaar).not.toHaveBeenCalled();
+    });
+
+    it("verwijderen na bevestiging, daarna naar het archief", async () => {
+      eigenTelling();
+      store.verwijder.mockResolvedValue(undefined);
+      renderEditor("t-a");
+      fireEvent.click(await screen.findByRole("button", { name: "Telling verwijderen" }));
+      expect(
+        screen.getByText(/‘Woning A’ en alle 2 opgeslagen versies worden definitief verwijderd/),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Verwijderen" }));
+      await waitFor(() => expect(store.verwijder).toHaveBeenCalledWith("t-a"));
+      await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/archief" }));
+    });
+
+    it("kijkrol en collega bij een gedeelde telling: geen dupliceren of verwijderen", async () => {
+      eigenTelling();
+      const { unmount } = renderEditor("t-a", "lezer-1", ["viewer"]);
+      await screen.findByRole("note", { name: "Alleen lezen" });
+      expect(screen.queryByRole("button", { name: "Dupliceren" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Telling verwijderen" })).toBeNull();
+      unmount();
+      renderEditor("t-a", "bob", ["member"]);
+      await screen.findByRole("note", { name: "Alleen lezen" });
+      // een collega mag een gedeelde telling wel dupliceren (eigen kopie), niet verwijderen
+      expect(screen.getByRole("button", { name: "Dupliceren" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Telling verwijderen" })).toBeNull();
+    });
+  });
 });

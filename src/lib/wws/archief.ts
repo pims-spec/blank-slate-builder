@@ -122,3 +122,11 @@ export function groepeerPerCollega(rijen: readonly ArchiefRij[]): CollegaGroep[]
 export function collegasInLijst(rijen: readonly ArchiefRij[]): { id: string; naam: string }[] {
   return groepeerPerCollega(rijen).map((g) => ({ id: g.ownerId, naam: g.naam }));
 }
+
+/** Favorieten eerst, dan op naam (naam of adres) — sortFavNaam() in wws-site.html */
+export function sorteerFavNaam<T extends { t: Telling; titel: string }>(rijen: readonly T[]): T[] {
+  const fav = (r: T) => (r.t.meta && r.t.meta["favoriet"] ? 1 : 0);
+  return [...rijen].sort(
+    (a, b) => fav(b) - fav(a) || a.titel.localeCompare(b.titel, "nl", { sensitivity: "base" }),
+  );
+}

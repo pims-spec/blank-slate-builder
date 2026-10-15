@@ -345,3 +345,17 @@ describe("versies bijwerken, hernoemen en verwijderen", () => {
     expect(updates).toEqual(["telling_versies", "tellingen"]);
   });
 });
+
+describe("zetFavoriet", () => {
+  it("bewaart de telling met alleen favoriet gewijzigd", async () => {
+    const { db, log } = nepDb(updateLukt);
+    const doc = maakTellingDoc(staat(1), N, ADMIN, NU);
+    await maakTellingStore(db, N).zetFavoriet(
+      { ...doc, id: "t1", ownerId: "u1", ownerNaam: "Anna", gewijzigdOp: "x" },
+      true,
+    );
+    const data = (stap(log[0], "update")![0] as { data: typeof doc }).data;
+    expect(data).toEqual({ ...doc, meta: { ...doc.meta, favoriet: true } });
+    expect("id" in data || "ownerId" in data).toBe(false);
+  });
+});

@@ -53,6 +53,17 @@ import {
 import { bewaarBeeld, ruimOngebruiktOp, ruimOudBeeldOp } from "@/lib/wws/plattegrond/bewaren";
 import { werkVersieBij } from "@/lib/wws/opslag/store";
 import VersieBeheer from "./VersieBeheer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { weergaveAdres } from "@/lib/wws/opslag";
 import { blobNaarBytes } from "@/lib/wws/plattegrond/beeld";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
@@ -105,6 +116,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
   const [indelingOpen, setIndelingOpen] = useState(false);
   const [plattegrondOpen, setPlattegrondOpen] = useState(false);
+  const [verwijderVraag, setVerwijderVraag] = useState(false);
   /** Venster "Nieuwe telling" (postcode + huisnummer) — bij elke nieuwe, lege telling */
   const [vraagAdres, setVraagAdres] = useState(!tellingId && rechten.magSchrijven);
   /** Nieuwe plattegrond, nog niet opgeslagen: gaat bij Opslaan naar Storage */
@@ -470,6 +482,65 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     toast("Versie " + v.nr + " verwijderd");
   }
 
+  /**
+   * Dupliceren — duplicateerTelling(): een nieuwe, nog niet opgeslagen telling met dezelfde invoer
+   * en adresgegevens, naam "… (kopie)", zonder versies. Een plattegrond in Storage gaat als nieuwe
+   * afbeelding mee (bij Opslaan in de map van de kopie), zodat de kopie niet van het origineel
+   * afhangt.
+   */
+  async function dupliceren() {
+    if (dirtyRef.current && !window.confirm(NIET_OPGESLAGEN)) return;
+    let beeld = nieuwBeeld;
+    const pad = staat.input.plattegrond?.pad;
+    if (!beeld && pad) {
+      try {
+        const blob = await plattegrondOpslag.haal(pad);
+        const bm = await createImageBitmap(blob);
+        beeld = { blob, breedte: bm.width, hoogte: bm.height };
+        bm.close();
+      } catch {
+        beeld = null;
+      }
+    }
+    const meta = structuredClone(staat.meta);
+    meta.naam = (meta.naam || weergaveAdres(meta) || "Naamloze telling") + " (kopie)";
+    const input = structuredClone(staat.input);
+    delete input.plattegrond;
+    const nieuwId = crypto.randomUUID();
+    geladenId.current = nieuwId;
+    opgeslagenPad.current = null;
+    setId(nieuwId);
+    setIsNieuw(true);
+    setStaat({
+      meta,
+      input,
+      versieCount: 0,
+      aantalVersies: 0,
+      basedOn: null,
+      createdAt: new Date().toISOString(),
+    });
+    setEigenaar({ id: userId, naam: null });
+    setVersies([]);
+    setNieuwBeeld(beeld);
+    setVraagAdres(false);
+    setDirty(true);
+    void navigate({ to: "/wws" });
+    toast("Telling gedupliceerd als ‘" + meta.naam + "’. Nog niet opgeslagen.");
+  }
+
+  /** Verwijderen vanuit de editor — deleteCurrent(); eerst de afbeeldingen, dan de telling */
+  async function verwijderTelling() {
+    try {
+      await tellingStore.verwijder(id);
+      setDirty(false);
+      void queryClient.invalidateQueries({ queryKey: ["tellingen"] });
+      toast.success("Telling verwijderd");
+      await navigate({ to: "/archief" });
+    } catch (e) {
+      toast.error("Verwijderen lukte niet: " + foutTekst(e));
+    }
+  }
+
   /** Ingelezen plattegrond overnemen: in de werkversie; de afbeelding gaat bij Opslaan naar Storage */
   function plattegrondOvernemen(input: WwsInput, beeld: NieuwBeeld) {
     setStaat((s) => ({ ...s, input }));
@@ -745,6 +816,20 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         <Button variant="outline" onClick={() => setIndelingOpen(true)}>
           Indelingsadvies
         </Button>
+        {rechten.magSchrijven && !isNieuw && (
+          <Button variant="outline" onClick={() => void dupliceren()}>
+            Dupliceren
+          </Button>
+        )}
+        {!isNieuw && rechten.magSchrijven && (eigenaar.id === userId || rechten.isAdmin) && (
+          <Button
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setVerwijderVraag(true)}
+          >
+            Telling verwijderen
+          </Button>
+        )}
         {!alleenLezen && !isNieuw && (
           <Button variant="outline" onClick={() => setDelenOpen(true)}>
             Delen
@@ -818,6 +903,32 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           </ul>
         </div>
       )}
+
+      <AlertDialog open={verwijderVraag} onOpenChange={setVerwijderVraag}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Telling verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ‘{m.naam || weergaveAdres(m) || "Naamloze telling"}’
+              {staat.aantalVersies > 0
+                ? staat.aantalVersies === 1
+                  ? " en de opgeslagen versie worden"
+                  : ` en alle ${staat.aantalVersies} opgeslagen versies worden`
+                : " wordt"}{" "}
+              definitief verwijderd. Dit kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void verwijderTelling()}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={versieDialoog} onOpenChange={setVersieDialoog}>
         <DialogContent>

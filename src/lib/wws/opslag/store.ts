@@ -101,6 +101,15 @@ export function maakTellingStore(db: Db, normen: Normen) {
       if (error) throw error;
     },
 
+    /**
+     * Favoriet aan/uit; slaat meteen op, zonder de rest van de telling te wijzigen —
+     * toggleFavoriet() in wws-site.html.
+     */
+    async zetFavoriet(t: Telling, favoriet: boolean): Promise<void> {
+      const { id: _i, ownerId: _o, ownerNaam: _n, gewijzigdOp: _g, ...doc } = t;
+      await this.bewaar(t.id, { ...doc, meta: { ...doc.meta, favoriet } });
+    },
+
     /** Versies van een telling, nieuwste eerst. */
     async versies(id: string): Promise<Versie[]> {
       const { data, error } = await db

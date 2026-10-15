@@ -24,11 +24,13 @@ import {
   heeftFilters,
   matchFilters,
   matchZoek,
+  sorteerFavNaam,
   type ArchiefFilters,
   type ArchiefRij,
 } from "@/lib/wws/archief";
 import { useNormen } from "./NormenContext";
 import { maakArchiefExcel } from "@/lib/wws/excel";
+import type { Telling } from "@/lib/wws/opslag";
 import { klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
 import { useDownload } from "./useDownload";
 
@@ -59,7 +61,8 @@ export default function Archief({ rechten, userId }: Props) {
     [data, NORMEN, klanten],
   );
   const zichtbaar = useMemo(
-    () => rijen.filter((r) => matchZoek(r, zoek) && matchFilters(r, filters)),
+    // favorieten eerst, dan op naam — zoals de bron
+    () => sorteerFavNaam(rijen.filter((r) => matchZoek(r, zoek) && matchFilters(r, filters))),
     [rijen, zoek, filters],
   );
   const collegas = useMemo(() => collegasInLijst(rijen), [rijen]);
@@ -79,10 +82,37 @@ export default function Archief({ rechten, userId }: Props) {
     onError: (e) => toast.error("Verwijderen lukte niet: " + e.message),
   });
 
+  /** Favoriet aan/uit, meteen opgeslagen — toggleFavoriet() */
+  const favoriet = useMutation({
+    mutationFn: ({ t, aan }: { t: Telling; aan: boolean }) => tellingStore.zetFavoriet(t, aan),
+    onMutate: ({ t, aan }) => {
+      queryClient.setQueryData<Telling[]>(["tellingen"], (lijst) =>
+        lijst?.map((x) => (x.id === t.id ? { ...x, meta: { ...x.meta, favoriet: aan } } : x)),
+      );
+    },
+    onError: (e) => toast.error("Opslaan lukte niet: " + e.message),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["tellingen"] }),
+  });
+
   const rij = (r: ArchiefRij) => {
     const gedeeld = r.t.ownerId !== userId && !rechten.zietAlles;
+    const fav = !!r.t.meta["favoriet"];
+    const magFav = magTellingBewerken(rechten, r.t.ownerId, userId);
     return (
       <tr key={r.t.id} className="border-t border-border align-top">
+        <td className="w-8 py-1.5 pl-2">
+          <button
+            type="button"
+            className={`text-lg leading-none ${fav ? "text-amber-500" : "text-muted-foreground"} disabled:opacity-40`}
+            aria-pressed={fav}
+            aria-label={(fav ? "Favoriet verwijderen: " : "Markeren als favoriet: ") + r.titel}
+            title={fav ? "Favoriet verwijderen" : "Markeren als favoriet"}
+            disabled={!magFav}
+            onClick={() => favoriet.mutate({ t: r.t, aan: !fav })}
+          >
+            {fav ? "★" : "☆"}
+          </button>
+        </td>
         <td className="px-3 py-2">
           <Link to="/wws" search={{ id: r.t.id }} className="font-medium hover:underline">
             {r.titel}
@@ -118,7 +148,7 @@ export default function Archief({ rechten, userId }: Props) {
     );
   };
 
-  const kolommen = 6 + (toonCollega && !groeperen ? 1 : 0);
+  const kolommen = 7 + (toonCollega && !groeperen ? 1 : 0);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -277,6 +307,9 @@ export default function Archief({ rechten, userId }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-muted-foreground">
               <tr>
+                <th className="w-8 pl-2">
+                  <span className="sr-only">Favoriet</span>
+                </th>
                 <th className="px-3 py-2 font-medium">Naam / adres</th>
                 <th className="px-3 py-2 font-medium">Eigenaar</th>
                 {toonCollega && !groeperen && <th className="px-3 py-2 font-medium">Collega</th>}

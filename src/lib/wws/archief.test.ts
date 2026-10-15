@@ -101,3 +101,26 @@ describe("archief", () => {
     ]);
   });
 });
+
+describe("sorteerFavNaam (zoals de bron)", () => {
+  it("favorieten eerst, dan op naam (nl, hoofdletterongevoelig)", async () => {
+    const { sorteerFavNaam } = await import("./archief");
+    const r = (titel: string, favoriet = false) =>
+      ({ titel, t: { meta: { favoriet } } }) as never as {
+        titel: string;
+        t: { meta: Record<string, unknown> };
+      };
+    const uit = sorteerFavNaam([
+      r("bakker"),
+      r("Zeeweg", true),
+      r("Appel"),
+      r("aardbei", true),
+    ] as never[]);
+    expect((uit as { titel: string }[]).map((x) => x.titel)).toEqual([
+      "aardbei",
+      "Zeeweg",
+      "Appel",
+      "bakker",
+    ]);
+  });
+});
