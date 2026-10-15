@@ -8,7 +8,7 @@ import { myAccessQuery } from "@/lib/access";
 export const Route = createFileRoute("/_authenticated/normen")({
   head: () => ({
     meta: [
-      { title: "Normen — Werkplaats" },
+      { title: "Normen — GoHome WWS" },
       { name: "description", content: "Normen en parameters van de WWS-puntentelling." },
     ],
   }),

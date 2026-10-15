@@ -9,10 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Nieuw wachtwoord — Werkplaats" },
-      { name: "description", content: "Stel een nieuw wachtwoord in voor Werkplaats." },
-      { property: "og:title", content: "Nieuw wachtwoord — Werkplaats" },
-      { property: "og:description", content: "Stel een nieuw wachtwoord in voor Werkplaats." },
+      { title: "Nieuw wachtwoord — GoHome WWS" },
+      { name: "description", content: "Stel een nieuw wachtwoord in voor GoHome WWS." },
+      { property: "og:title", content: "Nieuw wachtwoord — GoHome WWS" },
+      { property: "og:description", content: "Stel een nieuw wachtwoord in voor GoHome WWS." },
     ],
   }),
   component: ResetPassword,
@@ -37,9 +37,18 @@ function ResetPassword() {
         <h1 className="font-display text-4xl text-foreground">Nieuw wachtwoord</h1>
         <div className="space-y-2">
           <Label htmlFor="pw">Wachtwoord</Label>
-          <Input id="pw" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            id="pw"
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </div>
-        <Button type="submit" className="w-full">Opslaan</Button>
+        <Button type="submit" className="w-full">
+          Opslaan
+        </Button>
       </form>
     </div>
   );

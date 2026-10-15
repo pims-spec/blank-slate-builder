@@ -80,11 +80,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Werkplaats" },
-      { name: "description", content: "Een besloten werkplek, alleen op uitnodiging." },
-      { property: "og:title", content: "Werkplaats" },
-      { property: "og:description", content: "Een besloten werkplek, alleen op uitnodiging." },
+      { title: "GoHome WWS" },
+      {
+        name: "description",
+        content: "GoHome WWS-puntentelling: punten, segment, huur en advies per woning.",
+      },
+      { property: "og:title", content: "GoHome WWS" },
+      {
+        property: "og:description",
+        content: "GoHome WWS-puntentelling: punten, segment, huur en advies per woning.",
+      },
       { property: "og:type", content: "website" },
+      { name: "theme-color", content: "#5B41FF" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -92,7 +99,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.ico", sizes: "32x32 48x48" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

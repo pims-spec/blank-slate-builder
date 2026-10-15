@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/wws")({
   validateSearch: search,
   head: () => ({
     meta: [
-      { title: "Puntentelling — Werkplaats" },
+      { title: "Puntentelling — GoHome WWS" },
       { name: "description", content: "WWS-puntentelling voor zelfstandige woonruimte." },
     ],
   }),

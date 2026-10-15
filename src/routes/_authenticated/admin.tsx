@@ -11,10 +11,10 @@ import { ROL_LABEL, rolWijzigingen, type AppRole, type Rol } from "@/lib/rollen"
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
-      { title: "Gebruikers beheren — Werkplaats" },
-      { name: "description", content: "Geef gebruikers toegang tot Werkplaats." },
-      { property: "og:title", content: "Gebruikers beheren — Werkplaats" },
-      { property: "og:description", content: "Geef gebruikers toegang tot Werkplaats." },
+      { title: "Gebruikers beheren — GoHome WWS" },
+      { name: "description", content: "Geef gebruikers toegang tot GoHome WWS." },
+      { property: "og:title", content: "Gebruikers beheren — GoHome WWS" },
+      { property: "og:description", content: "Geef gebruikers toegang tot GoHome WWS." },
     ],
   }),
   beforeLoad: async ({ context }) => {

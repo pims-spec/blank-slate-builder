@@ -9,7 +9,7 @@ import { myAccessQuery } from "@/lib/access";
 export const Route = createFileRoute("/_authenticated/portefeuille")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Werkplaats" },
+      { title: "Dashboard — GoHome WWS" },
       { name: "description", content: "Overzicht van de portefeuille." },
     ],
   }),

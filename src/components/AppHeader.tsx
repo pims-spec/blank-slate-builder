@@ -29,7 +29,7 @@ export function AppHeader({
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-6 py-4">
         <Link to="/dashboard" className="font-display text-xl text-foreground">
-          Werkplaats
+          GoHome WWS
         </Link>
         <nav className="flex flex-wrap items-center gap-1">
           <Button asChild variant="ghost" size="sm">

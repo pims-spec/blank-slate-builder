@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/archief")({
   validateSearch: z.object({ indeling: z.boolean().optional() }),
   head: () => ({
     meta: [
-      { title: "Archief — Werkplaats" },
+      { title: "Archief — GoHome WWS" },
       { name: "description", content: "Opgeslagen WWS-puntentellingen." },
     ],
   }),

@@ -9,7 +9,7 @@ import { myAccessQuery } from "@/lib/access";
 export const Route = createFileRoute("/_authenticated/eigenaren")({
   head: () => ({
     meta: [
-      { title: "Eigenaren — Werkplaats" },
+      { title: "Eigenaren — GoHome WWS" },
       { name: "description", content: "Eigenaren en opdrachtgevers van de tellingen." },
     ],
   }),

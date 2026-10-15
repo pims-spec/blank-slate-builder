@@ -9,10 +9,10 @@ import { controleStatus } from "@/lib/wws/opslag";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Overzicht — Werkplaats" },
-      { name: "description", content: "Je persoonlijke overzicht in Werkplaats." },
-      { property: "og:title", content: "Overzicht — Werkplaats" },
-      { property: "og:description", content: "Je persoonlijke overzicht in Werkplaats." },
+      { title: "Overzicht — GoHome WWS" },
+      { name: "description", content: "Je persoonlijke overzicht in GoHome WWS." },
+      { property: "og:title", content: "Overzicht — GoHome WWS" },
+      { property: "og:description", content: "Je persoonlijke overzicht in GoHome WWS." },
     ],
   }),
   loader: ({ context }) =>
