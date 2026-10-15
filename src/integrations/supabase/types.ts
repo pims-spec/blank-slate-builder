@@ -102,6 +102,212 @@ export type Database = {
           },
         ]
       }
+      label_resultaten: {
+        Row: {
+          adres_id: string
+          energie_index: number | null
+          energieklasse: string | null
+          gebouwtype: string | null
+          geldig_tot: string | null
+          opgehaald_door: string | null
+          opgehaald_op: string
+          opnamedatum: string | null
+          portefeuille_id: string
+          registratiedatum: string | null
+          status: string
+        }
+        Insert: {
+          adres_id: string
+          energie_index?: number | null
+          energieklasse?: string | null
+          gebouwtype?: string | null
+          geldig_tot?: string | null
+          opgehaald_door?: string | null
+          opgehaald_op?: string
+          opnamedatum?: string | null
+          portefeuille_id: string
+          registratiedatum?: string | null
+          status: string
+        }
+        Update: {
+          adres_id?: string
+          energie_index?: number | null
+          energieklasse?: string | null
+          gebouwtype?: string | null
+          geldig_tot?: string | null
+          opgehaald_door?: string | null
+          opgehaald_op?: string
+          opnamedatum?: string | null
+          portefeuille_id?: string
+          registratiedatum?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_resultaten_adres_id_portefeuille_id_fkey"
+            columns: ["adres_id", "portefeuille_id"]
+            isOneToOne: false
+            referencedRelation: "portefeuille_adressen"
+            referencedColumns: ["id", "portefeuille_id"]
+          },
+          {
+            foreignKeyName: "label_resultaten_opgehaald_door_fkey"
+            columns: ["opgehaald_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portefeuille_adressen: {
+        Row: {
+          bag_id: string | null
+          bloks_object_id: string | null
+          created_at: string
+          huisletter: string
+          huisnummer: number
+          id: string
+          portefeuille_id: string
+          postcode: string
+          toevoeging: string
+        }
+        Insert: {
+          bag_id?: string | null
+          bloks_object_id?: string | null
+          created_at?: string
+          huisletter?: string
+          huisnummer: number
+          id?: string
+          portefeuille_id: string
+          postcode: string
+          toevoeging?: string
+        }
+        Update: {
+          bag_id?: string | null
+          bloks_object_id?: string | null
+          created_at?: string
+          huisletter?: string
+          huisnummer?: number
+          id?: string
+          portefeuille_id?: string
+          postcode?: string
+          toevoeging?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portefeuille_adressen_portefeuille_id_fkey"
+            columns: ["portefeuille_id"]
+            isOneToOne: false
+            referencedRelation: "portefeuilles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portefeuille_analyses: {
+        Row: {
+          aantal_adressen: number
+          analyse_datum: string
+          ep_opgehaald_tot: string | null
+          ep_opgehaald_van: string | null
+          gemaakt_door: string | null
+          gemaakt_op: string
+          id: string
+          instellingen: Json
+          portefeuille_id: string
+          resultaat: Json
+          venster_maanden: number
+        }
+        Insert: {
+          aantal_adressen: number
+          analyse_datum: string
+          ep_opgehaald_tot?: string | null
+          ep_opgehaald_van?: string | null
+          gemaakt_door?: string | null
+          gemaakt_op?: string
+          id?: string
+          instellingen: Json
+          portefeuille_id: string
+          resultaat: Json
+          venster_maanden?: number
+        }
+        Update: {
+          aantal_adressen?: number
+          analyse_datum?: string
+          ep_opgehaald_tot?: string | null
+          ep_opgehaald_van?: string | null
+          gemaakt_door?: string | null
+          gemaakt_op?: string
+          id?: string
+          instellingen?: Json
+          portefeuille_id?: string
+          resultaat?: Json
+          venster_maanden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portefeuille_analyses_gemaakt_door_fkey"
+            columns: ["gemaakt_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portefeuille_analyses_portefeuille_id_fkey"
+            columns: ["portefeuille_id"]
+            isOneToOne: false
+            referencedRelation: "portefeuilles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portefeuilles: {
+        Row: {
+          bloks_id: string | null
+          bron: string
+          created_at: string
+          created_by: string | null
+          id: string
+          klant_id: string | null
+          naam: string
+          updated_at: string
+        }
+        Insert: {
+          bloks_id?: string | null
+          bron?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          klant_id?: string | null
+          naam: string
+          updated_at?: string
+        }
+        Update: {
+          bloks_id?: string | null
+          bron?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          klant_id?: string | null
+          naam?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portefeuilles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portefeuilles_klant_id_fkey"
+            columns: ["klant_id"]
+            isOneToOne: false
+            referencedRelation: "klanten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

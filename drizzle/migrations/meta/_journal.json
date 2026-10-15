@@ -36,6 +36,13 @@
       "when": 1792048167370,
       "tag": "0004_plattegronden_en_ai_gebruik",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792068730618,
+      "tag": "0005_portefeuille_energielabels",
+      "breakpoints": true
     }
   ]
 }
