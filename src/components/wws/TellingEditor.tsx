@@ -70,7 +70,7 @@ import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
 import PveToepassenDialoog, { type PveVraag } from "./PveToepassenDialoog";
-import WwsCalculator, { Ontgrendel } from "./WwsCalculator";
+import WwsCalculator, { EnergieVelden, Ontgrendel, WozWaardeVeld } from "./WwsCalculator";
 import {
   adresZoek,
   isVergrendeld,
@@ -763,6 +763,67 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
   }
 
   const m = staat.meta;
+
+  /**
+   * Stap 1 van het indelingsadvies: "Adres en WOZ" en "Energielabel" — renderIndelingEigenaar().
+   * Dezelfde gegevens als de telling zelf (meta en input van de werkversie), met dezelfde
+   * velden, opzoekfuncties en vergrendeling; geen kopie.
+   */
+  const wijzigInput = (f: (d: WwsInput) => void) =>
+    setInput((i) => {
+      const d = structuredClone(i);
+      f(d);
+      return d;
+    });
+  const indelingStap1 = (
+    <fieldset disabled={alleenLezen} className="m-0 min-w-0 space-y-3 border-0 p-0">
+      <h3 className="font-semibold">Adres en WOZ</h3>
+      <p className="-mt-2 text-xs text-muted-foreground">
+        Nodig om het energielabel automatisch op te halen (EP-Online) en om de WOZ-waarde te kunnen
+        invullen.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <MetaVeld
+          label="Postcode"
+          placeholder="1234 AB"
+          waarde={m.postcode}
+          zet={(v) => zetMeta("postcode", v)}
+        />
+        <MetaVeld
+          label="Huisnummer + toevoeging"
+          placeholder="12 A"
+          waarde={m.huisnummer}
+          zet={(v) => zetMeta("huisnummer", v)}
+        />
+        <MetaVeld
+          label="Plaats"
+          placeholder="Wordt automatisch opgezocht via postcode + huisnummer"
+          waarde={m.plaats}
+          zet={(v) => zetMeta("plaats", v)}
+          onOntgrendel={
+            isVergrendeld(m, "plaats", m.plaats) ? () => ontgrendel("plaats") : undefined
+          }
+        />
+      </div>
+      <OpzoekLink meta={m} soort="ep" />
+      {!alleenLezen && <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />}
+      <WozWaardeVeld
+        waarde={staat.input.woz.waarde}
+        zet={(v) =>
+          wijzigInput((d) => {
+            d.woz.waarde = v;
+          })
+        }
+      />
+      <OpzoekLink meta={m} soort="woz" />
+      <h3 className="pt-3 font-semibold">Energielabel</h3>
+      <p className="-mt-2 text-xs text-muted-foreground">
+        Geldt voor de hele woning en telt voor elke variant even zwaar mee (rubriek 4) — controleer
+        dit dus ook als je hier alleen voor de indeling komt.
+      </p>
+      <EnergieVelden energie={staat.input.energie} wijzig={wijzigInput} />
+    </fieldset>
+  );
   const vanCollega = eigenaar.id !== userId;
 
   const paneel = (
@@ -1139,6 +1200,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
         {...(indelingBlanco && !alleenLezen
           ? { blanco: { meta: staat.meta, onPlattegrond: blancoPlattegrond } }
           : {})}
+        stap1={indelingStap1}
         onInputWijziging={(i) => setInput(i)}
         onToepassen={(input, keuze, v, beeld, ai) =>
           indelingToepassen(input, keuze, v.nSlaap, v.R.totaal, beeld, ai)
@@ -1187,6 +1249,7 @@ function MetaVeld({
   zet,
   type = "text",
   className = "",
+  placeholder,
   onOntgrendel,
 }: {
   label: string;
@@ -1194,6 +1257,7 @@ function MetaVeld({
   zet: (v: string) => void;
   type?: string;
   className?: string;
+  placeholder?: string;
   /** Automatisch overgenomen (PDOK/EP-Online): alleen-lezen met "wijzigen" — fld(…, {autoKey}) */
   onOntgrendel?: (() => void) | undefined;
 }) {
@@ -1205,6 +1269,7 @@ function MetaVeld({
           type={type}
           value={waarde}
           readOnly={!!onOntgrendel}
+          placeholder={placeholder}
           className={onOntgrendel ? "bg-muted" : undefined}
           onChange={(e) => zet(e.target.value)}
         />

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -97,6 +97,11 @@ interface Props {
     /** "Doorgaan met Indelingsadvies →": de ingelezen invoer en afbeelding in de werkversie */
     onPlattegrond: (input: WwsInput, beeld: NieuwBeeld) => void;
   };
+  /**
+   * Stap 1: de blokken "Adres en WOZ" en "Energielabel" boven Eigenaar (renderIndelingEigenaar).
+   * Gemaakt door de editor, met de velden van de telling zelf; wijzigingen komen terug via `input`.
+   */
+  stap1?: ReactNode;
   /** Tekenen op de plattegrond wijzigt de telling zelf (werkversie), zoals in de bron */
   onInputWijziging: (input: WwsInput) => void;
   /** Toepassen; beeld = de AI-afbeelding of het blokkenschema als nieuwe plattegrond */
@@ -142,6 +147,7 @@ function IndelingInhoud({
   onInputWijziging,
   onToepassen,
   blanco,
+  stap1,
 }: Props) {
   const N = useNormen();
   const [stap, setStap] = useState<Stap>(blanco ? "plattegrond" : "eigenaar");
@@ -162,6 +168,15 @@ function IndelingInhoud({
   }));
   const werkRef = useRef(werk);
   werkRef.current = werk;
+  // De telling is de bron: wijzigt de editor de invoer (stap 1: adres, WOZ, energielabel), dan
+  // rekent het venster daarmee verder. Eigen wijzigingen (tekenen) komen via onInputWijziging
+  // terug als precies dit object en veranderen dus niets.
+  useEffect(() => {
+    if (startInput === werkRef.current.input) return;
+    const w = { ...werkRef.current, input: startInput };
+    werkRef.current = w;
+    setWerk(w);
+  }, [startInput]);
   const { input, rooms } = werk;
   const setRooms = (f: (r: IndelingRuimte[]) => IndelingRuimte[]) =>
     setWerk((w) => ({ ...w, rooms: f(w.rooms) }));
@@ -282,15 +297,19 @@ function IndelingInhoud({
 
       {stap === "eigenaar" && (
         <div className="space-y-4">
+          {stap1}
           {energieMist && (
-            <p className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm">
-              Het energielabel (of energie-index/bouwjaar) is nog niet volledig ingevuld — zonder
-              dat kloppen de puntentotalen van de varianten niet. Vul het in bij de telling zelf.
+            // energieWaarschuwing in renderIndelingEigenaar()
+            <p className="text-sm text-amber-700 dark:text-amber-300" role="status">
+              Nog niet volledig ingevuld — zonder energielabel/bouwjaar kloppen de puntentotalen van
+              de varianten in de volgende stap niet.
             </p>
           )}
-          <p className="text-sm text-muted-foreground">
-            Kies voor wie je dit voorstel maakt. Dat bepaalt welke uitrusting en indelingswensen
-            (bijv. geen aparte toiletruimte, een gewenst aantal slaapkamers) worden meegenomen.
+          <h3 className="pt-3 font-semibold">Eigenaar</h3>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Kies voor wie je dit voorstel maakt. Dat bepaalt welke uitrusting (bijv. inductie) en
+            indelingswensen (bijv. geen aparte toiletruimte, een gewenst aantal slaapkamers) worden
+            meegenomen bij het genereren — je kunt ook zonder eigenaar doorgaan.
           </p>
           <label className="flex max-w-md flex-col gap-1 text-sm">
             <span className="text-muted-foreground">Eigenaar</span>
@@ -335,7 +354,7 @@ function IndelingInhoud({
                 ← Terug naar plattegrond
               </Button>
             )}
-            <Button onClick={() => setStap("kamers")}>Volgende stap →</Button>
+            <Button onClick={() => setStap("kamers")}>Volgende stap: ruimten →</Button>
           </div>
         </div>
       )}

@@ -199,6 +199,19 @@ opvallen, zodat hij niet ongemerkt meetelt:
   het getekende blokkenschema, wordt de nieuwe plattegrond van de telling. De oude afbeelding
   (`plattegrondImg` of de verwijzing naar Storage) en de `bbox`'en gaan eruit, want die passen
   niet meer bij de nieuwe indeling. De nieuwe afbeelding gaat bij Opslaan naar Storage.
+- **Stap 1 met adres, WOZ en energielabel** (sinds fase 5a weer zoals de bron,
+  `renderIndelingEigenaar`).
+  - **Wat terugkomt:** boven "Eigenaar" staan weer de blokken "Adres en WOZ" en "Energielabel".
+    Het eerste blok heeft postcode, huisnummer en plaats, de EP-Online-link met "Energielabel
+    automatisch ophalen", de WOZ-waarde en de WOZ-link. Het tweede heeft de tegels en velden van
+    rubriek 4 (`EnergieVelden`). De knop heet "Volgende stap: ruimten →".
+  - **Teruggedraaid:** in fase 3b was gekozen voor "geen dubbele velden". Stap 1 had toen alleen
+    een waarschuwing ("Vul het in bij de telling zelf"). Die keuze is teruggedraaid vanwege de
+    Blanco-start: daar is de telling nog leeg en is er geen editor om het label in te vullen.
+  - **Geen kopie:** de editor maakt de velden (`indelingStap1` in `TellingEditor`) met zijn eigen
+    `MetaVeld`, opzoekfuncties (PDOK, EP-Online), vergrendeling en `setInput`. Ze bewerken dus de
+    meta en input van de werkversie zelf. Het venster rekent verder met de invoer van de editor.
+  - **Kijkrol:** de velden staan uit en "ophalen" ontbreekt.
 - **Eigenaar en PvE pas bij toepassen**: de bron zet `meta.klantId` al bij stap 1 → 2 en legt geen
   `meta.pveId` vast. De app koppelt eigenaar én gebruikt PvE pas bij "Toepassen", zodat annuleren
   geen bijwerking heeft en later stil invullen hetzelfde PvE gebruikt.

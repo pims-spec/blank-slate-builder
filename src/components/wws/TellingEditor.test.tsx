@@ -522,7 +522,7 @@ describe("TellingEditor", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
     expect(screen.getByLabelText(/Uitgangspunten \(PvE\)/)).toHaveValue("p1");
-    fireEvent.click(screen.getByRole("button", { name: "Volgende stap →" }));
+    fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
     fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Toepassen op deze telling" })[0]!);
     // toepassen tekent eerst het blokkenschema (asynchroon; in jsdom is er geen canvas)
@@ -545,7 +545,7 @@ describe("TellingEditor", () => {
     renderEditor("t-pve");
     fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Volgende stap →" }));
+    fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
     fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
     await waitFor(() =>
@@ -880,7 +880,7 @@ describe("startscherm indelingsadvies (toonIndelingStart)", () => {
     fireEvent.click(within(dlg).getByRole("button", { name: "← Terug naar plattegrond" }));
     expect(within(dlg).queryByRole("list", { name: "Stappen" })).toBeNull();
     fireEvent.click(within(dlg).getByRole("button", { name: "Doorgaan met Indelingsadvies →" }));
-    fireEvent.click(within(dlg).getByRole("button", { name: "Volgende stap →" }));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Volgende stap: ruimten →" }));
     expect(within(dlg).getByLabelText("Status van Woonkamer")).toBeInTheDocument();
     expect(within(dlg).getByLabelText("Status van Slaapkamer")).toBeInTheDocument();
 
@@ -930,5 +930,85 @@ describe("startscherm indelingsadvies (toonIndelingStart)", () => {
     expect(within(dlg).getByLabelText("Eigenaar")).toBeInTheDocument();
     expect(within(dlg).queryByRole("button", { name: "← Terug naar plattegrond" })).toBeNull();
     expect(navigate).toHaveBeenCalledWith({ to: "/wws", search: { id: "t-b" }, replace: true });
+  });
+});
+
+describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEigenaar)", () => {
+  function telling(): Telling {
+    const st = nieuweTellingStaat("Beheerder");
+    st.meta.naam = "Woning S";
+    st.input.vertrekken.push(
+      { type: "woonkamer", m2: 30, verwarmd: true },
+      { type: "slaapkamer", m2: 12, verwarmd: true },
+    );
+    const t = {
+      ...maakTellingDoc({ ...st, versieCount: 0, aantalVersies: 0 }, N, null),
+      id: "t-s1",
+      ownerId: ADMIN.id,
+      ownerNaam: "Beheerder",
+      gewijzigdOp: "2026-10-14T10:00:00Z",
+    };
+    store.haal.mockResolvedValue(t);
+    return t;
+  }
+
+  it("bewerkt de werkversie zelf: adres opgezocht, WOZ en label staan daarna in de telling", async () => {
+    telling();
+    zoekAdres.mockResolvedValue({ ok: true, data: { straat: "Damrak", plaats: "Amsterdam" } });
+    renderEditor("t-s1");
+    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
+    for (const h of ["Adres en WOZ", "Energielabel", "Eigenaar"])
+      expect(within(dlg).getByRole("heading", { name: h })).toBeInTheDocument();
+    expect(within(dlg).getByText(/^Nog niet volledig ingevuld/)).toBeInTheDocument();
+
+    fireEvent.change(within(dlg).getByLabelText("Postcode"), { target: { value: "1012 LG" } });
+    fireEvent.change(within(dlg).getByLabelText("Huisnummer + toevoeging"), {
+      target: { value: "1" },
+    });
+    await waitFor(() =>
+      expect(zoekAdres).toHaveBeenCalledWith({ data: { postcode: "1012LG", huisnummer: "1" } }),
+    );
+    await waitFor(() => expect(within(dlg).getByLabelText("Plaats")).toHaveValue("Amsterdam"));
+    expect(
+      within(dlg).getByRole("button", { name: /Energielabel automatisch ophalen/ }),
+    ).toBeInTheDocument();
+    fireEvent.change(within(dlg).getByLabelText("WOZ-waarde (€)"), { target: { value: "300000" } });
+    expect(within(dlg).getByRole("radio", { name: /Label vanaf 2021/ })).toBeChecked();
+    fireEvent.change(within(dlg).getByRole("combobox", { name: "Labelklasse" }), {
+      target: { value: "B" },
+    });
+    expect(within(dlg).queryByText(/^Nog niet volledig ingevuld/)).toBeNull();
+
+    // varianten rekenen met het nieuwe label; toepassen neemt alles mee in de telling
+    fireEvent.click(within(dlg).getByRole("button", { name: "Volgende stap: ruimten →" }));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Genereer varianten →" }));
+    fireEvent.click(within(dlg).getAllByRole("button", { name: "Toepassen op deze telling" })[0]!);
+    await waitFor(
+      () => expect(screen.queryByRole("dialog", { name: "Indelingsadvies" })).toBeNull(),
+      { timeout: 3000 },
+    );
+    // in de telling zelf (geen kopie)
+    expect(screen.getByLabelText("Postcode")).toHaveValue("1012 LG");
+    expect(screen.getByLabelText("Plaats")).toHaveValue("Amsterdam");
+    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    const doc = store.bewaar.mock.calls[0]![1];
+    expect(doc.meta).toMatchObject({ postcode: "1012 LG", huisnummer: "1", plaats: "Amsterdam" });
+    expect(doc.input.woz.waarde).toBe("300000");
+    expect(doc.input.energie.label).toBe("B");
+  });
+
+  it("kijkrol: velden in stap 1 niet bewerkbaar, geen ophalen", async () => {
+    telling();
+    renderEditor("t-s1", "lezer-1", ["viewer"]);
+    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
+    expect(within(dlg).getByLabelText("Postcode")).toBeDisabled();
+    expect(within(dlg).getByLabelText("WOZ-waarde (€)")).toBeDisabled();
+    expect(within(dlg).getByRole("radio", { name: /Label vanaf 2021/ })).toBeDisabled();
+    expect(
+      within(dlg).queryByRole("button", { name: /Energielabel automatisch ophalen/ }),
+    ).toBeNull();
   });
 });
