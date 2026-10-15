@@ -324,7 +324,7 @@ function AdviesInhoud({
       </label>
 
       <Tabs defaultValue="route">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="route">Route ({A.stappen.length})</TabsTrigger>
           <TabsTrigger value="alle">Alle maatregelen ({A.los.length})</TabsTrigger>
           <TabsTrigger value="inst">Instellingen en kosten</TabsTrigger>
