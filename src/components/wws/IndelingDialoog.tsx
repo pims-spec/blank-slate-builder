@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,13 +12,25 @@ import { SEGMENT_NAMEN, eur, fmt, num, overigType, vertrekType, type WwsInput } 
 import {
   berekenVarianten,
   blokjes,
+  ruimteToevoegen,
   ruimtenUitTelling,
+  ruimteWijzigen,
   toepassen,
   vloerplanLayout,
   type IndelingRuimte,
   type IndelingStatus,
   type IndelingVariant,
+  type RuimteWijziging,
 } from "@/lib/wws/indeling";
+import { maakVariantAfbeelding } from "@/lib/wws/ai/ai.functions";
+import type { Afbeelding } from "@/lib/wws/ai/dienst";
+import { aiMelding, gebruikTekst } from "@/lib/wws/ai/meldingen";
+import type { Gebruik } from "@/lib/wws/ai/vragen";
+import { base64NaarBytes, naarDataUrl } from "@/lib/wws/plattegrond/beeld";
+import { schemaDataUrl, type SchemaCanvas } from "@/lib/wws/schemaTekening";
+import { volgendeStatus } from "@/lib/wws/tekenen";
+import PlattegrondTekenen from "./PlattegrondTekenen";
+import type { NieuwBeeld } from "./plattegrondBeeld";
 import type { Klant } from "@/lib/wws/opslag";
 import { actievePves } from "@/lib/wws/pve";
 import { useNormen } from "./NormenContext";
@@ -70,7 +82,21 @@ interface Props {
   klanten: readonly Klant[];
   /** Uit bij alleen-lezen */
   magToepassen: boolean;
-  onToepassen: (input: WwsInput, keuze: IndelingKeuze, v: IndelingVariant) => void;
+  /** De plattegrond om op te tekenen (object- of data-URL); null = geen */
+  plattegrondUrl: string | null;
+  /** De plattegrond als afbeelding voor de AI (JPEG, base64); null = geen */
+  plattegrondVoorAi: () => Promise<Afbeelding | null>;
+  /** Tekenen op de plattegrond wijzigt de telling zelf (werkversie), zoals in de bron */
+  onInputWijziging: (input: WwsInput) => void;
+  /** Toepassen; beeld = de AI-afbeelding of het blokkenschema als nieuwe plattegrond */
+  onToepassen: (
+    input: WwsInput,
+    keuze: IndelingKeuze,
+    v: IndelingVariant,
+    beeld: NieuwBeeld | null,
+    /** beeld is de AI-afbeelding (anders het blokkenschema) */
+    ai: boolean,
+  ) => void;
 }
 
 /**
@@ -95,11 +121,14 @@ export default function IndelingDialoog(p: Props) {
 }
 
 function IndelingInhoud({
-  input,
+  input: startInput,
   klantId: startKlant,
   pveId: startPve,
   klanten,
   magToepassen,
+  plattegrondUrl,
+  plattegrondVoorAi,
+  onInputWijziging,
   onToepassen,
 }: Props) {
   const N = useNormen();
@@ -114,7 +143,22 @@ function IndelingInhoud({
         : "";
   };
   const [pveId, setPveId] = useState(() => standaardPve(startKlant, startPve));
-  const [rooms, setRooms] = useState<IndelingRuimte[]>(() => ruimtenUitTelling(input));
+  // werkversie in het venster: tekenen wijzigt ruimten én de telling (zoals de bron)
+  const [werk, setWerk] = useState(() => ({
+    input: startInput,
+    rooms: ruimtenUitTelling(startInput),
+  }));
+  const werkRef = useRef(werk);
+  werkRef.current = werk;
+  const { input, rooms } = werk;
+  const setRooms = (f: (r: IndelingRuimte[]) => IndelingRuimte[]) =>
+    setWerk((w) => ({ ...w, rooms: f(w.rooms) }));
+  const wijzig = (nieuw: { input: WwsInput; rooms: IndelingRuimte[] }) => {
+    werkRef.current = nieuw;
+    setWerk(nieuw);
+    onInputWijziging(nieuw.input);
+  };
+  const [ai, setAi] = useState<Record<number, AiStaat>>({});
   const [extraSlaap, setExtraSlaap] = useState("");
   const [varianten, setVarianten] = useState<IndelingVariant[]>([]);
 
@@ -125,7 +169,51 @@ function IndelingInhoud({
 
   function genereer() {
     setVarianten(berekenVarianten(input, rooms, pve, extraSlaap, N));
+    setAi({});
     setStap("resultaten");
+  }
+
+  /** AI-afbeelding van een variant (op knopdruk, i.v.m. kosten) — indelingGenereerAIAfbeelding() */
+  async function genereerAi(i: number) {
+    const v = varianten[i];
+    if (!v) return;
+    setAi((a) => ({ ...a, [i]: { bezig: true } }));
+    let staat: AiStaat;
+    try {
+      const ref = await plattegrondVoorAi();
+      if (!ref) {
+        staat = {
+          bezig: false,
+          fout: "Er is geen plattegrond bij deze telling bekend. Lees eerst een plattegrond in (via ‘Plattegrond inlezen’) voordat je een AI-afbeelding kunt genereren.",
+        };
+      } else {
+        // alleen ruimtetype, m² en vast/nieuw — geen namen of andere gegevens
+        const ruimten = [
+          ...v.vertrekken.map((r) => ({ groep: "vertrekken" as const, r })),
+          ...v.overig.map((r) => ({ groep: "overig" as const, r })),
+        ].map(({ groep, r }) => ({ groep, type: r.type, m2: num(r.m2), vast: !!r._indVast }));
+        const r = await maakVariantAfbeelding({ data: { afbeelding: ref, ruimten } });
+        staat = r.ok
+          ? { bezig: false, beeld: r.data, gebruik: r.gebruik }
+          : { bezig: false, fout: aiMelding(r.fout, "afbeelding", r.gebruik), gebruik: r.gebruik };
+      }
+    } catch {
+      staat = { bezig: false, fout: aiMelding("geen_verbinding", "afbeelding") };
+    }
+    setAi((a) => ({ ...a, [i]: staat }));
+  }
+
+  /** Toepassen met als nieuwe plattegrond de AI-afbeelding, of anders het blokkenschema */
+  async function pasToe(i: number, v: IndelingVariant) {
+    const aiBeeld = ai[i]?.beeld;
+    const beeld = await variantBeeld(aiBeeld, v, werkRef.current.rooms);
+    onToepassen(
+      toepassen(werkRef.current.input, v),
+      { klantId, pveId: pve ? pve.id : "" },
+      v,
+      beeld,
+      !!aiBeeld && !!beeld,
+    );
   }
 
   return (
@@ -207,6 +295,24 @@ function IndelingInhoud({
             programma-varianten met het bijbehorende WWS-puntentotaal en een eenvoudig,
             proportioneel blokkenschema — geen bouwkundige tekening.
           </p>
+          {plattegrondUrl && magToepassen && (
+            <PlattegrondTekenen
+              url={plattegrondUrl}
+              rooms={rooms}
+              herkomst={(r) => (input[r.key][r.idx] as { herkomst?: string } | undefined)?.herkomst}
+              onWijzig={(i: number, w: RuimteWijziging) =>
+                wijzig(ruimteWijzigen(werkRef.current.input, werkRef.current.rooms, i, w))
+              }
+              onStatus={(i) =>
+                setRooms((rs) =>
+                  rs.map((x, j) => (j === i ? { ...x, status: volgendeStatus(x.status) } : x)),
+                )
+              }
+              onNieuw={(n) =>
+                wijzig(ruimteToevoegen(werkRef.current.input, werkRef.current.rooms, n))
+              }
+            />
+          )}
           {rooms.length ? (
             <ul className="divide-y divide-border rounded-md border border-border">
               {rooms.map((r, i) => {
@@ -279,10 +385,11 @@ function IndelingInhoud({
           extraSlaap={extraSlaap}
           energieMist={energieMist}
           magToepassen={magToepassen}
+          ai={ai}
+          aiMogelijk={!!plattegrondUrl && magToepassen}
+          onAi={genereerAi}
           onTerug={() => setStap("kamers")}
-          onToepassen={(v) =>
-            onToepassen(toepassen(input, v), { klantId, pveId: pve ? pve.id : "" }, v)
-          }
+          onToepassen={pasToe}
         />
       )}
     </div>
@@ -294,6 +401,9 @@ function Resultaten({
   extraSlaap,
   energieMist,
   magToepassen,
+  ai,
+  aiMogelijk,
+  onAi,
   onTerug,
   onToepassen,
 }: {
@@ -301,8 +411,11 @@ function Resultaten({
   extraSlaap: string;
   energieMist: boolean;
   magToepassen: boolean;
+  ai: Record<number, AiStaat>;
+  aiMogelijk: boolean;
+  onAi: (i: number) => void;
   onTerug: () => void;
-  onToepassen: (v: IndelingVariant) => void;
+  onToepassen: (i: number, v: IndelingVariant) => void;
 }) {
   const gelijkeTotalen =
     varianten.length > 1 && varianten.every((v) => v.R.totaal === varianten[0]!.R.totaal);
@@ -342,7 +455,7 @@ function Resultaten({
             </p>
           )}
           <div className="grid gap-4 md:grid-cols-2">
-            {varianten.map((v) => (
+            {varianten.map((v, i) => (
               <article
                 key={v.nSlaap}
                 className="space-y-2 rounded-lg border border-border p-3"
@@ -380,12 +493,27 @@ function Resultaten({
                     herindelen’.
                   </p>
                 )}
-                {/* fase 4: hier komt de AI-afbeelding van deze variant */}
-                {magToepassen && (
-                  <Button variant="outline" onClick={() => onToepassen(v)}>
-                    Toepassen op deze telling
-                  </Button>
-                )}
+                <AiAfbeelding staat={ai[i]} />
+                <div className="flex flex-wrap gap-2">
+                  {aiMogelijk && (
+                    <Button variant="outline" disabled={!!ai[i]?.bezig} onClick={() => onAi(i)}>
+                      {ai[i]?.bezig
+                        ? "Bezig met genereren…"
+                        : ai[i]?.beeld
+                          ? "Opnieuw genereren (± € 0,03)"
+                          : "Genereer AI-afbeelding (± € 0,03)"}
+                    </Button>
+                  )}
+                  {magToepassen && (
+                    <Button
+                      variant="outline"
+                      disabled={!!ai[i]?.bezig}
+                      onClick={() => onToepassen(i, v)}
+                    >
+                      Toepassen op deze telling
+                    </Button>
+                  )}
+                </div>
               </article>
             ))}
           </div>
@@ -486,4 +614,63 @@ function Schema({ v }: { v: IndelingVariant }) {
       )}
     </div>
   );
+}
+
+interface AiStaat {
+  bezig: boolean;
+  beeld?: Afbeelding;
+  fout?: string;
+  gebruik?: Gebruik | undefined;
+}
+
+function AiAfbeelding({ staat }: { staat: AiStaat | undefined }) {
+  if (!staat) return null;
+  return (
+    <div className="space-y-1">
+      {staat.beeld && (
+        <img
+          src={naarDataUrl(staat.beeld.data, staat.beeld.type)}
+          alt="Door AI gegenereerde plattegrond van deze variant"
+          className="w-full rounded-md border border-border"
+        />
+      )}
+      {staat.fout && (
+        <p className="rounded-md border border-border bg-muted px-2 py-1 text-xs" role="status">
+          {staat.fout}
+        </p>
+      )}
+      {staat.gebruik && (
+        <p className="text-xs text-muted-foreground">{gebruikTekst(staat.gebruik)}</p>
+      )}
+    </div>
+  );
+}
+
+/** De nieuwe plattegrond bij toepassen: de AI-afbeelding, of het getekende blokkenschema */
+async function variantBeeld(
+  aiBeeld: Afbeelding | undefined,
+  v: IndelingVariant,
+  rooms: readonly IndelingRuimte[],
+): Promise<NieuwBeeld | null> {
+  try {
+    let blob: Blob;
+    if (aiBeeld) {
+      blob = new Blob([base64NaarBytes(aiBeeld.data) as BlobPart], { type: aiBeeld.type });
+    } else {
+      const url = schemaDataUrl(
+        () => document.createElement("canvas") as unknown as SchemaCanvas,
+        v.vertrekken,
+        v.overig,
+        rooms,
+      );
+      if (!url) return null;
+      blob = await (await fetch(url)).blob();
+    }
+    const bm = await createImageBitmap(blob);
+    const r = { blob, breedte: bm.width, hoogte: bm.height };
+    bm.close();
+    return r;
+  } catch {
+    return null;
+  }
 }

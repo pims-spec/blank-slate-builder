@@ -10,7 +10,7 @@
 //   app het schema live;
 // - eigenaar en gebruikt PvE (meta.klantId/meta.pveId) worden pas bij toepassen gekoppeld, door
 //   de aanroeper; de bron zet klantId al bij stap 1 → 2 en zet geen pveId.
-import { facDefault, facKind, num, overigType, r2, vertrekType } from "./basis";
+import { ensureFac, facDefault, facKind, num, overigType, r2, vertrekType } from "./basis";
 import { calc } from "./calc";
 import type { Normen } from "./normen";
 import { pasPveOpFac, type Pve } from "./pve";
@@ -39,7 +39,7 @@ export interface IndelingRuimte {
   m2: number;
   kind: FacKind | null;
   status: IndelingStatus;
-  /** Positie op een ingelezen plattegrond (fase 4); nu alleen doorgegeven */
+  /** Positie op de ingelezen plattegrond (fracties 0–1) */
   bbox: Bbox | null;
   notch: Notches;
 }
@@ -552,8 +552,9 @@ export function unieBbox(rooms: readonly { bbox?: unknown }[]): Bbox | null {
 
 /**
  * De invoer na het toepassen van een variant — indelingToepassen(): ruimten van de variant,
- * zonder de schema-markeringen en zonder bbox's. Bewust anders dan de bron: plattegrondImg
- * wordt verwijderd (de bron zet er een getekend schema voor in de plaats). Geen stil invullen
+ * zonder de schema-markeringen en zonder bbox's. De oude plattegrond (plattegrondImg of de
+ * verwijzing naar Storage) past niet meer bij de nieuwe indeling en gaat eruit; de editor zet er
+ * het blokkenschema of de AI-afbeelding voor in de plaats, zoals de bron. Geen stil invullen
  * door het PvE: de variant wordt precies overgenomen zoals hij is gemaakt.
  */
 export function toepassen(
@@ -571,5 +572,84 @@ export function toepassen(
   uit.vertrekken = v.vertrekken.map(strip) as Vertrek[];
   uit.overig = v.overig.map(strip) as OverigeRuimte[];
   delete uit.plattegrondImg;
+  delete uit.plattegrond;
   return uit;
+}
+
+// ---------- tekenen op de plattegrond ----------
+
+export type RuimteWijziging = Partial<{
+  bbox: Bbox;
+  m2: number;
+  notch: Notches;
+  herkomst: string | undefined;
+}>;
+
+/**
+ * Een vlak op de plattegrond is verplaatst/vergroot/ingekeept: in de ruimtelijst én in de
+ * telling zelf (de bron wijzigde cur.input direct). Geeft nieuwe kopieën terug.
+ */
+export function ruimteWijzigen(
+  input: WwsInput,
+  rooms: readonly IndelingRuimte[],
+  i: number,
+  w: RuimteWijziging,
+): { input: WwsInput; rooms: IndelingRuimte[] } {
+  const r = rooms[i];
+  if (!r) return { input, rooms: [...rooms] };
+  const nr: IndelingRuimte = { ...r };
+  if (w.bbox) nr.bbox = w.bbox;
+  if (w.m2 !== undefined) nr.m2 = w.m2;
+  if (w.notch) nr.notch = w.notch;
+  const uit = { ...input, [r.key]: [...input[r.key]] } as WwsInput;
+  const lijst = uit[r.key] as (IndelingRij & { notch?: unknown; herkomst?: string })[];
+  const bron = lijst[r.idx];
+  if (bron) {
+    const b = { ...bron };
+    if (w.bbox) b.bbox = w.bbox;
+    if (w.m2 !== undefined) b.m2 = String(w.m2).replace(".", ",");
+    if (w.notch) {
+      if (Object.values(w.notch).every((x) => !x)) delete b.notch;
+      else b.notch = w.notch;
+    }
+    if (w.herkomst !== undefined) b.herkomst = w.herkomst;
+    lijst[r.idx] = b;
+  }
+  return { input: uit, rooms: rooms.map((x, j) => (j === i ? nr : x)) };
+}
+
+/** Een op de tekening ingetekende ruimte toevoegen — indelingVoegRuimteToe() */
+export function ruimteToevoegen(
+  input: WwsInput,
+  rooms: readonly IndelingRuimte[],
+  n: { key: Groep; type: string; naam: string; m2: string; bbox: Bbox },
+): { input: WwsInput; rooms: IndelingRuimte[] } {
+  const rij = {
+    type: n.type,
+    naam: n.naam,
+    m2: n.m2,
+    maten: [],
+    bbox: { ...n.bbox },
+    verwarmd: autoVerwarmd(n.key, n.type),
+  } as unknown as Vertrek & OverigeRuimte;
+  ensureFac(n.key, rij, false);
+  const uit = { ...input, [n.key]: [...input[n.key], rij] } as WwsInput;
+  const kind = facKind(n.key, n.type);
+  return {
+    input: uit,
+    rooms: [
+      ...rooms,
+      {
+        key: n.key,
+        idx: uit[n.key].length - 1,
+        naam: n.naam,
+        type: n.type,
+        m2: num(n.m2),
+        kind,
+        status: kind ? "vast" : "vrij",
+        bbox: { ...n.bbox },
+        notch: normaliseerNotch(null),
+      },
+    ],
+  };
 }

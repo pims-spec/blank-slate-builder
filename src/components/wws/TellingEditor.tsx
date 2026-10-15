@@ -106,6 +106,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [nieuwBeeld, setNieuwBeeld] = useState<NieuwBeeld | null>(null);
   /** Pad van de plattegrond zoals die nu is opgeslagen (om na vervangen op te ruimen) */
   const opgeslagenPad = useRef<string | null>(null);
+  const plattegrond = usePlattegrondUrl(staat.input, nieuwBeeld);
   const { data: klanten = [] } = useQuery(klantenQuery());
   const download = useDownload();
   const [versieNaam, setVersieNaam] = useState("");
@@ -364,12 +365,17 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     keuze: IndelingKeuze,
     nSlaap: number,
     punten: number,
+    beeld: NieuwBeeld | null,
+    ai: boolean,
   ) {
     setStaat((s) => ({
       ...s,
       input,
       meta: { ...s.meta, klantId: keuze.klantId, pveId: keuze.pveId },
     }));
+    // de oude plattegrond past niet meer: de AI-afbeelding of het blokkenschema komt ervoor in de
+    // plaats (gaat bij Opslaan naar Storage), zoals de bron
+    setNieuwBeeld(beeld);
     setDirty(true);
     setIndelingOpen(false);
     toast(
@@ -379,7 +385,13 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         (nSlaap === 1 ? "" : "s") +
         " toegepast (" +
         punten +
-        " punten). Sla de telling op, of leg een nieuwe versie vast.",
+        " punten)." +
+        (beeld
+          ? ai
+            ? " De AI-gegenereerde afbeelding is als plattegrond-afbeelding bij deze telling gezet."
+            : " Het blokkenschema is als plattegrond-afbeelding bij deze telling gezet."
+          : "") +
+        " Sla de telling op, of leg een nieuwe versie vast.",
     );
   }
 
@@ -787,7 +799,16 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         pveId={staat.meta.pveId}
         klanten={klanten}
         magToepassen={!alleenLezen}
-        onToepassen={(input, keuze, v) => indelingToepassen(input, keuze, v.nSlaap, v.R.totaal)}
+        plattegrondUrl={plattegrond.url}
+        plattegrondVoorAi={async () => {
+          const url = await plattegrondVoorPdf(staat.input, nieuwBeeld);
+          const m = url && /^data:(image\/jpeg);base64,(.+)$/.exec(url);
+          return m ? { type: "image/jpeg", data: m[2]! } : null;
+        }}
+        onInputWijziging={(i) => setInput(i)}
+        onToepassen={(input, keuze, v, beeld, ai) =>
+          indelingToepassen(input, keuze, v.nSlaap, v.R.totaal, beeld, ai)
+        }
       />
       <PveToepassenDialoog
         vraag={pveVraag}

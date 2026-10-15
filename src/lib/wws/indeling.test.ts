@@ -6,6 +6,9 @@ import {
   berekenVariantenKern,
   heeftToilet,
   ruimtenUitTelling,
+  ruimteToevoegen,
+  ruimteWijzigen,
+  toepassen,
   toiletVangnet,
   type IndelingRij,
 } from "./indeling";
@@ -116,5 +119,70 @@ describe("toiletvangnet (bewuste afwijking van wws-site.html)", () => {
     const voor = JSON.stringify(v.vertrekken);
     toiletVangnet(v);
     expect(JSON.stringify(v.vertrekken)).toBe(voor);
+  });
+});
+
+describe("tekenen: ruimte wijzigen en toevoegen (zoals de bron, in de telling zelf)", () => {
+  it("wijzigt bbox, m² en inkeping in de lijst én de telling; origineel ongewijzigd", () => {
+    const x = woning();
+    const rooms = ruimtenUitTelling(x);
+    const bbox = { x: 0.1, y: 0.1, w: 0.3, h: 0.2 };
+    const notch = { tl: { w: 0.2, h: 0.2 }, tr: null, bl: null, br: null };
+    const r = ruimteWijzigen(x, rooms, 1, {
+      bbox,
+      m2: 13.5,
+      notch,
+      herkomst: "Plattegrond, aangepast",
+    });
+    expect(r.rooms[1]).toMatchObject({ bbox, m2: 13.5, notch });
+    expect(r.input.vertrekken[1]).toMatchObject({
+      bbox,
+      m2: "13,5",
+      notch,
+      herkomst: "Plattegrond, aangepast",
+    });
+    expect(x.vertrekken[1]!.m2).toBe(12);
+    expect(rooms[1]!.bbox).toBeNull();
+    const leeg = ruimteWijzigen(r.input, r.rooms, 1, {
+      notch: { tl: null, tr: null, bl: null, br: null },
+    });
+    expect("notch" in leeg.input.vertrekken[1]!).toBe(false);
+  });
+
+  it("nieuwe ruimte krijgt voorzieningen, verwarming en status zoals indelingVoegRuimteToe", () => {
+    const x = woning();
+    const bbox = { x: 0.5, y: 0.5, w: 0.2, h: 0.2 };
+    const r = ruimteToevoegen(x, ruimtenUitTelling(x), {
+      key: "overig",
+      type: "toilet",
+      naam: "",
+      m2: "1,5",
+      bbox,
+    });
+    const rij = r.input.overig.at(-1)!;
+    expect(rij).toMatchObject({ type: "toilet", m2: "1,5", bbox, verwarmd: false });
+    expect(rij.fac?.kind).toBe("toilet");
+    expect(r.rooms.at(-1)).toMatchObject({
+      key: "overig",
+      idx: r.input.overig.length - 1,
+      status: "vast",
+      m2: 1.5,
+      bbox,
+    });
+    const v = ruimteToevoegen(x, [], {
+      key: "vertrekken",
+      type: "slaapkamer",
+      naam: "Slaapkamer 3",
+      m2: "",
+      bbox,
+    });
+    expect(v.input.vertrekken.at(-1)).toMatchObject({ verwarmd: true });
+    expect(v.rooms[0]!.status).toBe("vrij");
+  });
+
+  it("toepassen haalt ook de oude Storage-verwijzing weg", () => {
+    const x = { ...woning(), plattegrond: { pad: "a/b.jpg", breedte: 1, hoogte: 1 } };
+    const v = berekenVarianten(x, ruimtenUitTelling(x), null, "", N)[0]!;
+    expect(toepassen(x, v).plattegrond).toBeUndefined();
   });
 });

@@ -240,9 +240,18 @@ export interface NormenShape {
   huurTabel: string;
   huurTabelStart: number;
   kosten: Record<string, number>;
+  /**
+   * Daglimiet AI-gebruik per gebruiker (lezen = plattegrond/advies inlezen met Claude,
+   * afbeelding = AI-afbeelding met Gemini). Niet in de bron; ai_gebruik_boeken() in de database
+   * leest deze waarden, met 30/10 als ze ontbreken.
+   */
+  aiLimiet?: { lezen: number; afbeelding: number };
 }
 
 export type Normen = NormenShape;
+
+/** Standaard daglimiet AI-gebruik (zelfde als in de database-functie) */
+export const AI_LIMIET_STANDAARD = { lezen: 30, afbeelding: 10 } as const;
 
 const clone = <T>(o: T): T => JSON.parse(JSON.stringify(o));
 

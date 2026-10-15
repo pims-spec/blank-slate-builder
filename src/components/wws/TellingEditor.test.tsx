@@ -466,9 +466,10 @@ describe("TellingEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Volgende stap →" }));
     fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Toepassen op deze telling" })[0]!);
-    expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
-      "Niet-opgeslagen wijzigingen",
-    );
+    // toepassen tekent eerst het blokkenschema (asynchroon; in jsdom is er geen canvas)
+    expect(
+      await screen.findByRole("status", { name: "Opslagstatus" }, { timeout: 3000 }),
+    ).toHaveTextContent("Niet-opgeslagen wijzigingen");
     fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
     await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
     const doc = store.bewaar.mock.calls[0]![1];

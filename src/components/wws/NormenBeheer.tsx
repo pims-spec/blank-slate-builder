@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Normen } from "@/lib/wws";
+import { AI_LIMIET_STANDAARD } from "@/lib/wws/normen";
 import { MAATREGELEN } from "@/lib/wws/advies";
 import {
   ENERGIE_RIJEN,
@@ -34,6 +35,18 @@ const KOSTEN_VELDEN: NormVeld[] = [
   { label: "Oppervlakte nieuw balkon (m²)", pad: "kosten.balkonM2" },
 ];
 
+/** Daglimiet AI-gebruik per gebruiker (ai_gebruik_boeken() in de database leest dit) */
+const AI_VELDEN: NormVeld[] = [
+  { label: "Plattegrond/advies inlezen (Claude) per dag", pad: "aiLimiet.lezen" },
+  { label: "AI-afbeeldingen (Gemini) per dag", pad: "aiLimiet.afbeelding" },
+];
+
+/** Met de standaard-AI-limiet als die nog niet is ingesteld */
+const metAiLimiet = (n: Normen): Normen => ({
+  ...n,
+  aiLimiet: { ...AI_LIMIET_STANDAARD, ...n.aiLimiet },
+});
+
 /** Alle getalvelden van het formulier, met hun huidige waarde als tekst */
 function beginwaarden(n: Normen): Record<string, string> {
   const paden = [
@@ -43,8 +56,10 @@ function beginwaarden(n: Normen): Record<string, string> {
     ...n.voorzSan.map((_v, i) => `voorzSan.${i}.p`),
     ...Object.keys(n.woz).flatMap((j) => [0, 1, 2].map((x) => `woz.${j}.${x}`)),
     ...KOSTEN_VELDEN.map((v) => v.pad),
+    ...AI_VELDEN.map((v) => v.pad),
   ];
-  return Object.fromEntries(paden.map((p) => [p, String(leesPad(n, p) ?? "")]));
+  const m = metAiLimiet(n);
+  return Object.fromEntries(paden.map((p) => [p, String(leesPad(m, p) ?? "")]));
 }
 
 const datumLang = (iso: string) =>
@@ -65,10 +80,17 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     onError: (e: Error) => toast.error("Opslaan lukte niet: " + e.message),
   });
 
-  const nieuw = useMemo(
-    () => normenUitFormulier(normen, getallen, { naam, gecontroleerd }),
-    [normen, getallen, naam, gecontroleerd],
-  );
+  const nieuw = useMemo(() => {
+    const n = normenUitFormulier(metAiLimiet(normen), getallen, { naam, gecontroleerd });
+    // hele getallen 0–9999 (de database accepteert alleen die; anders geldt de standaard)
+    const heel = (x: number, d: number) =>
+      Number.isFinite(x) ? Math.max(0, Math.min(9999, Math.round(x))) : d;
+    n.aiLimiet = {
+      lezen: heel(n.aiLimiet!.lezen, AI_LIMIET_STANDAARD.lezen),
+      afbeelding: heel(n.aiLimiet!.afbeelding, AI_LIMIET_STANDAARD.afbeelding),
+    };
+    return n;
+  }, [normen, getallen, naam, gecontroleerd]);
 
   const zet = (pad: string, waarde: string) => setGetallen((g) => ({ ...g, [pad]: waarde }));
   const veld = (v: NormVeld) => (
@@ -267,6 +289,15 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
             adviesvenster.
           </p>
           <div className="grid gap-3 sm:grid-cols-3">{KOSTEN_VELDEN.map(veld)}</div>
+        </Sectie>
+
+        <Sectie titel="AI-gebruik per gebruiker per dag">
+          <p className="mb-3 text-xs text-muted-foreground">
+            Hoe vaak elke collega per dag een plattegrond of verduurzamingsadvies kan laten inlezen,
+            en hoeveel AI-afbeeldingen per collega per dag gemaakt kunnen worden. Ook mislukte
+            pogingen tellen mee.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">{AI_VELDEN.map(veld)}</div>
         </Sectie>
 
         <p className="text-xs text-muted-foreground">

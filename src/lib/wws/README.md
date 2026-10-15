@@ -104,6 +104,49 @@ reference/wws-site-pdf.cjs    letterlijke uitsnede van de PDF- en Excel-code, al
 - **Plattegrond.** Die komt in fase 4c uit Storage. De PDF-functies nemen hem al als parameter
   (`plattegrond`, een JPEG-data-URL).
 
+## AI en plattegronden (fase 4c)
+
+```
+src/lib/wws/plattegrond/opslag.ts    Storage-bucket "plattegronden": magic bytes, paden, opruimen
+src/lib/wws/plattegrond/bewaren.ts   opslaan met een nieuwe afbeelding; vorige opruimen
+src/lib/wws/plattegrond/beeld.ts     bestand/PDF → JPEG (pdf.js pas geladen bij een PDF)
+src/lib/wws/plattegrond/toepassen.ts applyPlat() zonder DOM
+src/lib/wws/ai/                      prompts, privacy, zod-schema's, Claude/Gemini, server functions
+src/lib/wws/tekenen.ts               tekenen op de plattegrond (verplaatsen, vergroten, inkepingen)
+src/lib/wws/schemaTekening.ts        het blokkenschema als PNG (indelingSchemaDataUrl)
+reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de vergelijkingstests
+```
+
+**Afbeeldingen.**
+
+- Nieuwe afbeeldingen gaan altijd naar de privé bucket `plattegronden`, onder
+  `<telling-id>/<uuid>.<jpg|png|webp>`. De telling bewaart alleen
+  `input.plattegrond = { pad, breedte, hoogte }`.
+- Oude `plattegrondImg`-data-URL's blijven leesbaar: alleen jpeg, png en webp worden getoond en
+  in de PDF gezet.
+- De bucket beperkt de bestandstypen niet. Daarom controleert de app vóór elke upload de echte
+  inhoud (magic bytes) en geeft het contentType expliciet mee.
+- Een nieuwe afbeelding staat in de werkversie tot Opslaan.
+- Telling verwijderen: eerst de bestanden onder `<id>/`, dan de telling. Lukt het opruimen niet,
+  dan blijft de telling staan.
+- Vervangen: de vorige afbeelding verdwijnt, tenzij een vastgelegde versie hem gebruikt.
+
+**AI.**
+
+- **Server functions:** schrijfrol vereist; invoer via zod, ook de echte inhoud van afbeeldingen.
+- **Daglimiet:** `ai_gebruik_boeken()`, met het eigen token. De limiet staat in `normen.aiLimiet`,
+  standaard 30 keer inlezen en 10 afbeeldingen per dag. Ook een mislukte aanroep telt mee.
+- **Modellen:** via `CLAUDE_MODEL` en `GEMINI_IMAGE_MODEL`, standaard `claude-sonnet-5-5` en
+  `gemini-3.1-flash-image`.
+- **Instructies:** de server bouwt ze zelf op. Ze zijn letterlijk gelijk aan de bron, met een
+  vergelijkingstest.
+- **Privacy:**
+  - Claude krijgt alleen de afbeelding of tekst plus de instructie.
+  - Uit de tekst gaan eerst de eigen gegevens van de telling, postcodes, e-mail, telefoon en IBAN.
+  - Gemini krijgt de plattegrond plus ruimtetypen en m², met `store: false`.
+- **Antwoorden:** gecontroleerd met zod. Alleen eigen foutcodes; nooit de foutmelding van de
+  dienst, in de browser noch in de log.
+
 ## Bewuste afwijkingen van wws-site.html
 
 Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De vergelijkingstests
@@ -121,9 +164,10 @@ hebben eigen tests.
   badkamer (behouden of nieuw) `toiletStaand = 1`, zoals de bron al doet voor een nieuwe badkamer,
   en meldt de variantkaart "toilet toegevoegd aan de badkamer". Is er ook geen badkamer, dan toont
   de kaart een waarschuwing. De punten van de variant worden ná het vangnet berekend.
-- **Toepassen**: de bron zet een getekend blokkenschema als `plattegrondImg`; de app verwijdert een
-  bestaande `plattegrondImg` (en de `bbox`'en) omdat die niet meer bij de nieuwe indeling past, en
-  toont het schema live.
+- **Toepassen** (sinds fase 4c weer zoals de bron): de AI-afbeelding van de variant, of anders
+  het getekende blokkenschema, wordt de nieuwe plattegrond van de telling. De oude afbeelding
+  (`plattegrondImg` of de verwijzing naar Storage) en de `bbox`'en gaan eruit, want die passen
+  niet meer bij de nieuwe indeling. De nieuwe afbeelding gaat bij Opslaan naar Storage.
 - **Eigenaar en PvE pas bij toepassen**: de bron zet `meta.klantId` al bij stap 1 → 2 en legt geen
   `meta.pveId` vast. De app koppelt eigenaar én gebruikt PvE pas bij "Toepassen", zodat annuleren
   geen bijwerking heeft en later stil invullen hetzelfde PvE gebruikt.
@@ -149,3 +193,14 @@ in `pdf.afwijkingen.test.ts`.
   - Het probleem: het adviesdialoog houdt geen eindlabel per stap bij, dus de bron toonde "?".
   - Nu: het label na de gekozen stappen tot en met de labelstap wordt ingevuld, net als
     berekenRoute() dat voor het adviesrapport al doet.
+
+### AI (`ai/`)
+
+- **De AI-afbeelding krijgt geen vrije ruimtenamen.**
+  - Hoe: `indelingAIPrompt` noemt de standaardnaam van het ruimtetype, met m², in plaats van wat
+    een gebruiker heeft ingetypt. Zo gaat er geen vrije tekst naar Gemini.
+  - Test: de vergelijkingstest gebruikt in de bron lege namen; dan zijn beide gelijk.
+- **Geen foutmelding van Google of Anthropic in beeld.**
+  - De bron toonde Googles letterlijke foutmelding.
+  - Nu: alleen een eigen, Nederlandse melding per foutcode.
+- **Daglimiet per gebruiker.** Deze bestaat niet in de bron.
