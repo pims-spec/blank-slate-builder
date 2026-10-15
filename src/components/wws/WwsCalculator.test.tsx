@@ -96,6 +96,11 @@ describe("WwsCalculator", () => {
     fireEvent.click(within(groep).getByRole("radio", { name: /Energie-Index/ }));
     expect(within(groep).getByRole("radio", { name: /Energie-Index/ })).toBeChecked();
     expect(screen.queryByRole("combobox", { name: "Labelklasse" })).toBeNull();
+    // bouwjaar alleen bij "Bouwjaar (geen geldig label)", zoals de bron
+    expect(screen.queryByLabelText("Bouwjaar (BAG)")).toBeNull();
+    fireEvent.click(within(groep).getByRole("radio", { name: /geen geldig label/ }));
+    expect(screen.getByLabelText("Bouwjaar (BAG)")).toHaveAttribute("placeholder", "Bijv. 1975");
+    expect(screen.queryByLabelText("Registratiedatum")).toBeNull();
   });
 
   describe("samenvattingspaneel (renderSum)", () => {

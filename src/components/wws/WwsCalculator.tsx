@@ -1468,17 +1468,20 @@ export function EnergieVelden({
             />
           </Veld>
         )}
-        <Veld label="Bouwjaar">
-          <Getal
-            value={E.bouwjaar}
-            placeholder=""
-            onChange={(v) =>
-              wijzig((d) => {
-                d.energie.bouwjaar = v;
-              })
-            }
-          />
-        </Veld>
+        {/* alleen bij "Bouwjaar (geen geldig label)", zoals energieVeldHtml() */}
+        {E.soort === "bouwjaar" && (
+          <Veld label="Bouwjaar (BAG)">
+            <Getal
+              value={E.bouwjaar}
+              placeholder="Bijv. 1975"
+              onChange={(v) =>
+                wijzig((d) => {
+                  d.energie.bouwjaar = v;
+                })
+              }
+            />
+          </Veld>
+        )}
       </div>
     </>
   );
