@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { eur, fmt, num, type WwsInput } from "@/lib/wws";
+import { eur, fmt, num, type EnergieAdvies, type WwsInput } from "@/lib/wws";
 import {
   MAATREGELEN,
   berekenAdvies,
@@ -29,6 +29,7 @@ import type { TellingMeta } from "@/lib/wws/opslag";
 import { maakAdviesPdf, maakRoutePdf } from "@/lib/wws/pdf/rapporten";
 import { useNormen } from "./NormenContext";
 import { useDownload } from "./useDownload";
+import EnergieAdviesBlok from "./EnergieAdviesBlok";
 import { instellingenStore } from "./tellingStore";
 
 const H_LABEL: Record<Haalbaarheid, string> = {
@@ -121,6 +122,8 @@ interface Props {
   meta?: TellingMeta | undefined;
   /** De plattegrond voor de PDF's (JPEG-data-URL), pas opgehaald bij het downloaden */
   plattegrond?: (() => Promise<string | null>) | undefined;
+  /** Verduurzamingsadvies uploaden/verwijderen in de werkversie (zonder: alleen tonen) */
+  onEnergieAdvies?: ((advies: EnergieAdvies | null) => void) | undefined;
   /** "Toepassen op telling": de nieuwe invoer, het aantal maatregelen en de punten daarna */
   onToepassen: (input: WwsInput, n: number, punten: number) => void;
   /** Admins kunnen de kosten als standaard voor iedereen opslaan */
@@ -136,6 +139,7 @@ export default function AdviesDialoog({
   input,
   meta,
   plattegrond,
+  onEnergieAdvies,
   onToepassen,
   isAdmin = false,
   magToepassen = true,
@@ -157,6 +161,7 @@ export default function AdviesDialoog({
             input={input}
             meta={meta}
             plattegrond={plattegrond}
+            onEnergieAdvies={onEnergieAdvies}
             onToepassen={onToepassen}
             isAdmin={isAdmin}
             magToepassen={magToepassen}
@@ -171,10 +176,11 @@ function AdviesInhoud({
   input,
   meta,
   plattegrond,
+  onEnergieAdvies,
   onToepassen,
   isAdmin,
   magToepassen,
-}: Pick<Props, "input" | "meta" | "plattegrond" | "onToepassen"> & {
+}: Pick<Props, "input" | "meta" | "plattegrond" | "onEnergieAdvies" | "onToepassen"> & {
   isAdmin: boolean;
   magToepassen: boolean;
 }) {
@@ -438,7 +444,20 @@ function AdviesInhoud({
         </TabsContent>
 
         <TabsContent value="inst" className="space-y-4">
-          {input.energieAdvies && <GeuploadAdvies ea={input.energieAdvies} />}
+          {meta && onEnergieAdvies ? (
+            <EnergieAdviesBlok
+              advies={input.energieAdvies}
+              meta={meta}
+              magBewerken={magToepassen}
+              onZet={(a) => {
+                // zoals de bron: na een nieuw of verwijderd advies opnieuw rekenen, alles aangevinkt
+                setSkip({});
+                onEnergieAdvies(a);
+              }}
+            />
+          ) : (
+            input.energieAdvies && <GeuploadAdvies ea={input.energieAdvies} />
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

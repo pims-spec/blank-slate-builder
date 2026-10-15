@@ -800,6 +800,14 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         input={staat.input}
         meta={staat.meta}
         plattegrond={() => plattegrondVoorPdf(staat.input, nieuwBeeld)}
+        onEnergieAdvies={(a) => {
+          setInput((i) => {
+            const n = { ...i };
+            if (a) n.energieAdvies = a;
+            else delete n.energieAdvies;
+            return n;
+          });
+        }}
         onToepassen={adviesToepassen}
         isAdmin={rechten.isAdmin}
         magToepassen={!alleenLezen}
