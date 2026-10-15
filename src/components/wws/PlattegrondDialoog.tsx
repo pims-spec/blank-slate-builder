@@ -147,7 +147,8 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
   const aanrecht = R ? num(R.keuken.aanrecht_m) : 0;
 
   return (
-    <div className="space-y-4 text-sm">
+    // min-w-0: anders maakt de brede tabel het venster breder dan het scherm (grid-kind)
+    <div className="min-w-0 space-y-4 text-sm">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="font-medium">Plattegrond</span>

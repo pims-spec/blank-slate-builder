@@ -217,7 +217,7 @@ function IndelingInhoud({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <ol className="flex flex-wrap gap-2 text-sm" aria-label="Stappen">
         {STAPPEN.map(([k, l], i) => (
           <li

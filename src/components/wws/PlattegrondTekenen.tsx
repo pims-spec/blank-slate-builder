@@ -269,35 +269,49 @@ export default function PlattegrondTekenen({
                 <span className="pointer-events-none truncate px-1">
                   {sleept === i ? fmt(r.m2) + " m²" : label}
                 </span>
-                {HOEKEN.map((hoek) => {
-                  const links = hoek === "tl" || hoek === "bl",
-                    boven = hoek === "tl" || hoek === "tr";
-                  const d = r.notch[hoek] || { w: 0.1, h: 0.1 };
-                  return (
-                    <span key={hoek} className="contents">
-                      <span
-                        data-greep="resize"
-                        data-hoek={hoek}
-                        title="Sleep om het formaat aan te passen"
-                        className="absolute size-3 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize border-2 border-primary bg-white"
-                        style={{ left: links ? "0%" : "100%", top: boven ? "0%" : "100%" }}
-                      />
-                      <span
-                        data-greep="notch"
-                        data-hoek={hoek}
-                        title="Sleep om een inkeping (hoek) te maken"
-                        className="absolute size-3 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-emerald-600 bg-white"
-                        style={{
-                          left: (links ? d.w * 100 : 100 - d.w * 100) + "%",
-                          top: (boven ? d.h * 100 : 100 - d.h * 100) + "%",
-                        }}
-                      />
-                    </span>
-                  );
-                })}
               </button>
             );
           })}
+          {/* Grepen in een eigen laag bovenop alle vlakken: anders liggen de hoeken van een groot
+              vlak onder een kleiner buurvlak en zijn ze niet te pakken (ook zo in de bron) */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ zIndex: rooms.length + 10 }}
+          >
+            {rooms.map((r, i) => {
+              if (!r.bbox) return null;
+              const b = r.bbox;
+              return HOEKEN.map((hoek) => {
+                const links = hoek === "tl" || hoek === "bl",
+                  boven = hoek === "tl" || hoek === "tr";
+                const d = r.notch[hoek] || { w: 0.1, h: 0.1 };
+                const hx = links ? b.x : b.x + b.w,
+                  hy = boven ? b.y : b.y + b.h;
+                const nx = links ? b.x + d.w * b.w : b.x + b.w - d.w * b.w,
+                  ny = boven ? b.y + d.h * b.h : b.y + b.h - d.h * b.h;
+                return (
+                  <span key={r.key + r.idx + hoek} className="contents">
+                    <span
+                      data-vlak={i}
+                      data-greep="resize"
+                      data-hoek={hoek}
+                      title="Sleep om het formaat aan te passen"
+                      className="pointer-events-auto absolute size-3 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize border-2 border-primary bg-white"
+                      style={{ left: hx * 100 + "%", top: hy * 100 + "%" }}
+                    />
+                    <span
+                      data-vlak={i}
+                      data-greep="notch"
+                      data-hoek={hoek}
+                      title="Sleep om een inkeping (hoek) te maken"
+                      className="pointer-events-auto absolute size-3 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-emerald-600 bg-white"
+                      style={{ left: nx * 100 + "%", top: ny * 100 + "%" }}
+                    />
+                  </span>
+                );
+              });
+            })}
+          </div>
           {drag?.mode === "new" && drag.cur && (
             <div
               className="absolute border-2 border-dashed border-primary bg-primary/10"

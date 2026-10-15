@@ -241,7 +241,7 @@ function AdviesInhoud({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi titel="Nu" waarde={A.start.totaal} sub="punten" />
         <div className="rounded-lg border border-border p-3">
