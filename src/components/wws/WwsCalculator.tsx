@@ -362,6 +362,12 @@ export interface WwsCalculatorProps {
   setInput?: Dispatch<SetStateAction<WwsInput>>;
   /** Komt boven het formulier, onder de titel (bv. opslaan en versies) */
   boven?: ReactNode;
+  /** Vervangt de titel: de topbar van de telling (naam, status, Opslaan) zoals in de bron */
+  kop?: ReactNode;
+  /** Onderaan het samenvattingspaneel (.sumbtns in de bron: PDF en advies) */
+  samenvattingOnder?: ReactNode;
+  /** Onderaan het formulier (bv. "Telling verwijderen", zoals in de bron) */
+  onder?: ReactNode;
   /** Alleen bekijken: alle velden uitgeschakeld */
   alleenLezen?: boolean;
   /**
@@ -382,6 +388,9 @@ export default function WwsCalculator({
   input,
   setInput,
   boven,
+  kop,
+  samenvattingOnder,
+  onder,
   alleenLezen = false,
   pasRuimteAan,
   energieExtra,
@@ -760,15 +769,17 @@ export default function WwsCalculator({
   return (
     <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_420px]">
       <div>
-        <header className="mb-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Puntentelling zelfstandige woonruimte
-          </h1>
-          <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-            Vul de woning in; punten, segment en maximale huurprijs worden direct bijgewerkt.
-            Normen: {N.naam}.
-          </p>
-        </header>
+        {kop ?? (
+          <header className="mb-2">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Puntentelling zelfstandige woonruimte
+            </h1>
+            <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+              Vul de woning in; punten, segment en maximale huurprijs worden direct bijgewerkt.
+              Normen: {N.naam}.
+            </p>
+          </header>
+        )}
 
         {boven}
 
@@ -1244,6 +1255,7 @@ export default function WwsCalculator({
             />
           </Sectie>
         </fieldset>
+        {onder}
       </div>
 
       {/* ---------- resultaat ---------- */}
@@ -1333,6 +1345,8 @@ export default function WwsCalculator({
               </tr>
             </tbody>
           </table>
+          {samenvattingOnder}
+          {kop && <p className="mt-4 text-xs text-muted-foreground">Normen: {N.naam}.</p>}
         </div>
       </aside>
     </div>

@@ -220,7 +220,7 @@ describe("TellingEditor", () => {
     const [, v] = store.voegVersieToe.mock.calls[0]!;
     expect(v).toMatchObject({ nr: 1, notitie: "Oplevering" });
     expect(v.normen).toEqual(N);
-    expect(await screen.findByText("Oplevering")).toBeInTheDocument();
+    expect(await screen.findByTitle("Oplevering")).toBeInTheDocument();
     expect(screen.getByLabelText("Naam")).toHaveValue("Oplevering");
 
     fireEvent.change(screen.getByLabelText("Straat"), { target: { value: "Andere straat" } });
@@ -519,7 +519,7 @@ describe("TellingEditor", () => {
       berekenVarianten(t.input, ruimtenUitTelling(t.input), PVE, "", N)[0]!,
     );
     renderEditor("t-pve");
-    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
     expect(screen.getByLabelText(/Uitgangspunten \(PvE\)/)).toHaveValue("p1");
     fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
@@ -543,7 +543,7 @@ describe("TellingEditor", () => {
     t.meta = { ...t.meta, klantId: "", pveId: "" };
     store.haal.mockResolvedValue(t);
     renderEditor("t-pve");
-    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
     fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
     fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
@@ -561,7 +561,7 @@ describe("TellingEditor", () => {
     it("Doorgaan: postcode en huisnummer ingevuld, adres meteen opgezocht; opsteller = gebruiker", async () => {
       zoekAdres.mockResolvedValue({ ok: true, data: { straat: "Damrak", plaats: "Amsterdam" } });
       renderEditor(undefined);
-      expect(await screen.findByRole("heading", { name: "Nieuwe telling" })).toBeInTheDocument();
+      expect(await screen.findByRole("dialog", { name: "Nieuwe telling" })).toBeInTheDocument();
       fireEvent.change(screen.getByPlaceholderText("1234 AB"), { target: { value: "1012lg" } });
       fireEvent.change(screen.getByPlaceholderText("12 A"), { target: { value: "1 A" } });
       fireEvent.click(screen.getByRole("button", { name: "Doorgaan" }));
@@ -587,7 +587,7 @@ describe("TellingEditor", () => {
       expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
         "Vul een geldige postcode (1234 AB) en huisnummer in, of klik op ‘Overslaan voor nu’.",
       );
-      expect(screen.getByRole("heading", { name: "Nieuwe telling" })).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Nieuwe telling" })).toBeInTheDocument();
       expect(zoekAdres).not.toHaveBeenCalled();
     });
 
@@ -595,14 +595,14 @@ describe("TellingEditor", () => {
       const { unmount } = renderEditor(undefined);
       fireEvent.click(await screen.findByRole("button", { name: "Overslaan voor nu" }));
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull(),
+        expect(screen.queryByRole("dialog", { name: "Nieuwe telling" })).toBeNull(),
       );
       expect(screen.getByLabelText("Postcode")).toHaveValue("");
       expect(zoekAdres).not.toHaveBeenCalled();
       unmount();
 
       renderEditor(undefined, "lezer-1", ["viewer"]);
-      expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Nieuwe telling" })).toBeNull();
     });
   });
 
@@ -752,7 +752,7 @@ describe("TellingEditor", () => {
       expect(blokkade.fn!(weg)).toBe(true);
       expect(vraag).toHaveBeenCalledTimes(1);
       vraag.mockRestore();
-      expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Nieuwe telling" })).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
       await waitFor(() => expect(store.maakAan).toHaveBeenCalledTimes(1));
       const [nieuwId, doc] = store.maakAan.mock.calls[0]!;
@@ -892,11 +892,8 @@ describe("startscherm indelingsadvies (toonIndelingStart)", () => {
     expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
       "Niet-opgeslagen wijzigingen",
     );
-    // weer openen via de knop: gewoon indelingsadvies, zonder plattegrondstap
-    fireEvent.click(screen.getByRole("button", { name: "Indelingsadvies" }));
-    const opnieuw = await screen.findByRole("dialog", { name: "Indelingsadvies" });
-    expect(within(opnieuw).getByRole("list", { name: "Stappen" })).toBeInTheDocument();
-    expect(within(opnieuw).queryByRole("button", { name: "← Terug naar plattegrond" })).toBeNull();
+    // zoals de bron: bij een nieuwe, nog niet opgeslagen telling geen kaart Indelingsadvies
+    expect(screen.queryByRole("button", { name: "Indeling verkennen" })).toBeNull();
   });
 
   it("Blanco met Overslaan voor nu: toch door naar de plattegrondstap", async () => {
@@ -911,7 +908,7 @@ describe("startscherm indelingsadvies (toonIndelingStart)", () => {
   it("Blanco niet voor de kijkrol", async () => {
     renderEditor(undefined, "lezer-1", ["viewer"], "blanco");
     await new Promise((r) => setTimeout(r, 50));
-    expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Nieuwe telling" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "Indelingsadvies" })).toBeNull();
   });
 
@@ -956,7 +953,7 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
     telling();
     zoekAdres.mockResolvedValue({ ok: true, data: { straat: "Damrak", plaats: "Amsterdam" } });
     renderEditor("t-s1");
-    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
     const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
     for (const h of ["Adres en WOZ", "Energielabel", "Eigenaar"])
       expect(within(dlg).getByRole("heading", { name: h })).toBeInTheDocument();
@@ -1002,7 +999,7 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
   it("kijkrol: velden in stap 1 niet bewerkbaar, geen ophalen", async () => {
     telling();
     renderEditor("t-s1", "lezer-1", ["viewer"]);
-    fireEvent.click(await screen.findByRole("button", { name: "Indelingsadvies" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
     const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
     expect(within(dlg).getByLabelText("Postcode")).toBeDisabled();
     expect(within(dlg).getByLabelText("WOZ-waarde (€)")).toBeDisabled();
@@ -1010,5 +1007,39 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
     expect(
       within(dlg).queryByRole("button", { name: /Energielabel automatisch ophalen/ }),
     ).toBeNull();
+  });
+});
+
+describe("plaats van de knoppen, zoals wws-site.html", () => {
+  it("topbar: naam + Opslaan/Versie; samenvatting: PDF en advies; onderaan: verwijderen; geen 'Nieuwe telling'", async () => {
+    const st = nieuweTellingStaat("Beheerder");
+    st.meta.naam = "Woning K";
+    store.haal.mockResolvedValue({
+      ...maakTellingDoc({ ...st, versieCount: 0, aantalVersies: 0 }, N, null),
+      id: "t-k",
+      ownerId: ADMIN.id,
+      ownerNaam: "Beheerder",
+      gewijzigdOp: "2026-10-14T10:00:00Z",
+    });
+    renderEditor("t-k");
+    const kop = (await screen.findByRole("heading", { level: 1, name: "Woning K" })).parentElement!
+      .parentElement!;
+    expect(within(kop).getByRole("button", { name: "Opslaan" })).toBeInTheDocument();
+    expect(within(kop).getByRole("button", { name: "Versie vastleggen" })).toBeInTheDocument();
+    const samenvatting = screen.getByRole("complementary");
+    expect(
+      within(samenvatting).getByRole("button", { name: "PDF van huidige stand" }),
+    ).toBeInTheDocument();
+    expect(
+      within(samenvatting).getByRole("button", { name: "Advies vrije sector" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Indeling verkennen" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Nieuwe telling" })).toBeNull();
+    // "Telling verwijderen" staat na het formulier (na de laatste rubriek)
+    const verwijder = screen.getByRole("button", { name: "Telling verwijderen" });
+    const laatsteRubriek = screen.getByText("Monument en opslagen");
+    expect(
+      laatsteRubriek.compareDocumentPosition(verwijder) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

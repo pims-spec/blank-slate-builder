@@ -930,90 +930,21 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
         onVerwijderen={plattegrondVerwijderen}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        {!alleenLezen && (
-          <>
-            {/* gebaseerd op een bestaande versie: Opslaan werkt die versie bij (canUpdateVersie) */}
-            <Button
-              onClick={opslaan}
-              disabled={bezig}
-              title={
-                kanVersieBijwerken
-                  ? "Overschrijft versie " + staat.basedOn + " met de huidige wijzigingen"
-                  : "Bewaart de werkversie, zonder een versie vast te leggen"
-              }
-            >
-              {kanVersieBijwerken ? "Versie " + staat.basedOn + " bijwerken" : "Opslaan"}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={bezig}
-              onClick={() => {
-                setVersieNaam("");
-                setVersieDialoog(true);
-              }}
-            >
-              {kanVersieBijwerken ? "Opslaan als nieuwe versie" : "Versie vastleggen"}
-            </Button>
-          </>
-        )}
-        <Button
-          variant="outline"
-          disabled={download.bezig === "werkversie"}
-          onClick={() =>
-            download.pdf("werkversie", async (lib) =>
-              maakTellingPdf(lib, {
-                meta: staat.meta,
-                input: staat.input,
-                normen: NORMEN,
-                plattegrond: await plattegrondVoorPdf(staat.input, nieuwBeeld),
-              }),
-            )
-          }
-        >
-          {download.bezig === "werkversie" ? "PDF maken…" : "PDF van huidige stand"}
-        </Button>
-        <Button variant="outline" onClick={() => setAdviesOpen(true)}>
-          Advies vrije sector
-        </Button>
-        <Button variant="outline" onClick={() => setIndelingOpen(true)}>
-          Indelingsadvies
-        </Button>
-        {rechten.magSchrijven && !isNieuw && (
-          <Button variant="outline" onClick={() => void dupliceren()}>
-            Dupliceren
+      {/* Indelingsadvies — eigen kaart onder de plattegrond, niet bij een nieuwe telling (bron) */}
+      {!isNieuw && (
+        <div className="flex flex-wrap items-center gap-3.5 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-[220px] flex-1">
+            <h3 className="font-semibold">Indelingsadvies</h3>
+            <p className="text-sm text-muted-foreground">
+              Laat een paar programma-varianten (aantal slaapkamers) met WWS-punten en een eenvoudig
+              blokkenschema uitwerken voor een woning die helemaal opnieuw wordt ingedeeld.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setIndelingOpen(true)}>
+            Indeling verkennen
           </Button>
-        )}
-        {!isNieuw && rechten.magSchrijven && (eigenaar.id === userId || rechten.isAdmin) && (
-          <Button
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setVerwijderVraag(true)}
-          >
-            Telling verwijderen
-          </Button>
-        )}
-        {!alleenLezen && !isNieuw && (
-          <Button variant="outline" onClick={() => setDelenOpen(true)}>
-            Delen
-          </Button>
-        )}
-        {rechten.magSchrijven && (
-          <Button asChild variant="ghost">
-            <Link to="/wws">Nieuwe telling</Link>
-          </Button>
-        )}
-        <span className="text-sm text-muted-foreground" role="status" aria-label="Opslagstatus">
-          {alleenLezen
-            ? "Alleen lezen"
-            : dirty
-              ? "Niet-opgeslagen wijzigingen"
-              : isNieuw
-                ? "Nog niet opgeslagen"
-                : "Alles opgeslagen"}
-          {staat.basedOn !== null && <> · gebaseerd op versie {staat.basedOn}</>}
-        </span>
-      </div>
+        </div>
+      )}
 
       {versies.length > 0 && (
         <div>
@@ -1141,6 +1072,107 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
     </section>
   );
 
+  /** Topbar zoals in de bron: naam van de telling met de status, rechts Opslaan en Versie */
+  const kop = (
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+      <div className="min-w-0">
+        <h1 className="truncate text-2xl font-semibold tracking-tight">
+          {m.naam || weergaveAdres(m) || "Nieuwe telling"}
+        </h1>
+        <span className="text-sm text-muted-foreground" role="status" aria-label="Opslagstatus">
+          {alleenLezen
+            ? "Alleen lezen"
+            : dirty
+              ? "Niet-opgeslagen wijzigingen"
+              : isNieuw
+                ? "Nog niet opgeslagen"
+                : "Alles opgeslagen"}
+          {staat.basedOn !== null && <> · gebaseerd op versie {staat.basedOn}</>}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {!alleenLezen && (
+          <>
+            {/* zoals de bron: Versie bijwerken (gebaseerd op een versie) of Versie is de hoofdknop */}
+            <Button
+              variant={kanVersieBijwerken ? "default" : "outline"}
+              onClick={opslaan}
+              disabled={bezig}
+              title={
+                kanVersieBijwerken
+                  ? "Overschrijft versie " + staat.basedOn + " met de huidige wijzigingen"
+                  : "Bewaart de werkversie, zonder een versie vast te leggen"
+              }
+            >
+              {kanVersieBijwerken ? "Versie " + staat.basedOn + " bijwerken" : "Opslaan"}
+            </Button>
+            <Button
+              variant={kanVersieBijwerken ? "outline" : "default"}
+              disabled={bezig}
+              onClick={() => {
+                setVersieNaam("");
+                setVersieDialoog(true);
+              }}
+            >
+              {kanVersieBijwerken ? "Opslaan als nieuwe versie" : "Versie vastleggen"}
+            </Button>
+          </>
+        )}
+        {/* in de bron staan dupliceren en delen als icoontjes bij de telling in de lijst links */}
+        {rechten.magSchrijven && !isNieuw && (
+          <Button variant="ghost" size="sm" onClick={() => void dupliceren()}>
+            Dupliceren
+          </Button>
+        )}
+        {!alleenLezen && !isNieuw && (
+          <Button variant="ghost" size="sm" onClick={() => setDelenOpen(true)}>
+            Delen
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  /** .sumbtns onderaan het samenvattingspaneel */
+  const samenvattingKnoppen = (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        disabled={download.bezig === "werkversie"}
+        onClick={() =>
+          download.pdf("werkversie", async (lib) =>
+            maakTellingPdf(lib, {
+              meta: staat.meta,
+              input: staat.input,
+              normen: NORMEN,
+              plattegrond: await plattegrondVoorPdf(staat.input, nieuwBeeld),
+            }),
+          )
+        }
+      >
+        {download.bezig === "werkversie" ? "PDF maken…" : "PDF van huidige stand"}
+      </Button>
+      <Button variant="outline" onClick={() => setAdviesOpen(true)}>
+        Advies vrije sector
+      </Button>
+    </div>
+  );
+
+  /** "Telling verwijderen" onderaan het formulier, zoals de bron */
+  const onderaan = !isNieuw &&
+    rechten.magSchrijven &&
+    (eigenaar.id === userId || rechten.isAdmin) && (
+      <div className="mt-5">
+        <Button
+          variant="ghost"
+          className="text-destructive hover:text-destructive"
+          onClick={() => setVerwijderVraag(true)}
+        >
+          Telling verwijderen
+        </Button>
+      </div>
+    );
+
   return (
     <>
       {isNieuw && rechten.magSchrijven && (
@@ -1154,6 +1186,9 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
         input={staat.input}
         setInput={setInput}
         boven={paneel}
+        kop={kop}
+        samenvattingOnder={samenvattingKnoppen}
+        onder={onderaan || undefined}
         alleenLezen={alleenLezen}
         pasRuimteAan={pasRuimteAan}
         energieExtra={
