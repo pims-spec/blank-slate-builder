@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -631,12 +631,35 @@ describe("TellingEditor", () => {
       expect(screen.queryByRole("button", { name: "Versie 1 verwijderen" })).toBeNull();
     });
 
+    it("versies vergelijken: versie 1 tegen de werkversie, met punten, rubrieken en gewijzigde invoer", async () => {
+      tellingMetVersie();
+      renderEditor("t-v");
+      await screen.findByRole("button", { name: "Versie 1 hernoemen" });
+      fireEvent.click(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]!);
+      fireEvent.change(screen.getAllByPlaceholderText("0,00")[0]!, { target: { value: "20" } });
+      fireEvent.click(screen.getByRole("button", { name: "Versies vergelijken" }));
+      const dlg = await screen.findByRole("dialog", { name: "Versies vergelijken" });
+      expect(within(dlg).getByLabelText("Versie A")).toHaveValue("v1");
+      expect(within(dlg).getByLabelText("Versie B")).toHaveValue("werk");
+      expect(within(dlg).getByText("Punten: v1 → werkversie")).toBeInTheDocument();
+      const rubriek = within(within(dlg).getByRole("table", { name: "Punten per rubriek" }))
+        .getByText("Vertrekken")
+        .closest("tr")!;
+      expect(rubriek).toHaveTextContent("+20");
+      expect(within(dlg).getByText("vertrekken[0].m2")).toBeInTheDocument();
+    });
+
     it("kijkrol: geen hernoemen of verwijderen", async () => {
       tellingMetVersie();
       renderEditor("t-v", "lezer-1", ["viewer"]);
       expect(await screen.findByRole("button", { name: "PDF van versie 1" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Versie 1 hernoemen" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Versie 1 verwijderen" })).toBeNull();
+      // vergelijken mag wel (alleen lezen)
+      fireEvent.click(screen.getByRole("button", { name: "Versies vergelijken" }));
+      expect(
+        await screen.findByRole("dialog", { name: "Versies vergelijken" }),
+      ).toBeInTheDocument();
     });
   });
 

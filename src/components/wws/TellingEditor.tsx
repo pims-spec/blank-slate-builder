@@ -53,6 +53,7 @@ import {
 import { bewaarBeeld, ruimOngebruiktOp, ruimOudBeeldOp } from "@/lib/wws/plattegrond/bewaren";
 import { werkVersieBij } from "@/lib/wws/opslag/store";
 import VersieBeheer from "./VersieBeheer";
+import VersiesVergelijken from "./VersiesVergelijken";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,6 +125,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [indelingOpen, setIndelingOpen] = useState(false);
   const [plattegrondOpen, setPlattegrondOpen] = useState(false);
   const [verwijderVraag, setVerwijderVraag] = useState(false);
+  const [vergelijkOpen, setVergelijkOpen] = useState(false);
   /** Venster "Nieuwe telling" (postcode + huisnummer) — bij elke nieuwe, lege telling */
   const [vraagAdres, setVraagAdres] = useState(!tellingId && rechten.magSchrijven);
   /** Nieuwe plattegrond, nog niet opgeslagen: gaat bij Opslaan naar Storage */
@@ -888,7 +890,19 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
 
       {versies.length > 0 && (
         <div>
-          <h3 className="mb-2 text-sm font-semibold">Versies</h3>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Versies</h3>
+            <Button size="sm" variant="outline" onClick={() => setVergelijkOpen(true)}>
+              Versies vergelijken
+            </Button>
+          </div>
+          <VersiesVergelijken
+            open={vergelijkOpen}
+            onOpenChange={setVergelijkOpen}
+            versies={versies}
+            werkInput={staat.input}
+            normen={NORMEN}
+          />
           <ul className="divide-y divide-border rounded-md border border-border text-sm">
             {versies.map((v) => (
               <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
