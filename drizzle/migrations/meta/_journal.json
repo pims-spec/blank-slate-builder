@@ -29,6 +29,13 @@
       "when": 1791979828512,
       "tag": "0003_delen_eigenaren_instellingen_kijkrol",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792048167370,
+      "tag": "0004_plattegronden_en_ai_gebruik",
+      "breakpoints": true
     }
   ]
 }
