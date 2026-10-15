@@ -1,0 +1,5 @@
+# xlsx 0.20.3 (SheetJS CE) — https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+# In de repo gezet zoals SheetJS aanraadt (vendoring), omdat de versie niet van npm komt.
+# Gecontroleerd: de SHA-512 is gelijk aan de integrity-hash die eerder in bun.lock stond
+# (sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==).
+8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8  xlsx-0.20.3.tgz
