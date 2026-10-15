@@ -138,12 +138,18 @@ function ServerStatus() {
         <p className="mt-4 text-sm text-destructive">Controleren lukte niet.</p>
       ) : (
         <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-card">
-          {Object.entries(data).map(([naam, aanwezig]) => (
+          {Object.entries(data.sleutels).map(([naam, aanwezig]) => (
             <li key={naam} className="flex items-center justify-between gap-4 p-4">
               <code className="text-sm">{naam}</code>
               <Badge variant={aanwezig ? "default" : "destructive"}>
                 {aanwezig ? "Ingesteld" : "Ontbreekt"}
               </Badge>
+            </li>
+          ))}
+          {Object.entries(data.modellen).map(([naam, model]) => (
+            <li key={naam} className="flex items-center justify-between gap-4 p-4">
+              <code className="text-sm">{naam}</code>
+              <span className="text-sm text-muted-foreground">{model}</span>
             </li>
           ))}
         </ul>

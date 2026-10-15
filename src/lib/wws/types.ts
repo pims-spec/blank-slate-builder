@@ -180,10 +180,23 @@ export interface EnergieAdviesMaatregel {
   besparingMax?: NumLike;
 }
 
+/** Huidige energiestatus uit een verduurzamingsadvies (alleen voor de PDF) */
+export interface EnergieAdviesHuidig {
+  label?: string;
+  woningtype?: string;
+  bouwjaar?: string | number;
+  oppervlakte_m2?: number | null;
+  installaties?: Partial<
+    Record<"verwarming" | "warmwater" | "pv" | "ventilatie" | "koeling", string>
+  >;
+  isolatie?: Partial<Record<"muur" | "glas", string>>;
+}
+
 /** Geüpload verduurzamingsadvies; het verbeteradvies gebruikt de labelstappen hieruit. */
 export interface EnergieAdvies {
   bestand?: string;
   geuploadOp?: string;
+  huidig?: EnergieAdviesHuidig | null;
   maatregelen?: EnergieAdviesMaatregel[];
 }
 
@@ -229,8 +242,12 @@ export interface WwsInput {
     nieuwbouw: boolean;
   };
   facV?: number;
-  /** Geüpload verduurzamingsadvies (nog geen upload in deze app; oude tellingen kunnen het hebben) */
+  /** Geüpload verduurzamingsadvies (input.energieAdvies in wws-site.html) */
   energieAdvies?: EnergieAdvies;
+  /** Plattegrond-afbeelding in Storage (bucket "plattegronden"); de telling zelf bevat geen beeld */
+  plattegrond?: { pad: string; breedte: number; hoogte: number };
+  /** Oude tellingen: afbeelding als data-URL in de telling zelf. Alleen nog lezen. */
+  plattegrondImg?: string;
 }
 
 // ---------- uitvoer ----------
