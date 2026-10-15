@@ -164,6 +164,13 @@ hebben eigen tests.
   badkamer (behouden of nieuw) `toiletStaand = 1`, zoals de bron al doet voor een nieuwe badkamer,
   en meldt de variantkaart "toilet toegevoegd aan de badkamer". Is er ook geen badkamer, dan toont
   de kaart een waarschuwing. De punten van de variant worden ná het vangnet berekend.
+- **Slaapkamers doornummeren** (`slaapkamersDoornummeren`, getest in `indeling.test.ts`).
+  - Het probleem: de bron noemt nieuw voorgestelde slaapkamers altijd "Slaapkamer 1",
+    "Slaapkamer 2", …. Bij een vaste "Slaapkamer 1" staan er dan twee met dezelfde naam.
+  - Nu: na het vangnet krijgen de nieuwe slaapkamers de nummers na het hoogste nummer van de
+    bestaande ruimten (vaste "Slaapkamer 1" → nieuw "Slaapkamer 2", "Slaapkamer 3").
+  - Alleen de namen die `bouwVariant` zelf gaf veranderen; de punten blijven gelijk.
+  - De vergelijkingstest gebruikt `berekenVariantenKern`, zonder deze stap.
 - **Toepassen** (sinds fase 4c weer zoals de bron): de AI-afbeelding van de variant, of anders
   het getekende blokkenschema, wordt de nieuwe plattegrond van de telling. De oude afbeelding
   (`plattegrondImg` of de verwijzing naar Storage) en de `bbox`'en gaan eruit, want die passen

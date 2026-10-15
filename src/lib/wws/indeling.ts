@@ -406,13 +406,41 @@ function varianten(
   kandidaten(rooms, extraSlaap, pve).forEach((n) => {
     const kaal = bouwVariant(n, pve, rooms, input);
     if (!kaal) return;
-    const v = metVangnet ? toiletVangnet(kaal) : kaal;
+    // de bewuste afwijkingen als aparte stappen na de letterlijk overgezette bouwVariant
+    const v = metVangnet ? slaapkamersDoornummeren(toiletVangnet(kaal)) : kaal;
     const genInput = clone(input);
     genInput.vertrekken = v.vertrekken as Vertrek[];
     genInput.overig = v.overig as OverigeRuimte[];
     out.push({ ...v, R: calc(genInput, N), input: genInput });
   });
   return out;
+}
+
+// ---------- slaapkamers doornummeren (bewuste afwijking van de bron) ----------
+
+const SLAAPKAMER_NAAM = /^Slaapkamer (\d+)$/i;
+
+/**
+ * Nieuw voorgestelde slaapkamers heten in de bron altijd "Slaapkamer 1", "Slaapkamer 2", …,
+ * ook als er al een vaste "Slaapkamer 1" is (twee keer dezelfde naam). Hier worden ze
+ * doorgenummerd na het hoogste nummer van de bestaande (niet-nieuwe) ruimten. Alleen de namen
+ * die bouwVariant zelf gaf; de punten veranderen niet. Wijzigt de variant zelf niet.
+ */
+export function slaapkamersDoornummeren<T extends Pick<IndelingVariant, "vertrekken" | "overig">>(
+  v: T,
+): T {
+  const alle = [...v.vertrekken, ...v.overig];
+  const hoogste = alle
+    .filter((r) => !r._indNieuw)
+    .map((r) => SLAAPKAMER_NAAM.exec(String(r.naam ?? "").trim()))
+    .reduce((m, x) => (x ? Math.max(m, Number(x[1])) : m), 0);
+  if (!hoogste) return v;
+  let nr = hoogste;
+  const hernoem = (r: IndelingRij): IndelingRij =>
+    r._indNieuw && r.type === "slaapkamer" && SLAAPKAMER_NAAM.test(String(r.naam ?? ""))
+      ? { ...r, naam: "Slaapkamer " + ++nr }
+      : r;
+  return { ...v, vertrekken: v.vertrekken.map(hernoem), overig: v.overig.map(hernoem) };
 }
 
 // ---------- toiletvangnet (bewuste afwijking van de bron) ----------

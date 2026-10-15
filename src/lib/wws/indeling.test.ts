@@ -8,6 +8,7 @@ import {
   ruimtenUitTelling,
   ruimteToevoegen,
   ruimteWijzigen,
+  slaapkamersDoornummeren,
   toepassen,
   toiletVangnet,
   type IndelingRij,
@@ -184,5 +185,61 @@ describe("tekenen: ruimte wijzigen en toevoegen (zoals de bron, in de telling ze
     const x = { ...woning(), plattegrond: { pad: "a/b.jpg", breedte: 1, hoogte: 1 } };
     const v = berekenVarianten(x, ruimtenUitTelling(x), null, "", N)[0]!;
     expect(toepassen(x, v).plattegrond).toBeUndefined();
+  });
+});
+
+describe("slaapkamers doornummeren (bewuste afwijking van wws-site.html)", () => {
+  /** woning() met een vaste "Slaapkamer 1" en de rest vrij */
+  function metVasteSlaapkamer() {
+    const x = woning();
+    x.vertrekken[1]!.naam = "Slaapkamer 1";
+    const rooms = ruimtenUitTelling(x);
+    rooms[1]!.status = "vast";
+    return { x, rooms };
+  }
+  const namen = (v: { vertrekken: IndelingRij[] }) =>
+    v.vertrekken.filter((r) => r.type === "slaapkamer").map((r) => r.naam);
+
+  it("de bron geeft twee keer 'Slaapkamer 1'; hier krijgt de nieuwe nummer 2 en verder", () => {
+    const { x, rooms } = metVasteSlaapkamer();
+    const kern = berekenVariantenKern(x, rooms, null, "", N);
+    const met = berekenVarianten(x, rooms, null, "", N);
+    const k1 = kern.find(
+      (v) => v.vertrekken.filter((r) => r.type === "slaapkamer" && r._indNieuw).length === 1,
+    )!;
+    expect(namen(k1)).toEqual(["Slaapkamer 1", "Slaapkamer 1"]);
+    met.forEach((v, i) => {
+      const n = namen(v);
+      expect(new Set(n).size, n.join(", ")).toBe(n.length);
+      expect(n[0]).toBe("Slaapkamer 1");
+      // nieuw: 2, 3, … op volgorde
+      expect(n.slice(1)).toEqual(n.slice(1).map((_x, j) => "Slaapkamer " + (j + 2)));
+      // alleen de namen verschillen; de punten blijven gelijk aan de kern
+      expect(v.R).toEqual(kern[i]!.R);
+    });
+  });
+
+  it("doornummeren na het hoogste bestaande nummer; zonder genummerde bestaande niets", () => {
+    const rij = (naam: string, nieuw: boolean) =>
+      ({ type: "slaapkamer", naam, m2: 10, verwarmd: true, _indNieuw: nieuw }) as IndelingRij;
+    const v = {
+      vertrekken: [
+        rij("Slaapkamer 3", false),
+        rij("Slaapkamer 1", true),
+        rij("Slaapkamer 2", true),
+      ],
+      overig: [] as IndelingRij[],
+    };
+    expect(namen(slaapkamersDoornummeren(v))).toEqual([
+      "Slaapkamer 3",
+      "Slaapkamer 4",
+      "Slaapkamer 5",
+    ]);
+    expect(namen(v)).toEqual(["Slaapkamer 3", "Slaapkamer 1", "Slaapkamer 2"]); // ongewijzigd
+    const zonder = {
+      vertrekken: [rij("Grote kamer", false), rij("Slaapkamer 1", true)],
+      overig: [],
+    };
+    expect(slaapkamersDoornummeren(zonder)).toBe(zonder);
   });
 });
