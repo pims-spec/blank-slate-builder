@@ -252,6 +252,8 @@ export interface WwsCalculatorProps {
    * nooit bij het laden of bij "Toepassen op telling".
    */
   pasRuimteAan?: (groep: "vertrekken" | "overig", ruimte: Vertrek | OverigeRuimte) => void;
+  /** Onder de energievelden (bv. het energielabel ophalen bij EP-Online) */
+  energieExtra?: ReactNode;
 }
 
 export default function WwsCalculator({
@@ -260,6 +262,7 @@ export default function WwsCalculator({
   boven,
   alleenLezen = false,
   pasRuimteAan,
+  energieExtra,
 }: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
@@ -706,6 +709,7 @@ export default function WwsCalculator({
                 />
               </Veld>
             </div>
+            {energieExtra}
           </Sectie>
 
           <Sectie titel="Keuken en sanitair" rubriek="5–6">

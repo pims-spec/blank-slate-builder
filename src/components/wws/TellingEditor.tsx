@@ -33,7 +33,12 @@ import {
   type TellingStaat,
   type Versie,
 } from "@/lib/wws/opslag";
+import { adresFoutMelding } from "@/lib/wws/opzoeken/dienst";
+import { epToepassen, type EpLabel } from "@/lib/wws/opzoeken/eponline";
+import { zoekAdres } from "@/lib/wws/opzoeken/opzoeken.functions";
+import { adresOpzoekenNodig, adresToepassen, adresZoekVelden } from "@/lib/wws/opzoeken/pdok";
 import AdviesDialoog from "./AdviesDialoog";
+import EnergielabelOphalen from "./EnergielabelOphalen";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
@@ -173,7 +178,64 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const zetMeta = (veld: keyof TellingMeta & string, waarde: string) => {
     setStaat((s) => ({ ...s, meta: { ...s.meta, [veld]: waarde } }));
     setDirty(true);
+    if (veld === "postcode" || veld === "huisnummer") planAdresOpzoeken();
   };
+
+  // ---------- adres en energielabel opzoeken ----------
+  // laatste staat en telling-id, voor wat na een netwerkaanroep pas terugkomt
+  const staatRef = useRef(staat);
+  staatRef.current = staat;
+  const idRef = useRef(id);
+  idRef.current = id;
+  const adresTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const adresLaatsteFout = useRef("");
+  useEffect(() => () => clearTimeout(adresTimer.current), []);
+
+  /**
+   * Na het typen van postcode of huisnummer: straat en plaats opzoeken bij PDOK als die nog
+   * leeg zijn — vulAdresAutomatischIn(). Alleen na een gebruikersactie, niet bij het laden.
+   */
+  function planAdresOpzoeken() {
+    clearTimeout(adresTimer.current);
+    adresTimer.current = setTimeout(async () => {
+      const meta = staatRef.current.meta;
+      const velden = adresZoekVelden(meta);
+      if (!velden || !adresOpzoekenNodig(meta)) return;
+      const poging = velden.postcode + "|" + velden.huisnummer;
+      const voorId = idRef.current;
+      const meld = (m: string) => {
+        if (adresLaatsteFout.current === poging) return;
+        adresLaatsteFout.current = poging;
+        toast(m);
+      };
+      try {
+        const r = await zoekAdres({ data: velden });
+        if (idRef.current !== voorId) return;
+        if (!r.ok) {
+          if (r.fout !== "niet_gevonden") meld(adresFoutMelding(r.fout));
+          return;
+        }
+        if (!adresToepassen(staatRef.current.meta, r.data)) return;
+        setStaat((s) => {
+          const m = adresToepassen(s.meta, r.data);
+          return m ? { ...s, meta: m } : s;
+        });
+        setDirty(true);
+      } catch {
+        meld(adresFoutMelding("geen_verbinding"));
+      }
+    }, 500);
+  }
+
+  /** EP-Online-label overnemen in de werkversie — applyEpLabel() */
+  function energielabelToepassen(label: EpLabel) {
+    const s = staatRef.current;
+    const r = epToepassen(s.input, s.meta, label);
+    for (const m of r.meldingen) toast(m);
+    if (!r.gewijzigd) return;
+    setStaat((x) => ({ ...x, input: r.input, meta: r.meta }));
+    setDirty(true);
+  }
 
   /** Na het eerste opslaan: ?id= in de adresbalk zetten, zonder te herladen */
   const naOpslaan = async () => {
@@ -571,6 +633,9 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         boven={paneel}
         alleenLezen={alleenLezen}
         pasRuimteAan={pasRuimteAan}
+        energieExtra={
+          !alleenLezen && <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />
+        }
       />
       <IndelingDialoog
         open={indelingOpen}

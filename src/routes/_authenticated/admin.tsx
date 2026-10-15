@@ -1,10 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { allUsersQuery, myAccessQuery } from "@/lib/access";
+import { serverStatus } from "@/lib/wws/opzoeken/opzoeken.functions";
 import { ROL_LABEL, rolWijzigingen, type AppRole, type Rol } from "@/lib/rollen";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -111,7 +112,42 @@ function Admin() {
             </li>
           ))}
         </ul>
+        <ServerStatus />
       </main>
     </div>
+  );
+}
+
+/** Welke secrets zijn ingesteld (alleen aanwezig of niet, nooit de waarde) */
+function ServerStatus() {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ["server-status"],
+    queryFn: () => serverStatus(),
+    staleTime: 0,
+  });
+  return (
+    <section className="mt-12" aria-label="Serverinstellingen">
+      <h2 className="font-display text-2xl text-foreground">Serverinstellingen</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Sleutels voor externe diensten stel je in bij Lovable Cloud → Secrets. Hier zie je alleen of
+        ze aanwezig zijn, nooit de waarde.
+      </p>
+      {isPending ? (
+        <p className="mt-4 text-sm text-muted-foreground">Controleren…</p>
+      ) : isError || !data ? (
+        <p className="mt-4 text-sm text-destructive">Controleren lukte niet.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-card">
+          {Object.entries(data).map(([naam, aanwezig]) => (
+            <li key={naam} className="flex items-center justify-between gap-4 p-4">
+              <code className="text-sm">{naam}</code>
+              <Badge variant={aanwezig ? "default" : "destructive"}>
+                {aanwezig ? "Ingesteld" : "Ontbreekt"}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
