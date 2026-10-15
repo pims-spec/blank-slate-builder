@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_gebruik: {
+        Row: {
+          created_at: string
+          dag: string
+          id: number
+          soort: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dag?: string
+          id?: never
+          soort: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dag?: string
+          id?: never
+          soort?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       instellingen: {
         Row: {
           data: Json
@@ -235,6 +259,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_gebruik_boeken: { Args: { _soort: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -247,6 +272,7 @@ export type Database = {
       is_gedeeld_met_mij: { Args: { _telling_id: string }; Returns: boolean }
       mag_telling_bewerken: { Args: { _telling_id: string }; Returns: boolean }
       mag_telling_zien: { Args: { _telling_id: string }; Returns: boolean }
+      telling_id_uit_pad: { Args: { _naam: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "member" | "viewer"
