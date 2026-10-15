@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import type { DashboardVersie } from "../dashboard";
 import type { Normen } from "../normen";
+import { BUCKET, maakPlattegrondOpslag, type Bucket } from "../plattegrond/opslag";
 import type { Segment } from "../types";
 import {
   leesTellingDoc,
@@ -88,8 +89,13 @@ export function maakTellingStore(db: Db, normen: Normen) {
         throw new Error("Deze telling bestaat niet meer, of je mag hem niet wijzigen.");
     },
 
-    /** Verwijdert de telling; de versies verdwijnen mee (on delete cascade). */
+    /**
+     * Verwijdert de telling; de versies verdwijnen mee (on delete cascade). Cascade werkt niet
+     * voor Storage: eerst de plattegronden onder "<id>/" weg. Lukt dat niet, dan blijft de
+     * telling staan (geen losse afbeeldingen zonder telling).
+     */
     async verwijder(id: string): Promise<void> {
+      await maakPlattegrondOpslag(db.storage.from(BUCKET) as unknown as Bucket).verwijderMap(id);
       const { error } = await db.from("tellingen").delete().eq("id", id);
       if (error) throw error;
     },

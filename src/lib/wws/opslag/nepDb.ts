@@ -2,6 +2,8 @@
 // per query een antwoord. Alleen voor tests.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import type { Bucket } from "../plattegrond/opslag";
+import { nepBucket } from "../plattegrond/nepBucket";
 
 export interface Aanroep {
   tabel: string;
@@ -12,9 +14,13 @@ export interface Antwoord {
   error?: unknown;
 }
 
-export function nepDb(antwoord: (a: Aanroep) => Antwoord = () => ({})) {
+export function nepDb(
+  antwoord: (a: Aanroep) => Antwoord = () => ({}),
+  bucket: Bucket = nepBucket().bucket,
+) {
   const log: Aanroep[] = [];
   const db = {
+    storage: { from: () => bucket },
     from(tabel: string) {
       const a: Aanroep = { tabel, stappen: [] };
       log.push(a);
