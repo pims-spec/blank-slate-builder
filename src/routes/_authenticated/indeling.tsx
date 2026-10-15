@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { AppHeader } from "@/components/AppHeader";
+import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import IndelingStart from "@/components/wws/IndelingStart";
 import { myAccessQuery } from "@/lib/access";
 
@@ -20,8 +20,8 @@ function IndelingPage() {
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader
+    <div className={"min-h-screen " + zijmenuRuimte}>
+      <Zijmenu
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}

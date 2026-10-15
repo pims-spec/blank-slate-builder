@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { AppHeader } from "@/components/AppHeader";
+import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import Eigenaren from "@/components/wws/Eigenaren";
 import { NormenProvider } from "@/components/wws/NormenContext";
 import { normenQuery } from "@/components/wws/tellingStore";
@@ -26,8 +26,8 @@ function EigenarenPage() {
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
   const { data: normen } = useSuspenseQuery(normenQuery());
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader
+    <div className={"min-h-screen " + zijmenuRuimte}>
+      <Zijmenu
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}

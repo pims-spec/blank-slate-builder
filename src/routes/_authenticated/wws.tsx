@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { AppHeader } from "@/components/AppHeader";
+import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { NormenProvider } from "@/components/wws/NormenContext";
 import TellingEditor from "@/components/wws/TellingEditor";
 import { normenQuery } from "@/components/wws/tellingStore";
@@ -38,8 +38,8 @@ function WwsPage() {
   const email = user.email ?? "";
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader
+    <div className={"min-h-screen " + zijmenuRuimte}>
+      <Zijmenu
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}

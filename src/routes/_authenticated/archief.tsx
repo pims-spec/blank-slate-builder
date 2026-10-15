@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { AppHeader } from "@/components/AppHeader";
+import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import Archief from "@/components/wws/Archief";
 import { NormenProvider } from "@/components/wws/NormenContext";
 import { normenQuery } from "@/components/wws/tellingStore";
@@ -31,8 +31,8 @@ function ArchiefPage() {
   const { data: normen } = useSuspenseQuery(normenQuery());
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader
+    <div className={"min-h-screen " + zijmenuRuimte}>
+      <Zijmenu
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}

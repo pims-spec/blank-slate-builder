@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { AppHeader } from "@/components/AppHeader";
+import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { Button } from "@/components/ui/button";
 import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
@@ -31,8 +31,8 @@ function Dashboard() {
   const controle = data.isAdmin ? controleStatus(normen.gecontroleerd) : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader
+    <div className={"min-h-screen " + zijmenuRuimte}>
+      <Zijmenu
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}

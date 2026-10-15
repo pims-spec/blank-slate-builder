@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AppHeader } from "@/components/AppHeader";
+import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { allUsersQuery, myAccessQuery } from "@/lib/access";
@@ -64,8 +64,8 @@ function Admin() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader isAdmin magSchrijven />
+    <div className={"min-h-screen " + zijmenuRuimte}>
+      <Zijmenu isAdmin magSchrijven />
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-4xl text-foreground">Gebruikers</h1>
         <p className="mt-2 text-muted-foreground">
