@@ -175,13 +175,13 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
               : "Je eigen tellingen en tellingen die met je gedeeld zijn."}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Input
             aria-label="Zoeken"
             placeholder="Zoek op naam, adres, postcode of eigenaar"
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
-            className="w-72"
+            className="w-full sm:w-72"
           />
           <Button
             variant="outline"

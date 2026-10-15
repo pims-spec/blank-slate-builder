@@ -144,7 +144,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
                     {tellingenTekst(aantalGekoppeld(tellingen, k.id))}
                   </span>
                   {rechten.isAdmin && (
-                    <span className="flex gap-1">
+                    <span className="flex flex-wrap gap-1">
                       <Button
                         size="sm"
                         variant="ghost"

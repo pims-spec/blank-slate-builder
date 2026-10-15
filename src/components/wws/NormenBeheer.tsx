@@ -221,24 +221,26 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
         ))}
 
         <Sectie titel="Energielabel">
-          <table className="text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
-              <tr>
-                <th className="py-1 pr-4 font-medium">Label</th>
-                <th className="py-1 pr-4 font-medium">Eengezins</th>
-                <th className="py-1 font-medium">Meergezins</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ENERGIE_RIJEN.map((r) => (
-                <tr key={r.pad}>
-                  <td className="py-1 pr-4">{r.label}</td>
-                  <td className="py-1 pr-4">{cel(r.pad + ".0", r.label + " eengezins")}</td>
-                  <td className="py-1">{cel(r.pad + ".1", r.label + " meergezins")}</td>
+          <div className="max-w-full overflow-x-auto">
+            <table className="text-sm">
+              <thead className="text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="py-1 pr-4 font-medium">Label</th>
+                  <th className="py-1 pr-4 font-medium">Eengezins</th>
+                  <th className="py-1 font-medium">Meergezins</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ENERGIE_RIJEN.map((r) => (
+                  <tr key={r.pad}>
+                    <td className="py-1 pr-4">{r.label}</td>
+                    <td className="py-1 pr-4">{cel(r.pad + ".0", r.label + " eengezins")}</td>
+                    <td className="py-1">{cel(r.pad + ".1", r.label + " meergezins")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Sectie>
 
         {NORM_SECTIES.slice(1, 2).map((s) => (
@@ -262,31 +264,33 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
         ))}
 
         <Sectie titel="WOZ-kengetallen">
-          <table className="text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
-              <tr>
-                <th className="py-1 pr-4 font-medium">Beschikking</th>
-                <th className="py-1 pr-4 font-medium">Onderdeel I (€)</th>
-                <th className="py-1 pr-4 font-medium">Onderdeel II (€)</th>
-                <th className="py-1 font-medium">II kleine nieuwbouw COROP (€)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.keys(normen.woz)
-                .sort()
-                .reverse()
-                .map((j) => (
-                  <tr key={j}>
-                    <td className="py-1 pr-4">1 januari {j}</td>
-                    {[0, 1, 2].map((x) => (
-                      <td key={x} className="py-1 pr-4">
-                        {cel(`woz.${j}.${x}`, `WOZ ${j} kolom ${x + 1}`)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+          <div className="max-w-full overflow-x-auto">
+            <table className="text-sm">
+              <thead className="text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="py-1 pr-4 font-medium">Beschikking</th>
+                  <th className="py-1 pr-4 font-medium">Onderdeel I (€)</th>
+                  <th className="py-1 pr-4 font-medium">Onderdeel II (€)</th>
+                  <th className="py-1 font-medium">II kleine nieuwbouw COROP (€)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(normen.woz)
+                  .sort()
+                  .reverse()
+                  .map((j) => (
+                    <tr key={j}>
+                      <td className="py-1 pr-4">1 januari {j}</td>
+                      {[0, 1, 2].map((x) => (
+                        <td key={x} className="py-1 pr-4">
+                          {cel(`woz.${j}.${x}`, `WOZ ${j} kolom ${x + 1}`)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">{NORM_SECTIES[4]!.velden.map(veld)}</div>
         </Sectie>
 
@@ -392,15 +396,17 @@ function VoorzTabel({
   cel: (pad: string, label: string) => ReactNode;
 }) {
   return (
-    <table className="mt-3 text-sm">
-      <tbody>
-        {lijst.map((it, i) => (
-          <tr key={it.k}>
-            <td className="py-1 pr-4">{it.l}</td>
-            <td className="py-1">{cel(`${prefix}.${i}.p`, it.l)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="max-w-full overflow-x-auto">
+      <table className="mt-3 text-sm">
+        <tbody>
+          {lijst.map((it, i) => (
+            <tr key={it.k}>
+              <td className="py-1 pr-4">{it.l}</td>
+              <td className="py-1">{cel(`${prefix}.${i}.p`, it.l)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
