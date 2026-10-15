@@ -181,16 +181,17 @@ export const DASHBOARD_VERSIE_LIMIET = 5000;
 
 /**
  * Wat het dashboard van alle versies nodig heeft, in één query: alleen telling, nummer,
- * datum en het opgeslagen resultaat (geen invoer of normen per versie). De bron gebruikt
- * niets anders. Admins en de kijkrol zien via de RLS alle versies.
+ * datum, naam en het opgeslagen resultaat (geen invoer of normen per versie). De naam is voor
+ * de versiekeuze in het archief. Admins en de kijkrol zien via de RLS alle versies.
  */
 export const DASHBOARD_VERSIE_VELDEN =
-  "telling_id, nr, createdAt:data->>createdAt, totaal:data->resultaat->totaal, maxHuur:data->resultaat->maxHuur, seg:data->resultaat->>seg";
+  "telling_id, nr, createdAt:data->>createdAt, notitie:data->>notitie, totaal:data->resultaat->totaal, maxHuur:data->resultaat->maxHuur, seg:data->resultaat->>seg";
 
 interface DashboardVersieRij {
   telling_id: string;
   nr: number;
   createdAt: string | null;
+  notitie: string | null;
   totaal: number | null;
   maxHuur: number | null;
   seg: Segment | null;
@@ -212,6 +213,7 @@ export async function haalDashboardVersies(
       tellingId: r.telling_id,
       nr: r.nr,
       createdAt: r.createdAt,
+      notitie: r.notitie ?? "",
       resultaat: { totaal: r.totaal, maxHuur: r.maxHuur, seg: r.seg },
     })),
     limietBereikt: rijen.length >= limiet,

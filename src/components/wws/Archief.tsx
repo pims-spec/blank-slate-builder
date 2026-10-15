@@ -25,13 +25,15 @@ import {
   matchFilters,
   matchZoek,
   sorteerFavNaam,
+  versieKeuzes,
+  versiesTekst,
   type ArchiefFilters,
   type ArchiefRij,
 } from "@/lib/wws/archief";
 import { useNormen } from "./NormenContext";
 import { maakArchiefExcel } from "@/lib/wws/excel";
 import type { Telling } from "@/lib/wws/opslag";
-import { klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
+import { dashboardVersiesQuery, klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
 import { useDownload } from "./useDownload";
 
 const datumTijd = (iso: string) =>
@@ -56,6 +58,10 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
   const [zoek, setZoek] = useState("");
   const [filters, setFilters] = useState<ArchiefFilters>(LEGE_FILTERS);
   const [teVerwijderen, setTeVerwijderen] = useState<ArchiefRij | null>(null);
+  // namen en nummers van de versies (dezelfde lichte query als het dashboard)
+  const { data: versieData } = useQuery(dashboardVersiesQuery());
+  /** Per telling de gekozen versie om te openen ("" = werkversie) */
+  const [gekozen, setGekozen] = useState<Record<string, string>>({});
   const download = useDownload();
 
   const rijen = useMemo(
@@ -98,6 +104,13 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
 
   const rij = (r: ArchiefRij) => {
     const gedeeld = r.t.ownerId !== userId && !rechten.zietAlles;
+    const keuzes = versieKeuzes(r.t.id, versieData?.versies ?? []);
+    const versie = gekozen[r.t.id] ?? "";
+    const openZoek = {
+      id: r.t.id,
+      ...(voorIndeling ? { indeling: true } : {}),
+      ...(versie ? { versie: Number(versie) } : {}),
+    };
     const fav = !!r.t.meta["favoriet"];
     const magFav = magTellingBewerken(rechten, r.t.ownerId, userId);
     return (
@@ -133,9 +146,27 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
         <td className="px-3 py-2 text-right tabular-nums">{r.punten ?? "—"}</td>
         <td className="px-3 py-2">{r.seg ? SEGMENT_NAMEN[r.seg] : "—"}</td>
         <td className="px-3 py-2 text-muted-foreground">{datumTijd(r.t.gewijzigdOp)}</td>
+        <td className="px-3 py-2">
+          <div className="whitespace-nowrap text-muted-foreground">{versiesTekst(r.t)}</div>
+          {/* meerdere versies: kiezen welke er geopend wordt (aanvulling op de bron) */}
+          {keuzes.length > 2 && (
+            <select
+              className={veldCls + " mt-1 h-8 max-w-48 text-xs"}
+              aria-label={"Te openen versie: " + r.titel}
+              value={versie}
+              onChange={(e) => setGekozen((g) => ({ ...g, [r.t.id]: e.target.value }))}
+            >
+              {keuzes.map((k) => (
+                <option key={k.waarde} value={k.waarde}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </td>
         <td className="whitespace-nowrap px-3 py-1 text-right">
           <Button asChild size="sm" variant="ghost">
-            <Link to="/wws" search={voorIndeling ? { id: r.t.id, indeling: true } : { id: r.t.id }}>
+            <Link to="/wws" search={openZoek}>
               Openen
             </Link>
           </Button>
@@ -154,7 +185,7 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
     );
   };
 
-  const kolommen = 7 + (toonCollega && !groeperen ? 1 : 0);
+  const kolommen = 8 + (toonCollega && !groeperen ? 1 : 0);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -330,6 +361,7 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
                 <th className="px-3 py-2 text-right font-medium">Punten</th>
                 <th className="px-3 py-2 font-medium">Segment</th>
                 <th className="px-3 py-2 font-medium">Laatst gewijzigd</th>
+                <th className="px-3 py-2 font-medium">Versies</th>
                 <th className="px-3 py-2">
                   <span className="sr-only">Acties</span>
                 </th>

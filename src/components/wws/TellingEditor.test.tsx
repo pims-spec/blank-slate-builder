@@ -114,6 +114,7 @@ function renderEditor(
   userId = ADMIN.id,
   roles: AppRole[] = ["admin", "member"],
   start?: "indeling" | "blanco",
+  openVersie?: number,
 ) {
   const qc = new QueryClient();
   return render(
@@ -127,6 +128,7 @@ function renderEditor(
           bewerker={ADMIN}
           rechten={rechtenVan(roles)}
           start={start}
+          openVersie={openVersie}
         />
       </QueryClientProvider>
     </StrictMode>,
@@ -622,6 +624,29 @@ describe("TellingEditor", () => {
       store.versies.mockResolvedValue([v]);
       return v;
     }
+
+    it("vanuit het archief met een gekozen versie: die versie wordt geopend, zonder extra vraag", async () => {
+      const v = tellingMetVersie();
+      const vraag = vi.spyOn(window, "confirm");
+      renderEditor("t-v", ADMIN.id, ["admin", "member"], undefined, 1);
+      await waitFor(() =>
+        expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+          "gebaseerd op versie 1",
+        ),
+      );
+      expect(screen.getByRole("button", { name: "Versie 1 bijwerken" })).toBeInTheDocument();
+      expect(navigate).toHaveBeenCalledWith({ to: "/wws", search: { id: "t-v" }, replace: true });
+      // de blokkade laat precies deze ene navigatie door
+      expect(
+        blokkade.fn!({
+          current: { pathname: "/wws", search: "?id=t-v&versie=1" },
+          next: { pathname: "/wws", search: "?id=t-v" },
+        }),
+      ).toBe(false);
+      expect(vraag).not.toHaveBeenCalled();
+      expect(v.nr).toBe(1);
+      vraag.mockRestore();
+    });
 
     it("Opslaan op een werkversie gebaseerd op versie 1 werkt versie 1 bij", async () => {
       const v = tellingMetVersie();

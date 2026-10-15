@@ -30,6 +30,8 @@ export interface DashboardVersie {
   tellingId: string;
   nr: number;
   createdAt?: string | null | undefined;
+  /** Naam van de versie (voor de keuzelijst in het archief) */
+  notitie?: string | null | undefined;
   resultaat?:
     { totaal?: number | null; maxHuur?: number | null; seg?: Segment | null } | null | undefined;
 }

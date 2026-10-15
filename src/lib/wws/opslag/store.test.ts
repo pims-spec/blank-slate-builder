@@ -230,6 +230,7 @@ describe("dashboard: versies", () => {
           telling_id: "t1",
           nr: 1,
           createdAt: "2026-01-02T10:00:00Z",
+          notitie: "Oplevering",
           totaal: 150,
           maxHuur: 900.5,
           seg: "midden",
@@ -249,8 +250,11 @@ describe("dashboard: versies", () => {
       tellingId: "t1",
       nr: 1,
       createdAt: "2026-01-02T10:00:00Z",
+      notitie: "Oplevering",
       resultaat: { totaal: 150, maxHuur: 900.5, seg: "midden" },
     });
+    expect(velden).toContain("notitie:data->>notitie");
+    expect(r.versies[1]?.notitie).toBe("");
     expect(r.limietBereikt).toBe(false);
   });
 

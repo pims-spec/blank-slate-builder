@@ -7,6 +7,8 @@ import { klantNaam, type Klant } from "./opslag/klanten";
 import { tellingTitel, weergaveAdres } from "./opslag/doc";
 import type { Telling } from "./opslag/types";
 import type { Segment, Woningtype } from "./types";
+import { versieKeuzeLabel } from "./versieDiff";
+import type { DashboardVersie } from "./dashboard";
 
 export interface ArchiefFilters {
   /** yyyy-mm-dd */
@@ -129,4 +131,29 @@ export function sorteerFavNaam<T extends { t: Telling; titel: string }>(rijen: r
   return [...rijen].sort(
     (a, b) => fav(b) - fav(a) || a.titel.localeCompare(b.titel, "nl", { sensitivity: "base" }),
   );
+}
+
+/** "geen versies" / "1 versie" / "3 versies" — archiefRow() in wws-site.html */
+export const versiesTekst = (t: Pick<Telling, "aantalVersies" | "versieCount">) => {
+  const av = t.aantalVersies != null ? t.aantalVersies : t.versieCount;
+  return av ? av + " versie" + (av > 1 ? "s" : "") : "geen versies";
+};
+
+/**
+ * Keuzelijst in het archief bij een telling met meerdere versies: eerst de werkversie, dan de
+ * versies van nieuw naar oud ("v2 — Na renovatie"). Aanvulling op de bron, die alleen het aantal
+ * toont. `waarde` is "" (werkversie) of het versienummer.
+ */
+export function versieKeuzes(
+  tellingId: string,
+  versies: readonly Pick<DashboardVersie, "tellingId" | "nr" | "notitie" | "createdAt">[],
+): { waarde: string; label: string }[] {
+  const eigen = versies
+    .filter((v) => v.tellingId === tellingId)
+    .sort((a, b) => b.nr - a.nr)
+    .map((v) => ({
+      waarde: String(v.nr),
+      label: versieKeuzeLabel({ nr: v.nr, notitie: v.notitie ?? "", createdAt: v.createdAt ?? "" }),
+    }));
+  return [{ waarde: "", label: "Werkversie" }, ...eigen];
 }

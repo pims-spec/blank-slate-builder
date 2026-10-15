@@ -19,10 +19,12 @@ const tellingStore = vi.hoisted(() => ({
   zetFavoriet: vi.fn(),
 }));
 const klantenStore = vi.hoisted(() => ({ lijst: vi.fn() }));
+const versiesLijst = vi.hoisted(() => vi.fn());
 vi.mock("./tellingStore", () => ({
   tellingStore,
   tellingenQuery: () => ({ queryKey: ["tellingen"], queryFn: () => tellingStore.lijst() }),
   klantenQuery: () => ({ queryKey: ["klanten"], queryFn: () => klantenStore.lijst() }),
+  dashboardVersiesQuery: () => ({ queryKey: ["dashboard-versies"], queryFn: () => versiesLijst() }),
 }));
 
 const N = DEFAULT_NORMEN as unknown as Normen;
@@ -56,6 +58,7 @@ beforeEach(() => {
     telling("t2", "Van Anna", "anna", "Anna", "k2"),
   ];
   tellingStore.lijst.mockResolvedValue(lijst);
+  versiesLijst.mockResolvedValue({ versies: [], limietBereikt: false });
   klantenStore.lijst.mockResolvedValue([
     { id: "k1", naam: "Amstel Wonen", pves: [] },
     { id: "k2", naam: "Zeta Vastgoed", pves: [] },
@@ -157,5 +160,41 @@ describe("Archief", () => {
     expect(screen.queryByText(/Kies een telling om het indelingsadvies/)).toBeNull();
     const open = within(rijVan("Eigen telling")).getByText("Openen").closest("a")!;
     expect(JSON.parse(open.dataset["search"]!)).toEqual({ id: "t1" });
+  });
+
+  it("versies: aantal per telling; bij meerdere een keuzelijst, en Openen opent de gekozen versie", async () => {
+    const meer = telling("t1", "Eigen telling", "bob", "Bob");
+    meer.aantalVersies = 2;
+    const een = telling("t2", "Van Anna", "anna", "Anna");
+    een.aantalVersies = 1;
+    tellingStore.lijst.mockResolvedValue([meer, een]);
+    versiesLijst.mockResolvedValue({
+      versies: [
+        { tellingId: "t1", nr: 1, notitie: "Begin", createdAt: "2026-03-04T10:00:00Z" },
+        { tellingId: "t1", nr: 2, notitie: "Na renovatie", createdAt: "2026-05-01T10:00:00Z" },
+        { tellingId: "t2", nr: 1, notitie: "Enige", createdAt: "2026-03-04T10:00:00Z" },
+      ],
+      limietBereikt: false,
+    });
+    toon(["member"], "bob");
+    await screen.findByText("Eigen telling");
+    expect(screen.getByRole("columnheader", { name: "Versies" })).toBeTruthy();
+    expect(within(rijVan("Van Anna")).getByText("1 versie")).toBeTruthy();
+    expect(within(rijVan("Van Anna")).queryByRole("combobox")).toBeNull();
+
+    const r = rijVan("Eigen telling");
+    expect(within(r).getByText("2 versies")).toBeTruthy();
+    const keuze = await within(r).findByRole("combobox", {
+      name: "Te openen versie: Eigen telling",
+    });
+    expect([...(keuze as HTMLSelectElement).options].map((o) => o.text)).toEqual([
+      "Werkversie",
+      "v2 — Na renovatie",
+      "v1 — Begin",
+    ]);
+    const open = () => JSON.parse(within(r).getByText("Openen").closest("a")!.dataset["search"]!);
+    expect(open()).toEqual({ id: "t1" });
+    fireEvent.change(keuze, { target: { value: "1" } });
+    expect(open()).toEqual({ id: "t1", versie: 1 });
   });
 });

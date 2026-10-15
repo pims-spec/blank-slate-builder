@@ -100,6 +100,8 @@ interface Props {
    * indelingsadvies; "blanco" vraagt postcode/huisnummer en gaat dan naar de plattegrondstap.
    */
   start?: "indeling" | "blanco" | undefined;
+  /** Vanuit het archief: na het laden deze versie openen (zoals "Openen" in de versielijst) */
+  openVersie?: number | undefined;
 }
 
 type Laden = "bezig" | "klaar" | "niet-gevonden";
@@ -108,7 +110,14 @@ type Laden = "bezig" | "klaar" | "niet-gevonden";
  * Een telling bewerken en opslaan: werkversie opslaan, een versie vastleggen en een
  * eerdere versie openen — zoals in wws-site.html.
  */
-export default function TellingEditor({ tellingId, userId, bewerker, rechten, start }: Props) {
+export default function TellingEditor({
+  tellingId,
+  userId,
+  bewerker,
+  rechten,
+  start,
+  openVersie,
+}: Props) {
   const navigate = useNavigate();
   const NORMEN = useNormen();
   const queryClient = useQueryClient();
@@ -244,11 +253,28 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
     if (start === "blanco") void navigate({ to: "/wws", replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Archief met een gekozen versie: na het laden die versie openen, en de vlag uit de adresbalk
+  const versieGeopend = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openVersie || !tellingId || laden !== "klaar" || isNieuw) return;
+    if (versieGeopend.current === tellingId + "/" + openVersie) return;
+    versieGeopend.current = tellingId + "/" + openVersie;
+    const v = versies.find((x) => x.nr === openVersie);
+    if (start !== "indeling") {
+      zonderBlokkade.current = true;
+      void navigate({ to: "/wws", search: { id: tellingId }, replace: true });
+    }
+    if (v) versieOpenen(v);
+    else toast.error("Versie " + openVersie + " bestaat niet (meer); de werkversie is geopend.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openVersie, tellingId, laden, isNieuw, versies]);
   useEffect(() => {
     if (start !== "indeling" || !tellingId || laden !== "klaar" || isNieuw) return;
     if (indelingGeopend.current === tellingId) return;
     indelingGeopend.current = tellingId;
     setIndelingOpen(true);
+    // de vlag(gen) uit de adresbalk, zonder vraag (een geopende versie maakt de telling 'gewijzigd')
+    zonderBlokkade.current = true;
     void navigate({ to: "/wws", search: { id: tellingId }, replace: true });
   }, [start, tellingId, laden, isNieuw, navigate]);
 

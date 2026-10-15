@@ -12,6 +12,8 @@ const search = z.object({
   /** Vanaf het startscherm van het indelingsadvies (zie /indeling) */
   indeling: z.boolean().optional(),
   blanco: z.boolean().optional(),
+  /** Vanuit het archief: deze versie openen (nummer) */
+  versie: z.number().int().positive().optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/wws")({
@@ -32,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/wws")({
 
 function WwsPage() {
   const { user } = Route.useRouteContext();
-  const { id, indeling, blanco } = Route.useSearch();
+  const { id, indeling, blanco, versie } = Route.useSearch();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
   const { data: normen } = useSuspenseQuery(normenQuery());
   const email = user.email ?? "";
@@ -53,6 +55,7 @@ function WwsPage() {
             bewerker={{ id: user.id, naam: data.profile?.display_name || email, email }}
             rechten={data}
             start={blanco ? "blanco" : indeling ? "indeling" : undefined}
+            openVersie={versie}
           />
         </NormenProvider>
       ) : (

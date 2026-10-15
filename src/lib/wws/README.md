@@ -198,6 +198,20 @@ opvallen, zodat hij niet ongemerkt meetelt:
 - de tekst "Kies het soort ruimte. Tot dan telt deze ruimte mee als …";
 - een melding in het samenvattingspaneel met het aantal ruimten zonder soort.
 
+### Archief: versie kiezen (`archief.ts`, `Archief.tsx`)
+
+De bron toont per telling alleen het aantal versies ("geen versies", "1 versie", "3 versies").
+Dat staat nu in de kolom Versies.
+
+Aanvulling op de bron:
+
+- Heeft een telling meerdere versies, dan staat er een keuzelijst bij: eerst de werkversie, dan
+  de versies van nieuw naar oud ("v2 — Na renovatie").
+- "Openen" opent de gekozen versie (`/wws?id=…&versie=2`). Dat werkt zoals "Openen" in de
+  versielijst: de werkversie wordt daarop gebaseerd, en Opslaan werkt die versie bij.
+- De namen komen uit dezelfde lichte versie-query als het dashboard, die daarvoor ook
+  `notitie` ophaalt.
+
 ### Indelingsadvies (`indeling.ts`)
 
 - **Toiletvangnet** (`toiletVangnet`, getest in `indeling.test.ts`). De bron kan een variant zonder

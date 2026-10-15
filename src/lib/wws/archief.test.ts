@@ -8,6 +8,8 @@ import {
   matchFilters,
   matchZoek,
   type ArchiefFilters,
+  versieKeuzes,
+  versiesTekst,
 } from "./archief";
 import { calc } from "./calc";
 import { DEFAULT_NORMEN, type Normen } from "./normen";
@@ -121,6 +123,27 @@ describe("sorteerFavNaam (zoals de bron)", () => {
       "Zeeweg",
       "Appel",
       "bakker",
+    ]);
+  });
+});
+
+describe("versies in het archief", () => {
+  it("aantal zoals archiefRow() in de bron", () => {
+    expect(versiesTekst({ aantalVersies: 0, versieCount: 0 })).toBe("geen versies");
+    expect(versiesTekst({ aantalVersies: 1, versieCount: 1 })).toBe("1 versie");
+    expect(versiesTekst({ aantalVersies: 3, versieCount: 4 })).toBe("3 versies");
+  });
+
+  it("keuzelijst: werkversie, dan de versies van nieuw naar oud, alleen van deze telling", () => {
+    const keuzes = versieKeuzes("a", [
+      { tellingId: "a", nr: 1, notitie: "Begin", createdAt: "2026-03-04T10:00:00Z" },
+      { tellingId: "b", nr: 1, notitie: "Ander", createdAt: "2026-03-04T10:00:00Z" },
+      { tellingId: "a", nr: 2, notitie: "Na renovatie", createdAt: "2026-05-01T10:00:00Z" },
+    ]);
+    expect(keuzes).toEqual([
+      { waarde: "", label: "Werkversie" },
+      { waarde: "2", label: "v2 — Na renovatie" },
+      { waarde: "1", label: "v1 — Begin" },
     ]);
   });
 });
