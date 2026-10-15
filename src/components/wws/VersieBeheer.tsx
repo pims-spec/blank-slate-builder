@@ -131,7 +131,12 @@ export default function VersieBeheer({ versie: v, tellingId, onHernoemd, onVerwi
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void verwijderNu()}>Verwijderen</AlertDialogAction>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void verwijderNu()}
+            >
+              Verwijderen
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

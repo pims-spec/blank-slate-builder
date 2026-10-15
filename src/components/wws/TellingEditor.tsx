@@ -146,6 +146,8 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
   const download = useDownload();
   const [versieNaam, setVersieNaam] = useState("");
 
+  const kanVersieBijwerken = staat.basedOn != null && versies.some((v) => v.nr === staat.basedOn);
+
   const [dirty, setDirtyState] = useState(false);
   const dirtyRef = useRef(false);
   const setDirty = (d: boolean) => {
@@ -153,8 +155,14 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
     setDirtyState(d);
   };
 
+  /** Eén navigatie zonder vraag: de editor wisselt zelf van telling (dupliceren) */
+  const zonderBlokkade = useRef(false);
   useBlocker({
     shouldBlockFn: ({ current, next }) => {
+      if (zonderBlokkade.current) {
+        zonderBlokkade.current = false;
+        return false;
+      }
       if (!dirtyRef.current) return false;
       if (current.pathname === next.pathname && current.search === next.search) return false;
       return !window.confirm(NIET_OPGESLAGEN);
@@ -592,6 +600,8 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
     setNieuwBeeld(beeld);
     setVraagAdres(false);
     setDirty(true);
+    // de kopie is nog niet opgeslagen; dat is de bedoeling, dus niet om bevestiging vragen
+    zonderBlokkade.current = true;
     void navigate({ to: "/wws" });
     toast("Telling gedupliceerd als ‘" + meta.naam + "’. Nog niet opgeslagen.");
   }
@@ -862,8 +872,17 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
       <div className="flex flex-wrap items-center gap-2">
         {!alleenLezen && (
           <>
-            <Button onClick={opslaan} disabled={bezig}>
-              Opslaan
+            {/* gebaseerd op een bestaande versie: Opslaan werkt die versie bij (canUpdateVersie) */}
+            <Button
+              onClick={opslaan}
+              disabled={bezig}
+              title={
+                kanVersieBijwerken
+                  ? "Overschrijft versie " + staat.basedOn + " met de huidige wijzigingen"
+                  : "Bewaart de werkversie, zonder een versie vast te leggen"
+              }
+            >
+              {kanVersieBijwerken ? "Versie " + staat.basedOn + " bijwerken" : "Opslaan"}
             </Button>
             <Button
               variant="outline"
@@ -873,7 +892,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
                 setVersieDialoog(true);
               }}
             >
-              Versie vastleggen
+              {kanVersieBijwerken ? "Opslaan als nieuwe versie" : "Versie vastleggen"}
             </Button>
           </>
         )}
@@ -954,7 +973,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
             {versies.map((v) => (
               <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                 <span className="w-8 tabular-nums text-muted-foreground">{v.nr}</span>
-                <span className="min-w-0 flex-1 truncate" title={v.notitie}>
+                <span className="min-w-[10rem] flex-1 truncate" title={v.notitie}>
                   {v.notitie}
                 </span>
                 <span className="tabular-nums">{v.resultaat.totaal} p</span>

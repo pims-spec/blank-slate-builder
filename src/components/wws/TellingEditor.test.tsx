@@ -11,10 +11,16 @@ import { rechtenVan, type AppRole } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
 const navigate = vi.fn();
+type Locatie = { pathname: string; search: string };
+const blokkade = vi.hoisted(() => ({
+  fn: null as null | ((a: { current: Locatie; next: Locatie }) => boolean),
+}));
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
   useNavigate: () => navigate,
-  useBlocker: () => undefined,
+  useBlocker: (o: { shouldBlockFn: (a: { current: Locatie; next: Locatie }) => boolean }) => {
+    blokkade.fn = o.shouldBlockFn;
+  },
 }));
 
 const store = vi.hoisted(() => ({
@@ -463,9 +469,15 @@ describe("TellingEditor", () => {
       "Oud",
     );
     store.versies.mockResolvedValue([{ ...v, id: "v0001" }]);
+    store.werkVersieBij.mockImplementation(async (_t: string, _v: string, patch: object) => ({
+      ...v,
+      id: "v0001",
+      ...patch,
+    }));
     renderEditor("t-pve");
     fireEvent.click(await screen.findByRole("button", { name: "Openen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+    // gebaseerd op versie 1: opslaan werkt die versie bij (en bewaart de werkversie)
+    fireEvent.click(screen.getByRole("button", { name: "Versie 1 bijwerken" }));
     await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
     expect(opgeslagenInput()).toEqual(v.input);
     expect(JSON.stringify(opgeslagenInput())).not.toContain("uitPve");
@@ -622,7 +634,10 @@ describe("TellingEditor", () => {
       vi.spyOn(window, "confirm").mockReturnValue(true);
       fireEvent.click(await screen.findByRole("button", { name: "Openen" }));
       fireEvent.change(screen.getByLabelText("Straat"), { target: { value: "Nieuwe straat" } });
-      fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+      // zoals de bron: de knoppen zeggen wat er gebeurt
+      expect(screen.queryByRole("button", { name: "Opslaan" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Opslaan als nieuwe versie" })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Versie 1 bijwerken" }));
       await waitFor(() => expect(store.werkVersieBij).toHaveBeenCalledTimes(1));
       const [tid, vid, patch] = store.werkVersieBij.mock.calls[0]!;
       expect([tid, vid]).toEqual(["t-v", "v0001"]);
@@ -725,6 +740,18 @@ describe("TellingEditor", () => {
         "Niet-opgeslagen wijzigingen",
       );
       expect(navigate).toHaveBeenCalledWith({ to: "/wws" });
+      // die navigatie vraagt niet om bevestiging (de kopie is bewust nog niet opgeslagen);
+      // een volgende wel
+      const vraag = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const weg = {
+        current: { pathname: "/wws", search: "?id=t-a" },
+        next: { pathname: "/wws", search: "" },
+      };
+      expect(blokkade.fn!(weg)).toBe(false);
+      expect(vraag).not.toHaveBeenCalled();
+      expect(blokkade.fn!(weg)).toBe(true);
+      expect(vraag).toHaveBeenCalledTimes(1);
+      vraag.mockRestore();
       expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
       await waitFor(() => expect(store.maakAan).toHaveBeenCalledTimes(1));
