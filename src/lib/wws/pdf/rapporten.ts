@@ -4,6 +4,7 @@
 // pdf.vergelijk.test.ts vergelijkt de tekst van deze PDF's met die van de originele functies.
 import {
   berekenRoute,
+  energieVanOmschrijving,
   selectieResultaat,
   type AdviesInstellingen,
   type AdviesResultaat,
@@ -38,6 +39,7 @@ import {
   PDF_SOFT,
   PDF_W,
   bestandsBasis,
+  binnenTekenset,
   nieuwDoc,
   pdfTxt,
   tabel,
@@ -64,6 +66,8 @@ const DISC_ADVIES =
 // ---------- puntentelling ----------
 
 export interface TellingPdfInvoer {
+  /** Zonder de bewuste afwijkingen, precies als wws-site.html (alleen voor de vergelijkingstests) */
+  bronGetrouw?: boolean;
   meta: TellingMeta;
   input: WwsInput;
   normen: Normen;
@@ -75,6 +79,9 @@ export interface TellingPdfInvoer {
 
 /** Rapportage puntentelling — makePdf() */
 export function maakTellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
+  return binnenTekenset(x.bronGetrouw, () => tellingPdf(lib, x));
+}
+function tellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
   const { meta, normen, versie } = x;
   const input = pdfInvoer(x.input);
   const doc = nieuwDoc(lib);
@@ -129,6 +136,8 @@ export function maakTellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
 // ---------- route naar de vrije sector ----------
 
 export interface RoutePdfInvoer {
+  /** Zonder de bewuste afwijkingen, precies als wws-site.html (alleen voor de vergelijkingstests) */
+  bronGetrouw?: boolean;
   meta: TellingMeta;
   input: WwsInput;
   normen: Normen;
@@ -140,6 +149,9 @@ export interface RoutePdfInvoer {
 
 /** Huidige situatie, de gekozen route en de nieuwe situatie — makeRoutePdf() */
 export function maakRoutePdf(lib: PdfLib, x: RoutePdfInvoer): PdfBestand {
+  return binnenTekenset(x.bronGetrouw, () => routePdf(lib, x));
+}
+function routePdf(lib: PdfLib, x: RoutePdfInvoer): PdfBestand {
   const { meta, normen: N, advies: A } = x;
   const cur = pdfInvoer(x.input);
   const S = selectieResultaat(x.input, N, A, x.overslaan);
@@ -173,9 +185,9 @@ export function maakRoutePdf(lib: PdfLib, x: RoutePdfInvoer): PdfBestand {
     gehaald: S.R.totaal >= A.doel,
     kosten: S.kosten,
     input: S.input,
-    // zoals de bron: zonder begin-soort en omschrijving (zie de README, bekende punten)
     vanLabel: cur.energie.label,
   };
+  if (!x.bronGetrouw) routeAanvullen(route, cur, chosen, N);
   ({ y } = pdfOptiePagina(
     lib,
     doc,
@@ -219,9 +231,37 @@ export function maakRoutePdf(lib: PdfLib, x: RoutePdfInvoer): PdfBestand {
   return { blob: doc.output("blob"), bestandsnaam: "Route_vrije_sector_" + base + ".pdf" };
 }
 
+/**
+ * Bewuste afwijkingen in de route-PDF. De bron gaf de route geen beginsituatie mee (de
+ * energiekaart toonde "Van undefined naar …") en het adviesdialoog houdt geen eindlabel per stap
+ * bij ("… naar nieuw energielabel ?"). Hier worden beide aangevuld, zoals berekenRoute() dat
+ * voor het adviesrapport al doet.
+ */
+export function routeAanvullen(
+  route: PdfRoute,
+  cur: WwsInput,
+  chosen: AdviesResultaat["stappen"],
+  N: Normen,
+) {
+  route.origSoort = cur.energie.soort;
+  route.vanOmschrijving = energieVanOmschrijving(cur.energie);
+  route.stappen = chosen.map((g, i) =>
+    g.key === "label"
+      ? {
+          ...g,
+          // het label na deze stap: alle gekozen stappen t/m deze toegepast
+          naarLabel: selectieResultaat(cur, N, { stappen: chosen.slice(0, i + 1) }).input.energie
+            .label,
+        }
+      : g,
+  );
+}
+
 // ---------- volledig adviesrapport ----------
 
 export interface AdviesPdfInvoer {
+  /** Zonder de bewuste afwijkingen, precies als wws-site.html (alleen voor de vergelijkingstests) */
+  bronGetrouw?: boolean;
   meta: TellingMeta;
   input: WwsInput;
   normen: Normen;
@@ -232,6 +272,9 @@ export interface AdviesPdfInvoer {
 
 /** Huidige situatie plus twee verbeteropties — makeAdviesVolledigPdf() */
 export function maakAdviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
+  return binnenTekenset(x.bronGetrouw, () => adviesPdf(lib, x));
+}
+function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   const { meta, normen: N, inst } = x;
   const cur = pdfInvoer(x.input);
   const doc = nieuwDoc(lib);
@@ -333,6 +376,8 @@ export function maakAdviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
 // ---------- dashboard ----------
 
 export interface DashboardPdfInvoer {
+  /** Zonder de bewuste afwijkingen, precies als wws-site.html (alleen voor de vergelijkingstests) */
+  bronGetrouw?: boolean;
   S: Dashboard;
   normen: Normen;
   /** Gekozen eigenaar (klant); leeg = alle eigenaren */
@@ -345,6 +390,9 @@ export interface DashboardPdfInvoer {
 
 /** Portefeuille-rapportage — makeDashboardPdf(). null als er niets te exporteren is. */
 export function maakDashboardPdf(lib: PdfLib, x: DashboardPdfInvoer): PdfBestand | null {
+  return binnenTekenset(x.bronGetrouw, () => dashboardPdf(lib, x));
+}
+function dashboardPdf(lib: PdfLib, x: DashboardPdfInvoer): PdfBestand | null {
   const { S, normen: N, klantId } = x;
   const klantTxt = klantId ? x.klantNaam : "Alle eigenaren";
   if (!S.totaal) return null;

@@ -94,17 +94,8 @@ reference/wws-site-pdf.cjs    letterlijke uitsnede van de PDF- en Excel-code, al
 - Beide kanten draaien op dezelfde, actuele jsPDF en SheetJS; de oude code via `applyPlugin`.
   De kwetsbare oude versies komen zo nergens in het project.
 
-**Overgenomen eigenaardigheden van de bron** (bewust gelijk gehouden; voorstel tot correctie
-staat open):
+**Verder** (de bewuste afwijkingen in de PDF's staan hieronder, bij "Bewuste afwijkingen"):
 
-- **Tekens buiten het standaardlettertype.** De ingebouwde Helvetica van jsPDF kent geen "≤".
-  Een tekst met "≤" wordt in de PDF als losse, gespatieerde letters getekend
-  ("1 , 4 < E I ≤ 1 , 8 …"). Het gaat om de energie-indexklassen, bijvoorbeeld "1,4 < EI ≤ 1,8".
-  `pdfTxt` vervangt alleen ² en –.
-- **Route-PDF ("Route als PDF").**
-  - De route krijgt geen begin-soort mee. Met een labelstap toont de energiekaart daardoor
-    "Van undefined naar nieuw energielabel ?".
-  - Het "?" komt doordat het adviesdialoog geen eindlabel per stap bijhoudt.
 - **`pdfSamenvattingPagina`** wijst in de bron toe aan een `const` als de plattegrond niet
   gelezen kan worden; dat zou gooien. Hier is dat een `let`. Dit is de enige aanpassing in de
   uitsnede, daar gemarkeerd.
@@ -137,3 +128,24 @@ hebben eigen tests.
   `meta.pveId` vast. De app koppelt eigenaar én gebruikt PvE pas bij "Toepassen", zodat annuleren
   geen bijwerking heeft en later stil invullen hetzelfde PvE gebruikt.
 
+### PDF's (`pdf/`)
+
+De vergelijkingstest (`pdf.vergelijk.test.ts`) maakt de PDF's met `bronGetrouw: true`, precies als
+de bron. De app laat die optie weg, en dan gelden de afwijkingen hieronder. Ze hebben eigen tests
+in `pdf.afwijkingen.test.ts`.
+
+- **"≤" wordt "<="** (`pdfTxt` in `stijl.ts`).
+  - Het probleem: de ingebouwde Helvetica van jsPDF kent geen "≤". In de bron werd een tekst
+    met "≤" als losse, gespatieerde letters getekend. Het gaat om de energie-indexklassen,
+    zoals "1,4 < EI ≤ 1,8", in de telling-PDF bij elke telling met een energie-index en in de
+    adviesroutes.
+  - Fase 5: als het huisstijl-lettertype wordt ingesloten, kan "≤" terug.
+- **Route-PDF ("Route als PDF"): de beginsituatie** (`routeAanvullen` in `rapporten.ts`).
+  - Het probleem: de bron gaf de route geen begin-soort mee. Met een labelstap toonde de
+    energiekaart daardoor "Van undefined naar nieuw energielabel …".
+  - Nu: de kaart toont "Van label C naar …", of bij een energie-index of bouwjaar
+    "Van energie-index … naar nieuw energielabel …".
+- **Route-PDF: het eindlabel.**
+  - Het probleem: het adviesdialoog houdt geen eindlabel per stap bij, dus de bron toonde "?".
+  - Nu: het label na de gekozen stappen tot en met de labelstap wordt ingevuld, net als
+    berekenRoute() dat voor het adviesrapport al doet.

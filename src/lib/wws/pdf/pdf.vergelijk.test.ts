@@ -147,7 +147,7 @@ describe("PDF's gelijk aan wws-site.html", () => {
               notitie: seed % 2 ? "Na renovatie – keuken vernieuwd" : "",
             }
           : null;
-      const nieuw = maakTellingPdf(LIB, { meta, input, normen: N, versie });
+      const nieuw = maakTellingPdf(LIB, { meta, input, normen: N, versie, bronGetrouw: true });
       const { b } = bron({});
       const oud = await b.makePdf(
         CALC.clone(meta),
@@ -176,7 +176,14 @@ describe("PDF's gelijk aan wws-site.html", () => {
       A.stappen.forEach((_s, k) => {
         if (R() < 0.3) overslaan[k] = true;
       });
-      const nieuw = maakRoutePdf(LIB, { meta, input, normen: N, advies: A, overslaan });
+      const nieuw = maakRoutePdf(LIB, {
+        meta,
+        input,
+        normen: N,
+        advies: A,
+        overslaan,
+        bronGetrouw: true,
+      });
 
       const cur = { meta: CALC.clone(meta), input: CALC.normalizeInput(CALC.clone(input)) };
       const state: Ref = { ...CALC.clone(inst), result: null, skip: overslaan };
@@ -201,7 +208,13 @@ describe("PDF's gelijk aan wws-site.html", () => {
       const input = normaliseer(verrijk(seed + 500, genereer(seed + 500)));
       const meta = willekeurigeMeta(seed);
       const inst = instellingen(seed);
-      const nieuw = maakAdviesPdf(LIB, { meta, input, normen: N, inst: structuredClone(inst) });
+      const nieuw = maakAdviesPdf(LIB, {
+        meta,
+        input,
+        normen: N,
+        inst: structuredClone(inst),
+        bronGetrouw: true,
+      });
       const cur = { meta: CALC.clone(meta), input: CALC.normalizeInput(CALC.clone(input)) };
       const state: Ref = { ...CALC.clone(inst), result: { stappen: [] }, skip: {} };
       const { b, opgeslagen } = bron({ cur, adviesState: state });
@@ -277,6 +290,7 @@ describe("PDF's gelijk aan wws-site.html", () => {
         vandaag: new Date(),
       });
       const nieuw = maakDashboardPdf(LIB, {
+        bronGetrouw: true,
         S,
         normen: N,
         klantId,

@@ -30,11 +30,34 @@ export const PDF_SEGC: Record<Segment, RGB> = {
   midden: [255, 124, 58],
   hoog: [48, 164, 108],
 };
-/** jsPDF's standaardlettertype kent geen ² en – */
-export const pdfTxt = (s: unknown) =>
-  String(s ?? "")
+/**
+ * jsPDF's standaardlettertype kent geen ², – en ≤. De bron vervangt alleen ² en –; een tekst met
+ * "≤" (de energie-indexklassen) wordt dan als losse, gespatieerde letters getekend.
+ * Bewuste afwijking: buiten `binnenTekenset(true, …)` wordt "≤" ook vervangen, door "<=".
+ * (Fase 5: met een ingesloten huisstijl-lettertype kan "≤" terug.)
+ */
+let veiligeTekens = true;
+export const pdfTxt = (s: unknown) => {
+  const t = String(s ?? "")
     .replace(/²/g, "2")
     .replace(/–/g, "-");
+  return veiligeTekens ? t.replace(/≤/g, "<=") : t;
+};
+
+/**
+ * Draait het maken van een PDF bron-getrouw (zonder de bewuste afwijkingen) of niet. Alleen de
+ * vergelijkingstests gebruiken bronGetrouw = true. Het maken van een PDF is synchroon, dus de
+ * instelling geldt precies voor die ene PDF.
+ */
+export function binnenTekenset<T>(bronGetrouw: boolean | undefined, maak: () => T): T {
+  const oud = veiligeTekens;
+  veiligeTekens = !bronGetrouw;
+  try {
+    return maak();
+  } finally {
+    veiligeTekens = oud;
+  }
+}
 
 export const segName = (s: Segment) => SEGMENT_NAMEN[s];
 
