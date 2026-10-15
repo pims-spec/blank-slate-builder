@@ -808,107 +808,7 @@ export default function WwsCalculator({
           </Sectie>
 
           <Sectie titel="Energieprestatie" rubriek="4">
-            {/* vier tegels als keuzerondjes, zoals energieVeldHtml() */}
-            <div
-              className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5"
-              role="radiogroup"
-              aria-label="Type energielabel of bouwjaar"
-            >
-              {ENERGIE_TEGELS.map(([k, titel, sub]) => (
-                <label
-                  key={k}
-                  className={
-                    "relative flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 rounded-xl border-[1.5px] px-3.5 py-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary " +
-                    (E.soort === k
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background hover:border-primary") +
-                    (alleenLezen ? " cursor-default" : "")
-                  }
-                >
-                  <input
-                    type="radio"
-                    name="energie-soort"
-                    value={k}
-                    className="pointer-events-none absolute opacity-0"
-                    checked={E.soort === k}
-                    onChange={() =>
-                      wijzig((d) => {
-                        d.energie.soort = k;
-                      })
-                    }
-                  />
-                  <span className="text-sm font-semibold">{titel}</span>
-                  <span
-                    className={
-                      "text-xs " + (E.soort === k ? "opacity-80" : "text-muted-foreground")
-                    }
-                  >
-                    {sub}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(E.soort === "label" || E.soort === "labelOud") && (
-                <Veld label="Labelklasse">
-                  <Keuze
-                    value={E.label}
-                    onChange={(v) =>
-                      wijzig((d) => {
-                        d.energie.label = v as typeof E.label;
-                      })
-                    }
-                    opties={[
-                      ["", "Kies de labelklasse"],
-                      ...LABELS.map((l) => [l, l] as [string, string]),
-                      ["EPV", "Energieprestatievergoeding"],
-                    ]}
-                  />
-                </Veld>
-              )}
-              {E.soort === "index" && (
-                <Veld label="Energie-index">
-                  <Keuze
-                    value={E.indexKlasse}
-                    onChange={(v) =>
-                      wijzig((d) => {
-                        d.energie.indexKlasse = v;
-                      })
-                    }
-                    opties={[
-                      ["", "Kies de klasse"],
-                      ...INDEX_KLASSEN.map((k, x) => [String(x), k] as [string, string]),
-                      ["EPV", "Energieprestatievergoeding"],
-                    ]}
-                  />
-                </Veld>
-              )}
-              {E.soort !== "bouwjaar" && (
-                <Veld label="Registratiedatum">
-                  <input
-                    type="date"
-                    className={inputCls}
-                    value={E.datum}
-                    onChange={(e) =>
-                      wijzig((d) => {
-                        d.energie.datum = e.target.value;
-                      })
-                    }
-                  />
-                </Veld>
-              )}
-              <Veld label="Bouwjaar">
-                <Getal
-                  value={E.bouwjaar}
-                  placeholder=""
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.energie.bouwjaar = v;
-                    })
-                  }
-                />
-              </Veld>
-            </div>
+            <EnergieVelden energie={inp.energie} wijzig={wijzig} />
             {energieExtra}
           </Sectie>
 
@@ -1436,6 +1336,137 @@ export default function WwsCalculator({
         </div>
       </aside>
     </div>
+  );
+}
+
+/** "WOZ-waarde (€)" — fld("WOZ-waarde (€)","input.woz.waarde") in stap 1 van het indelingsadvies */
+export function WozWaardeVeld({
+  waarde,
+  zet,
+}: {
+  waarde: NumLike | undefined;
+  zet: (v: string) => void;
+}) {
+  return (
+    <Veld label="WOZ-waarde (€)" className="max-w-xs">
+      <Getal value={waarde} placeholder="Bijv. 300000" onChange={zet} />
+    </Veld>
+  );
+}
+
+/**
+ * Grondslag (tegels), labelklasse/index, registratiedatum en bouwjaar van rubriek 4 —
+ * energieVeldHtml() in wws-site.html. Ook gebruikt in stap 1 van het indelingsadvies; beide
+ * bewerken dezelfde invoer (via wijzig).
+ */
+export function EnergieVelden({
+  energie: E,
+  wijzig,
+}: {
+  energie: WwsInput["energie"];
+  wijzig: (f: (d: WwsInput) => void) => void;
+}) {
+  return (
+    <>
+      {/* vier tegels als keuzerondjes, zoals energieVeldHtml() */}
+      <div
+        className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5"
+        role="radiogroup"
+        aria-label="Type energielabel of bouwjaar"
+      >
+        {ENERGIE_TEGELS.map(([k, titel, sub]) => (
+          <label
+            key={k}
+            className={
+              "relative flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 rounded-xl border-[1.5px] px-3.5 py-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary " +
+              (E.soort === k
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background hover:border-primary") +
+              // alleen-lezen (fieldset disabled): niet klikbaar ogen
+              " has-[:disabled]:cursor-default has-[:disabled]:hover:border-border"
+            }
+          >
+            <input
+              type="radio"
+              name="energie-soort"
+              value={k}
+              className="pointer-events-none absolute opacity-0"
+              checked={E.soort === k}
+              onChange={() =>
+                wijzig((d) => {
+                  d.energie.soort = k;
+                })
+              }
+            />
+            <span className="text-sm font-semibold">{titel}</span>
+            <span className={"text-xs " + (E.soort === k ? "opacity-80" : "text-muted-foreground")}>
+              {sub}
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {(E.soort === "label" || E.soort === "labelOud") && (
+          <Veld label="Labelklasse">
+            <Keuze
+              value={E.label}
+              onChange={(v) =>
+                wijzig((d) => {
+                  d.energie.label = v as typeof E.label;
+                })
+              }
+              opties={[
+                ["", "Kies de labelklasse"],
+                ...LABELS.map((l) => [l, l] as [string, string]),
+                ["EPV", "Energieprestatievergoeding"],
+              ]}
+            />
+          </Veld>
+        )}
+        {E.soort === "index" && (
+          <Veld label="Energie-index">
+            <Keuze
+              value={E.indexKlasse}
+              onChange={(v) =>
+                wijzig((d) => {
+                  d.energie.indexKlasse = v;
+                })
+              }
+              opties={[
+                ["", "Kies de klasse"],
+                ...INDEX_KLASSEN.map((k, x) => [String(x), k] as [string, string]),
+                ["EPV", "Energieprestatievergoeding"],
+              ]}
+            />
+          </Veld>
+        )}
+        {E.soort !== "bouwjaar" && (
+          <Veld label="Registratiedatum">
+            <input
+              type="date"
+              className={inputCls}
+              value={E.datum}
+              onChange={(e) =>
+                wijzig((d) => {
+                  d.energie.datum = e.target.value;
+                })
+              }
+            />
+          </Veld>
+        )}
+        <Veld label="Bouwjaar">
+          <Getal
+            value={E.bouwjaar}
+            placeholder=""
+            onChange={(v) =>
+              wijzig((d) => {
+                d.energie.bouwjaar = v;
+              })
+            }
+          />
+        </Veld>
+      </div>
+    </>
   );
 }
 
