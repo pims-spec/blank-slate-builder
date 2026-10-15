@@ -704,4 +704,66 @@ describe("TellingEditor", () => {
       expect(screen.queryByRole("button", { name: "Telling verwijderen" })).toBeNull();
     });
   });
+
+  describe("vergrendelde velden, opzoeklinks en uitleg", () => {
+    it("adres automatisch overgenomen: alleen-lezen met 'wijzigen'; bouwjaar en woningtype ook", async () => {
+      const st = nieuweTellingStaat("Beheerder");
+      st.meta = {
+        ...st.meta,
+        adres: "Damrak",
+        plaats: "Amsterdam",
+        bouwjaar: "1975",
+        postcode: "1012 LG",
+        huisnummer: "1 A",
+        auto: { adres: true, plaats: true, bouwjaar: true, woningtype: true },
+      };
+      store.haal.mockResolvedValue({
+        ...maakTellingDoc(st, N, null),
+        id: "t-auto",
+        ownerId: ADMIN.id,
+        ownerNaam: "Beheerder",
+        gewijzigdOp: "2026-10-14T10:00:00Z",
+      });
+      renderEditor("t-auto");
+      const straat = await screen.findByLabelText("Straat");
+      expect(straat).toHaveAttribute("readonly");
+      expect(screen.getAllByLabelText("Bouwjaar")[0]).toHaveAttribute("readonly");
+      expect(screen.getByLabelText("Woningtype")).toBeDisabled();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Straat zelf wijzigen (automatisch overgenomen)" }),
+      );
+      expect(screen.getByLabelText("Straat")).not.toHaveAttribute("readonly");
+      expect(screen.getByLabelText("Plaats")).toHaveAttribute("readonly");
+      expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+        "Niet-opgeslagen wijzigingen",
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Woningtype zelf wijzigen (automatisch overgenomen)" }),
+      );
+      expect(screen.getByLabelText("Woningtype")).toBeEnabled();
+
+      // opzoeklinks: WOZ met toevoeging, adres gekopieerd
+      expect(screen.getAllByText("1012LG 1 A")).toHaveLength(2);
+      const schrijf = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText: schrijf } });
+      fireEvent.click(screen.getByRole("link", { name: "EP-online ↗" }));
+      await waitFor(() => expect(schrijf).toHaveBeenCalledWith("1012LG 1"));
+      expect(
+        await screen.findByText(
+          /‘1012LG 1’ gekopieerd\. Plak het in het zoekveld van EP-online \(zonder toevoeging/,
+          {
+            selector: "[role=status]",
+          },
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "WOZ-waardeloket ↗" })).toHaveAttribute(
+        "href",
+        "https://www.wozwaardeloket.nl/",
+      );
+
+      // uitleg bij een rubriek
+      fireEvent.click(screen.getByRole("button", { name: "Uitleg: Buitenruimten" }));
+      expect(await screen.findByText(/Een Frans balkon telt niet\./)).toBeInTheDocument();
+    });
+  });
 });

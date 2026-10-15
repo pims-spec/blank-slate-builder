@@ -69,7 +69,14 @@ import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
 import PveToepassenDialoog, { type PveVraag } from "./PveToepassenDialoog";
-import WwsCalculator from "./WwsCalculator";
+import WwsCalculator, { Ontgrendel } from "./WwsCalculator";
+import {
+  adresZoek,
+  isVergrendeld,
+  kopieerMelding,
+  OPZOEK_LINKS,
+  type LinkSoort,
+} from "@/lib/wws/opzoeken/links";
 import { useNormen } from "./NormenContext";
 import { klantenQuery, tellingStore } from "./tellingStore";
 
@@ -215,6 +222,18 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     setStaat((s) => ({ ...s, input: typeof u === "function" ? u(s.input) : u }));
     setDirty(true);
   }, []);
+
+  /** "wijzigen": het automatisch overgenomen veld mag weer met de hand — data-unlockauto */
+  const ontgrendel = (sleutel: "adres" | "plaats" | "bouwjaar" | "woningtype") => {
+    setStaat((s) => ({
+      ...s,
+      meta: {
+        ...s.meta,
+        auto: { ...((s.meta["auto"] as Record<string, boolean>) || {}), [sleutel]: false },
+      },
+    }));
+    setDirty(true);
+  };
 
   const zetMeta = (veld: keyof TellingMeta & string, waarde: string) => {
     setStaat((s) => ({ ...s, meta: { ...s.meta, [veld]: waarde } }));
@@ -720,6 +739,9 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
             className="sm:col-span-3"
             waarde={m.adres}
             zet={(v) => zetMeta("adres", v)}
+            onOntgrendel={
+              isVergrendeld(m, "adres", m.adres) ? () => ontgrendel("adres") : undefined
+            }
           />
           <MetaVeld
             label="Huisnummer"
@@ -738,6 +760,18 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
             className="sm:col-span-3"
             waarde={m.plaats}
             zet={(v) => zetMeta("plaats", v)}
+            onOntgrendel={
+              isVergrendeld(m, "plaats", m.plaats) ? () => ontgrendel("plaats") : undefined
+            }
+          />
+          <MetaVeld
+            label="Bouwjaar"
+            className="sm:col-span-2"
+            waarde={m.bouwjaar}
+            zet={(v) => zetMeta("bouwjaar", v)}
+            onOntgrendel={
+              isVergrendeld(m, "bouwjaar", m.bouwjaar) ? () => ontgrendel("bouwjaar") : undefined
+            }
           />
           <MetaVeld
             label="Peildatum"
@@ -982,7 +1016,18 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         alleenLezen={alleenLezen}
         pasRuimteAan={pasRuimteAan}
         energieExtra={
-          !alleenLezen && <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />
+          <>
+            <OpzoekLink meta={m} soort="ep" />
+            {!alleenLezen && (
+              <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />
+            )}
+          </>
+        }
+        wozExtra={<OpzoekLink meta={m} soort="woz" />}
+        woningtypeVergrendeld={
+          isVergrendeld(m, "woningtype", staat.input.woningtype)
+            ? { onOntgrendel: () => ontgrendel("woningtype") }
+            : undefined
         }
       />
       {!alleenLezen && (
@@ -1056,18 +1101,84 @@ function MetaVeld({
   zet,
   type = "text",
   className = "",
+  onOntgrendel,
 }: {
   label: string;
   waarde: string;
   zet: (v: string) => void;
   type?: string;
   className?: string;
+  /** Automatisch overgenomen (PDOK/EP-Online): alleen-lezen met "wijzigen" — fld(…, {autoKey}) */
+  onOntgrendel?: (() => void) | undefined;
 }) {
   return (
-    <label className={`flex flex-col gap-1 text-sm ${className}`}>
-      <span className="text-muted-foreground">{label}</span>
-      <Input type={type} value={waarde} onChange={(e) => zet(e.target.value)} />
-    </label>
+    <div className={`flex flex-col gap-1 text-sm ${className}`}>
+      <label className="flex flex-col gap-1">
+        <span className="text-muted-foreground">{label}</span>
+        <Input
+          type={type}
+          value={waarde}
+          readOnly={!!onOntgrendel}
+          className={onOntgrendel ? "bg-muted" : undefined}
+          onChange={(e) => zet(e.target.value)}
+        />
+      </label>
+      {onOntgrendel && (
+        <span className="-mt-1">
+          <Ontgrendel onClick={onOntgrendel} veld={label} />
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** "Opzoeken voor 1234AB 12: WOZ-waardeloket ↗" — lookupRow(); de link kopieert het adres */
+function OpzoekLink({ meta, soort }: { meta: TellingMeta; soort: LinkSoort }) {
+  const [melding, setMelding] = useState("");
+  const q = adresZoek(meta, "woz");
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-muted-foreground">
+        {q ? (
+          <>
+            Opzoeken voor <b>{q}</b>:
+          </>
+        ) : (
+          "Vul postcode en huisnummer in om op te zoeken:"
+        )}
+      </span>
+      <a
+        className="rounded-md border border-input px-3 py-1 hover:bg-muted"
+        href={OPZOEK_LINKS[soort].url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => {
+          const z = adresZoek(meta, soort);
+          if (!z) {
+            setMelding("Tip: vul eerst postcode en huisnummer in.");
+            return;
+          }
+          void navigator.clipboard
+            .writeText(z)
+            .then(
+              () => true,
+              () => false,
+            )
+            .then((ok) => {
+              const t = kopieerMelding(soort, z, ok);
+              setMelding(t);
+              toast(t);
+            });
+        }}
+      >
+        {OPZOEK_LINKS[soort].naam} ↗
+      </a>
+      {melding && (
+        <span className="text-xs text-muted-foreground" role="status">
+          {melding}
+        </span>
+      )}
+    </div>
   );
 }
 

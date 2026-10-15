@@ -30,7 +30,9 @@ import {
   zetMaat,
 } from "@/lib/wws/ruimteInvoer";
 import type { Maat } from "@/lib/wws/types";
+import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
 import { useNormen } from "./NormenContext";
+import Uitleg from "./Uitleg";
 
 // ---------- bouwstenen ----------
 const inputCls =
@@ -147,12 +149,14 @@ function Vink({
   label,
   checked,
   onChange,
+  uitleg,
 }: {
   label: string;
   checked: boolean;
   onChange: (b: boolean) => void;
+  uitleg?: string;
 }) {
-  return (
+  const vink = (
     <label className="flex items-center gap-2 text-sm">
       <input
         type="checkbox"
@@ -162,6 +166,13 @@ function Vink({
       />
       {label}
     </label>
+  );
+  if (!uitleg) return vink;
+  return (
+    <div className="flex items-center gap-2">
+      {vink}
+      <Uitleg tekst={uitleg} over={label} />
+    </div>
   );
 }
 function Keuze({
@@ -226,6 +237,11 @@ function Sectie({
           {rubriek}
         </span>
         {titel}
+        {rubriek && RUBRIEK_UITLEG[rubriek] && (
+          <span className="self-center">
+            <Uitleg tekst={RUBRIEK_UITLEG[rubriek]} over={titel} />
+          </span>
+        )}
       </h2>
       <div className="space-y-3 sm:pl-11">{children}</div>
     </section>
@@ -328,6 +344,10 @@ export interface WwsCalculatorProps {
   pasRuimteAan?: (groep: "vertrekken" | "overig", ruimte: Vertrek | OverigeRuimte) => void;
   /** Onder de energievelden (bv. het energielabel ophalen bij EP-Online) */
   energieExtra?: ReactNode;
+  /** Onder de WOZ-velden (bv. de link naar het WOZ-waardeloket) */
+  wozExtra?: ReactNode;
+  /** Woningtype automatisch overgenomen (EP-Online): alleen-lezen met "wijzigen" */
+  woningtypeVergrendeld?: { onOntgrendel: () => void } | undefined;
 }
 
 export default function WwsCalculator({
@@ -337,6 +357,8 @@ export default function WwsCalculator({
   alleenLezen = false,
   pasRuimteAan,
   energieExtra,
+  wozExtra,
+  woningtypeVergrendeld,
 }: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
@@ -710,20 +732,27 @@ export default function WwsCalculator({
 
         <fieldset disabled={alleenLezen} className="m-0 min-w-0 border-0 p-0">
           <Sectie titel="Woning">
-            <Veld label="Woningtype" className="max-w-xs">
-              <Keuze
-                value={inp.woningtype}
-                onChange={(v) =>
-                  wijzig((d) => {
-                    d.woningtype = v as WwsInput["woningtype"];
-                  })
-                }
-                opties={[
-                  ["eengezins", "Eengezinswoning"],
-                  ["meergezins", "Meergezinswoning"],
-                ]}
-              />
-            </Veld>
+            <div className="flex max-w-md items-end gap-2">
+              <Veld label="Woningtype" className="max-w-xs flex-1">
+                <fieldset disabled={!!woningtypeVergrendeld} className="m-0 min-w-0 border-0 p-0">
+                  <Keuze
+                    value={inp.woningtype}
+                    onChange={(v) =>
+                      wijzig((d) => {
+                        d.woningtype = v as WwsInput["woningtype"];
+                      })
+                    }
+                    opties={[
+                      ["eengezins", "Eengezinswoning"],
+                      ["meergezins", "Meergezinswoning"],
+                    ]}
+                  />
+                </fieldset>
+              </Veld>
+              {woningtypeVergrendeld && !alleenLezen && (
+                <Ontgrendel onClick={woningtypeVergrendeld.onOntgrendel} veld="Woningtype" />
+              )}
+            </div>
           </Sectie>
 
           <Sectie titel="Vertrekken" rubriek="1">
@@ -1174,6 +1203,7 @@ export default function WwsCalculator({
             </div>
             <Vink
               label="Nieuwbouw 2015–2019 (minimaal 40 WOZ-punten vanaf 110 punten)"
+              uitleg={VINK_UITLEG.nieuwbouw1519}
               checked={inp.woz.nieuwbouw1519}
               onChange={(b) =>
                 wijzig((d) => {
@@ -1183,6 +1213,7 @@ export default function WwsCalculator({
             />
             <Vink
               label="Kengetal kleine nieuwbouw COROP"
+              uitleg={VINK_UITLEG.kleinCorop}
               checked={inp.woz.kleinCorop}
               onChange={(b) =>
                 wijzig((d) => {
@@ -1190,6 +1221,7 @@ export default function WwsCalculator({
                 })
               }
             />
+            {wozExtra}
           </Sectie>
 
           <Sectie titel="Bijzondere voorzieningen" rubriek="12">
@@ -1323,5 +1355,20 @@ function Opmerking({ o }: { o: ReturnType<typeof ruimteOpmerking> }) {
     <p className={"mt-1 text-xs " + (o.ingeschat ? "text-orange-600" : "text-muted-foreground")}>
       {o.tekst}
     </p>
+  );
+}
+
+/** "wijzigen" bij een automatisch overgenomen veld — data-unlockauto in wws-site.html */
+export function Ontgrendel({ onClick, veld }: { onClick: () => void; veld: string }) {
+  return (
+    <button
+      type="button"
+      className="mb-1.5 text-xs text-primary hover:underline"
+      title="Automatisch overgenomen. Klik om dit veld zelf aan te passen."
+      aria-label={veld + " zelf wijzigen (automatisch overgenomen)"}
+      onClick={onClick}
+    >
+      wijzigen
+    </button>
   );
 }
