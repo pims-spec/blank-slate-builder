@@ -1258,7 +1258,7 @@ export default function WwsCalculator({
           <p className="mt-3">
             <span
               className={
-                "inline-block rounded-full px-3 py-0.5 text-sm font-medium text-white " +
+                "inline-block rounded-full px-3 py-0.5 text-sm font-medium text-seg-foreground " +
                 SEG_KLEUR[res.seg]
               }
             >
@@ -1518,7 +1518,7 @@ function SegmentBalk({ totaal, N }: { totaal: number; N: Normen }) {
 function Opmerking({ o }: { o: ReturnType<typeof ruimteOpmerking> }) {
   if (!o) return null;
   return (
-    <p className={"mt-1 text-xs " + (o.ingeschat ? "text-orange-600" : "text-muted-foreground")}>
+    <p className={"mt-1 text-xs " + (o.ingeschat ? "text-orange-ink" : "text-muted-foreground")}>
       {o.tekst}
     </p>
   );

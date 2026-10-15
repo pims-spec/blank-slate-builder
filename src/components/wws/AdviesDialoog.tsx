@@ -38,9 +38,9 @@ const H_LABEL: Record<Haalbaarheid, string> = {
   lastig: "Lastig",
 };
 const H_KLEUR: Record<Haalbaarheid, string> = {
-  eenvoudig: "bg-emerald-600 text-white",
-  gemiddeld: "bg-amber-500 text-black",
-  lastig: "bg-red-600 text-white",
+  eenvoudig: "bg-seg-hoog text-seg-foreground",
+  gemiddeld: "bg-orange text-orange-foreground",
+  lastig: "bg-seg-laag text-seg-foreground",
 };
 
 /** Titel van een samengevoegde stap (stapTitel() in wws-site.html) */

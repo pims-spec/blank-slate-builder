@@ -30,10 +30,11 @@ import {
 } from "@/lib/wws/plattegrond/toepassen";
 import type { NieuwBeeld } from "./plattegrondBeeld";
 
+// groen = afgelezen, paars = berekend, oranje = ingeschat (zoals de bron), met tekst in AA-contrast
 const BRON_KLEUR: Record<string, string> = {
-  afgelezen: "bg-emerald-600",
-  berekend: "bg-primary",
-  ingeschat: "bg-orange-500",
+  afgelezen: "bg-seg-hoog text-seg-foreground",
+  berekend: "bg-primary text-primary-foreground",
+  ingeschat: "bg-orange text-orange-foreground",
 };
 const veldCls =
   "rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -288,7 +289,7 @@ export function PlattegrondInlezen({
                       </td>
                       <td className="p-1">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] text-white ${BRON_KLEUR[r.bron] ?? "bg-muted-foreground"}`}
+                          className={`rounded-full px-2 py-0.5 text-[11px] ${BRON_KLEUR[r.bron] ?? "bg-muted text-foreground"}`}
                         >
                           {r.bron}
                         </span>
