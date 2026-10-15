@@ -54,6 +54,18 @@ describe("AdviesDialoog", () => {
     expect(x).toEqual(woning());
   });
 
+  it("titel en labelsprong-tekst zoals de bron", () => {
+    metQuery(<AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} />);
+    expect(
+      screen.getByRole("dialog", { name: "Advies: route naar de vrije sector" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Altijd 1 labelsprong verwerken in het advies (ook in de downloadbare adviesrapporten)",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("marge verhoogt het doel", () => {
     metQuery(<AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} />);
     const marge = screen.getByLabelText("Marge in punten");

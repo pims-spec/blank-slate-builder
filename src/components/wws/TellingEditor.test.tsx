@@ -285,7 +285,7 @@ describe("TellingEditor", () => {
     expect(screen.queryByRole("button", { name: "Delen" })).toBeNull();
     expect(screen.getByLabelText("Straat")).toBeDisabled();
     expect(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Verbeteradvies" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Advies vrije sector" })).toBeEnabled();
     unmount();
 
     renderEditor(undefined, "lezer-1", ["viewer"]);

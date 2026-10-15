@@ -132,7 +132,7 @@ interface Props {
   magToepassen?: boolean;
 }
 
-/** Verbeteradvies: route naar de vrije sector, zoals het adviesvenster in wws-site.html. */
+/** Advies vrije sector: route naar de vrije sector, zoals het adviesvenster in wws-site.html. */
 export default function AdviesDialoog({
   open,
   onOpenChange,
@@ -149,8 +149,9 @@ export default function AdviesDialoog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Verbeteradvies</DialogTitle>
-          <DialogDescription>
+          <DialogTitle>Advies: route naar de vrije sector</DialogTitle>
+          {/* de bron heeft geen ondertitel; alleen voor schermlezers */}
+          <DialogDescription className="sr-only">
             De goedkoopste route naar de vrije sector (vanaf {NORMEN.grensMidden + 1} punten), met
             een eventuele marge.
           </DialogDescription>
@@ -320,7 +321,7 @@ function AdviesInhoud({
           checked={inst.labelsprong}
           onChange={(e) => herbereken({ labelsprong: e.target.checked })}
         />
-        Altijd 1 labelsprong verwerken in het advies
+        Altijd 1 labelsprong verwerken in het advies (ook in de downloadbare adviesrapporten)
       </label>
 
       <Tabs defaultValue="route">

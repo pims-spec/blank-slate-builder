@@ -913,7 +913,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
           {download.bezig === "werkversie" ? "PDF maken…" : "PDF van huidige stand"}
         </Button>
         <Button variant="outline" onClick={() => setAdviesOpen(true)}>
-          Verbeteradvies
+          Advies vrije sector
         </Button>
         <Button variant="outline" onClick={() => setIndelingOpen(true)}>
           Indelingsadvies
