@@ -648,6 +648,21 @@ describe("TellingEditor", () => {
       expect(store.voegVersieToe).not.toHaveBeenCalled();
     });
 
+    it("versies staan in het samenvattingspaneel, onder de knoppen", async () => {
+      tellingMetVersie();
+      renderEditor("t-v");
+      const samenvatting = await screen.findByRole("complementary");
+      expect(
+        await within(samenvatting).findByRole("heading", { name: "Versies" }),
+      ).toBeInTheDocument();
+      expect(
+        within(samenvatting).getByRole("button", { name: "Versies vergelijken" }),
+      ).toBeInTheDocument();
+      expect(
+        within(samenvatting).getByRole("button", { name: "Versie 1 hernoemen" }),
+      ).toBeInTheDocument();
+    });
+
     it("hernoemen: Enter bevestigt", async () => {
       const v = tellingMetVersie();
       store.werkVersieBij.mockResolvedValue({ ...v, notitie: "Na renovatie" });

@@ -946,70 +946,6 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
         </div>
       )}
 
-      {versies.length > 0 && (
-        <div>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Versies</h3>
-            <Button size="sm" variant="outline" onClick={() => setVergelijkOpen(true)}>
-              Versies vergelijken
-            </Button>
-          </div>
-          <VersiesVergelijken
-            open={vergelijkOpen}
-            onOpenChange={setVergelijkOpen}
-            versies={versies}
-            werkInput={staat.input}
-            normen={NORMEN}
-          />
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
-            {versies.map((v) => (
-              <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-                <span className="w-8 tabular-nums text-muted-foreground">{v.nr}</span>
-                <span className="min-w-[10rem] flex-1 truncate" title={v.notitie}>
-                  {v.notitie}
-                </span>
-                <span className="tabular-nums">{v.resultaat.totaal} p</span>
-                <span className="text-muted-foreground">{SEGMENT_NAMEN[v.resultaat.seg]}</span>
-                <span className="text-muted-foreground">{datumTijd(v.createdAt)}</span>
-                <Button size="sm" variant="ghost" onClick={() => versieOpenen(v)}>
-                  Openen
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label={"PDF van versie " + v.nr}
-                  disabled={download.bezig === v.id}
-                  onClick={() =>
-                    download.pdf(v.id, async (lib) =>
-                      // met de normen en de plattegrond van toen, zoals de bron (mergeNormen(v.normen))
-                      maakTellingPdf(lib, {
-                        meta: v.meta,
-                        input: v.input,
-                        normen: v.normen,
-                        versie: v,
-                        plattegrond: await plattegrondVoorPdf(v.input),
-                      }),
-                    )
-                  }
-                >
-                  PDF
-                </Button>
-                {!alleenLezen && (
-                  <VersieBeheer
-                    versie={v}
-                    tellingId={id}
-                    onHernoemd={(nv) =>
-                      setVersies((vs) => vs.map((x) => (x.id === nv.id ? nv : x)))
-                    }
-                    onVerwijderd={versieVerwijderd}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <AlertDialog open={verwijderVraag} onOpenChange={setVerwijderVraag}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1158,6 +1094,75 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
     </div>
   );
 
+  /** Versies onder de samenvatting (in de bron: "Versies (n)" in het samenvattingspaneel) */
+  const versieLijst = (
+    <div className="mt-5 border-t border-border pt-4">
+      {versies.length > 0 && (
+        <div>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Versies</h3>
+            <Button size="sm" variant="outline" onClick={() => setVergelijkOpen(true)}>
+              Versies vergelijken
+            </Button>
+          </div>
+          <VersiesVergelijken
+            open={vergelijkOpen}
+            onOpenChange={setVergelijkOpen}
+            versies={versies}
+            werkInput={staat.input}
+            normen={NORMEN}
+          />
+          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+            {versies.map((v) => (
+              <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                <span className="w-8 tabular-nums text-muted-foreground">{v.nr}</span>
+                <span className="min-w-[10rem] flex-1 truncate" title={v.notitie}>
+                  {v.notitie}
+                </span>
+                <span className="tabular-nums">{v.resultaat.totaal} p</span>
+                <span className="text-muted-foreground">{SEGMENT_NAMEN[v.resultaat.seg]}</span>
+                <span className="text-muted-foreground">{datumTijd(v.createdAt)}</span>
+                <Button size="sm" variant="ghost" onClick={() => versieOpenen(v)}>
+                  Openen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={"PDF van versie " + v.nr}
+                  disabled={download.bezig === v.id}
+                  onClick={() =>
+                    download.pdf(v.id, async (lib) =>
+                      // met de normen en de plattegrond van toen, zoals de bron (mergeNormen(v.normen))
+                      maakTellingPdf(lib, {
+                        meta: v.meta,
+                        input: v.input,
+                        normen: v.normen,
+                        versie: v,
+                        plattegrond: await plattegrondVoorPdf(v.input),
+                      }),
+                    )
+                  }
+                >
+                  PDF
+                </Button>
+                {!alleenLezen && (
+                  <VersieBeheer
+                    versie={v}
+                    tellingId={id}
+                    onHernoemd={(nv) =>
+                      setVersies((vs) => vs.map((x) => (x.id === nv.id ? nv : x)))
+                    }
+                    onVerwijderd={versieVerwijderd}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+
   /** "Telling verwijderen" onderaan het formulier, zoals de bron */
   const onderaan = !isNieuw &&
     rechten.magSchrijven &&
@@ -1187,7 +1192,12 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten, st
         setInput={setInput}
         boven={paneel}
         kop={kop}
-        samenvattingOnder={samenvattingKnoppen}
+        samenvattingOnder={
+          <>
+            {samenvattingKnoppen}
+            {versies.length > 0 && versieLijst}
+          </>
+        }
         onder={onderaan || undefined}
         alleenLezen={alleenLezen}
         pasRuimteAan={pasRuimteAan}
