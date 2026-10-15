@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
+import { calc } from "../calc";
 import type { DashboardVersie } from "../dashboard";
 import type { Normen } from "../normen";
 import { BUCKET, maakPlattegrondOpslag, type Bucket } from "../plattegrond/opslag";
@@ -111,6 +112,45 @@ export function maakTellingStore(db: Db, normen: Normen) {
       return (data ?? []).map((rij) => ({ ...leesVersieDoc(rij.data, normen), id: rij.id }));
     },
 
+    /**
+     * Een versie bijwerken: de opgeslagen data aangevuld met `patch` — updateVersie() in
+     * wws-site.html. RLS: policy "Versies bewerken" (mag_telling_bewerken).
+     */
+    async werkVersieBij(id: string, vid: string, patch: Partial<VersieDoc>): Promise<Versie> {
+      const { data: bestaand, error: e1 } = await db
+        .from("telling_versies")
+        .select("data")
+        .eq("telling_id", id)
+        .eq("id", vid)
+        .maybeSingle();
+      if (e1) throw e1;
+      if (!bestaand) throw new Error("Deze versie bestaat niet meer.");
+      const merged = { ...(bestaand.data as object), ...patch } as VersieDoc;
+      const { data, error } = await db
+        .from("telling_versies")
+        .update({ data: json(merged) })
+        .eq("telling_id", id)
+        .eq("id", vid)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0)
+        throw new Error("Deze versie bestaat niet meer, of je mag hem niet wijzigen.");
+      return { ...leesVersieDoc(merged, normen), id: vid };
+    },
+
+    /** Een versie verwijderen — deleteVersie(). RLS: policy "Versies verwijderen". */
+    async verwijderVersie(id: string, vid: string): Promise<void> {
+      const { data, error } = await db
+        .from("telling_versies")
+        .delete()
+        .eq("telling_id", id)
+        .eq("id", vid)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0)
+        throw new Error("Deze versie bestaat niet meer, of je mag hem niet verwijderen.");
+    },
+
     async voegVersieToe(id: string, v: VersieDoc): Promise<Versie> {
       const vid = versieId(v.nr);
       const { error } = await db
@@ -207,4 +247,26 @@ export async function legVersieVast(
   await slaWerkversieOp(store, { ...o, staat });
   const versie = await store.voegVersieToe(o.id, v);
   return { staat, versie };
+}
+
+/**
+ * "Opslaan" op een werkversie die op versie X is gebaseerd: versie X krijgt de huidige meta,
+ * invoer, normen en uitkomst — updateVersieBijwerken() in wws-site.html (zonder Google Drive) —
+ * en daarna wordt de werkversie opgeslagen. Geeft de bijgewerkte versie.
+ */
+export async function werkVersieBij(
+  store: TellingStore,
+  o: OpslaanOpties & { versie: Versie },
+): Promise<Versie> {
+  const R = calc(o.staat.input, o.normen);
+  const patch: Partial<VersieDoc> = {
+    meta: structuredClone(o.staat.meta),
+    input: structuredClone(o.staat.input),
+    normen: structuredClone(o.normen),
+    resultaat: { totaal: R.totaal, exact: R.exact, seg: R.seg, maxHuur: R.maxHuur, rows: R.rows },
+    bewerktOp: (o.nu ?? new Date()).toISOString(),
+  };
+  const v = await store.werkVersieBij(o.id, o.versie.id, patch);
+  await slaWerkversieOp(store, o);
+  return v;
 }

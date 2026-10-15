@@ -54,3 +54,22 @@ export async function ruimOudBeeldOp(
     console.warn("[plattegrond] oude afbeelding opruimen mislukt");
   }
 }
+
+/**
+ * Na het bijwerken of verwijderen van een versie: de kandidaat-afbeeldingen weg die niet meer
+ * door de werkversie of een (overgebleven) versie worden gebruikt. Fouten alleen gelogd.
+ */
+export async function ruimOngebruiktOp(
+  opslag: PlattegrondOpslag,
+  kandidaten: readonly (string | null | undefined)[],
+  inGebruik: readonly { plattegrond?: { pad: string } | undefined }[],
+): Promise<void> {
+  const gebruikt = new Set(inGebruik.map((x) => x.plattegrond?.pad).filter(Boolean));
+  const weg = [...new Set(kandidaten.filter((p): p is string => !!p && !gebruikt.has(p)))];
+  if (!weg.length) return;
+  try {
+    await opslag.verwijder(weg);
+  } catch {
+    console.warn("[plattegrond] ongebruikte afbeelding opruimen mislukt");
+  }
+}

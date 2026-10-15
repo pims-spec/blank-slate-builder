@@ -62,6 +62,8 @@ export interface VersieDoc {
   input: WwsInput;
   normen: Normen;
   resultaat: VersieResultaat;
+  /** Laatst bijgewerkt via "Opslaan" op een werkversie die op deze versie is gebaseerd */
+  bewerktOp?: string;
 }
 
 /** Een telling zoals die uit de database komt. */

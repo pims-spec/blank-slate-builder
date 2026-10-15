@@ -85,3 +85,15 @@ describe("ruimOudBeeldOp", () => {
     await ruimOudBeeldOp(opslag, nieuwPad(T, "image/jpeg"), null, []); // bestaat niet: geen fout
   });
 });
+
+describe("ruimOngebruiktOp", () => {
+  it("alleen afbeeldingen die niemand meer gebruikt", async () => {
+    const { ruimOngebruiktOp } = await import("./bewaren");
+    const b = nepBucket();
+    const opslag = maakPlattegrondOpslag(b.bucket);
+    const a = await opslag.bewaar(T, JPEG, { breedte: 1, hoogte: 1 });
+    const c = await opslag.bewaar(T, JPEG, { breedte: 1, hoogte: 1 });
+    await ruimOngebruiktOp(opslag, [a.pad, c.pad, null, a.pad], [{ plattegrond: c }, {}]);
+    expect([...b.bestanden.keys()]).toEqual([c.pad]);
+  });
+});

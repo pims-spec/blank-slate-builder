@@ -50,7 +50,9 @@ import {
   usePlattegrondUrl,
   type NieuwBeeld,
 } from "./plattegrondBeeld";
-import { bewaarBeeld, ruimOudBeeldOp } from "@/lib/wws/plattegrond/bewaren";
+import { bewaarBeeld, ruimOngebruiktOp, ruimOudBeeldOp } from "@/lib/wws/plattegrond/bewaren";
+import { werkVersieBij } from "@/lib/wws/opslag/store";
+import VersieBeheer from "./VersieBeheer";
 import { blobNaarBytes } from "@/lib/wws/plattegrond/beeld";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
@@ -315,6 +317,30 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     setBezig(true);
     try {
       const r = await metBeeld();
+      // gebaseerd op een (nog bestaande) versie: die versie bijwerken — updateVersieBijwerken()
+      const basis =
+        r.staat.basedOn != null ? versies.find((v) => v.nr === r.staat.basedOn) : undefined;
+      if (basis && !r.isNieuw) {
+        const v = await werkVersieBij(tellingStore, {
+          id,
+          isNieuw: false,
+          staat: r.staat,
+          normen: NORMEN,
+          bewerker,
+          versie: basis,
+        });
+        const vs = versies.map((x) => (x.id === v.id ? v : x));
+        setVersies(vs);
+        ruimOp(r.staat, vs);
+        void ruimOngebruiktOp(
+          plattegrondOpslag,
+          [basis.input.plattegrond?.pad],
+          [r.staat.input, ...vs.map((x) => x.input)],
+        );
+        await naOpslaan();
+        toast.success("Versie " + v.nr + " bijgewerkt");
+        return;
+      }
       await slaWerkversieOp(tellingStore, {
         id,
         isNieuw: r.isNieuw,
@@ -408,6 +434,40 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     setStaat((s) => ({ ...s, meta: { ...s.meta, postcode, huisnummer } }));
     setDirty(true);
     planAdresOpzoeken(0);
+  }
+
+  /**
+   * Na het verwijderen van een versie — deleteVersie(): aantal versies en "gebaseerd op" bijwerken
+   * en de telling opslaan (zoals de bron); de afbeelding van die versie weg als niemand hem gebruikt.
+   */
+  async function versieVerwijderd(v: Versie) {
+    const rest = versies.filter((x) => x.id !== v.id);
+    setVersies(rest);
+    const nieuw: TellingStaat = {
+      ...staat,
+      aantalVersies: rest.length,
+      basedOn: staat.basedOn === v.nr ? null : staat.basedOn,
+    };
+    setStaat(nieuw);
+    try {
+      await slaWerkversieOp(tellingStore, {
+        id,
+        isNieuw: false,
+        staat: nieuw,
+        normen: NORMEN,
+        bewerker,
+      });
+      setDirty(false);
+      void queryClient.invalidateQueries({ queryKey: ["tellingen"] });
+    } catch (e) {
+      toast.error("Opslaan lukte niet: " + foutTekst(e));
+    }
+    void ruimOngebruiktOp(
+      plattegrondOpslag,
+      [v.input.plattegrond?.pad],
+      [nieuw.input, ...rest.map((x) => x.input)],
+    );
+    toast("Versie " + v.nr + " verwijderd");
   }
 
   /** Ingelezen plattegrond overnemen: in de werkversie; de afbeelding gaat bij Opslaan naar Storage */
@@ -743,6 +803,16 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
                 >
                   PDF
                 </Button>
+                {!alleenLezen && (
+                  <VersieBeheer
+                    versie={v}
+                    tellingId={id}
+                    onHernoemd={(nv) =>
+                      setVersies((vs) => vs.map((x) => (x.id === nv.id ? nv : x)))
+                    }
+                    onVerwijderd={versieVerwijderd}
+                  />
+                )}
               </li>
             ))}
           </ul>

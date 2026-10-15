@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { maakTellingDoc, nieuweTellingStaat, type TellingStaat } from "./doc";
 import { nepDb, stap, type Aanroep, type Antwoord } from "./nepDb";
-import { haalDashboardVersies, legVersieVast, maakTellingStore, slaWerkversieOp } from "./store";
+import {
+  haalDashboardVersies,
+  legVersieVast,
+  maakTellingStore,
+  slaWerkversieOp,
+  werkVersieBij,
+} from "./store";
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const NU = new Date("2026-10-14T10:00:00.000Z");
@@ -250,5 +256,92 @@ describe("dashboard: versies", () => {
     const rij = { telling_id: "t", nr: 1, createdAt: null, totaal: 1, maxHuur: 1, seg: "laag" };
     const { db } = nepDb(() => ({ data: [rij, rij, rij] }));
     expect((await haalDashboardVersies(db, 3)).limietBereikt).toBe(true);
+  });
+});
+
+describe("versies bijwerken, hernoemen en verwijderen", () => {
+  const versieData = () => ({
+    nr: 2,
+    notitie: "Oud",
+    createdAt: "2026-01-01T00:00:00Z",
+    meta: staat().meta,
+    input: staat().input,
+    normen: N,
+    resultaat: { totaal: 1, exact: 1, seg: "laag", maxHuur: null, rows: [] },
+  });
+
+  it("werkVersieBij (store): bestaande data aangevuld met de wijziging (hernoemen)", async () => {
+    const { db, log } = nepDb((a) =>
+      stap(a, "maybeSingle")
+        ? { data: { data: versieData() } }
+        : stap(a, "update")
+          ? { data: [{ id: "v0002" }] }
+          : {},
+    );
+    const v = await maakTellingStore(db, N).werkVersieBij("t1", "v0002", { notitie: "Nieuw" });
+    expect(v).toMatchObject({ id: "v0002", nr: 2, notitie: "Nieuw" });
+    const upd = log.find((a) => stap(a, "update"))!;
+    expect(upd.tabel).toBe("telling_versies");
+    expect(
+      (stap(upd, "update")![0] as { data: { notitie: string; nr: number } }).data,
+    ).toMatchObject({
+      notitie: "Nieuw",
+      nr: 2,
+    });
+    expect(upd.stappen.filter(([s]) => s === "eq").map(([, a]) => a)).toEqual([
+      ["telling_id", "t1"],
+      ["id", "v0002"],
+    ]);
+  });
+
+  it("werkVersieBij (store): fout als de versie weg is of niet gewijzigd mag worden", async () => {
+    const weg = nepDb(() => ({ data: null }));
+    await expect(maakTellingStore(weg.db, N).werkVersieBij("t1", "v9", {})).rejects.toThrow(
+      /bestaat niet meer/,
+    );
+    const rls = nepDb((a) =>
+      stap(a, "maybeSingle") ? { data: { data: versieData() } } : { data: [] },
+    );
+    await expect(maakTellingStore(rls.db, N).werkVersieBij("t1", "v0002", {})).rejects.toThrow(
+      /mag hem niet wijzigen/,
+    );
+  });
+
+  it("verwijderVersie: delete op telling en versie; 0 rijen is een fout", async () => {
+    const goed = nepDb(() => ({ data: [{ id: "v0002" }] }));
+    await maakTellingStore(goed.db, N).verwijderVersie("t1", "v0002");
+    expect(stap(goed.log[0], "delete")).toEqual([]);
+    const rls = nepDb(() => ({ data: [] }));
+    await expect(maakTellingStore(rls.db, N).verwijderVersie("t1", "v0002")).rejects.toThrow(
+      /mag hem niet verwijderen/,
+    );
+  });
+
+  it("werkVersieBij (opslaan op een werkversie gebaseerd op versie X): X krijgt de werkversie, daarna wordt de telling opgeslagen", async () => {
+    const { db, log } = nepDb((a) =>
+      stap(a, "maybeSingle")
+        ? { data: { data: versieData() } }
+        : stap(a, "update")
+          ? { data: [{ id: "x" }] }
+          : {},
+    );
+    const store = maakTellingStore(db, N);
+    const s = { ...staat(2), basedOn: 2 };
+    s.meta.naam = "Bijgewerkt";
+    const v = await werkVersieBij(store, {
+      id: "t1",
+      isNieuw: false,
+      staat: s,
+      normen: N,
+      bewerker: ADMIN,
+      versie: { ...(versieData() as object), id: "v0002" } as never,
+      nu: NU,
+    });
+    expect(v.meta.naam).toBe("Bijgewerkt");
+    expect(v.notitie).toBe("Oud"); // naam van de versie blijft
+    expect(v.bewerktOp).toBe(NU.toISOString());
+    expect(v.resultaat.totaal).toBeGreaterThan(1);
+    const updates = log.filter((a) => stap(a, "update")).map((a) => a.tabel);
+    expect(updates).toEqual(["telling_versies", "tellingen"]);
   });
 });

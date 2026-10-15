@@ -155,6 +155,7 @@ export function leesVersieDoc(raw: unknown, standaardNormen: Normen): VersieDoc 
       maxHuur: getalOfNull(res.maxHuur),
       rows: Array.isArray(res.rows) ? (res.rows as VersieDoc["resultaat"]["rows"]) : [],
     },
+    ...(typeof r.bewerktOp === "string" ? { bewerktOp: r.bewerktOp } : {}),
   };
 }
 

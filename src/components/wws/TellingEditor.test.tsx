@@ -25,6 +25,8 @@ const store = vi.hoisted(() => ({
   verwijder: vi.fn(),
   versies: vi.fn(),
   voegVersieToe: vi.fn(),
+  werkVersieBij: vi.fn(),
+  verwijderVersie: vi.fn(),
 }));
 const klantenStore = vi.hoisted(() => ({ lijst: vi.fn(), voegToe: vi.fn() }));
 const delenStore = vi.hoisted(() => ({
@@ -554,6 +556,87 @@ describe("TellingEditor", () => {
 
       renderEditor(undefined, "lezer-1", ["viewer"]);
       expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+    });
+  });
+
+  describe("versies bijwerken, hernoemen, verwijderen", () => {
+    function tellingMetVersie() {
+      const s = nieuweTellingStaat("Anna");
+      s.meta.adres = "Straat";
+      const v = { ...maakVersie(s, N, "Eerste", new Date("2026-03-04T10:00:00Z")), id: "v0001" };
+      const t: Telling = {
+        ...maakTellingDoc({ ...s, versieCount: 1, aantalVersies: 1 }, N, null),
+        id: "t-v",
+        ownerId: ADMIN.id,
+        ownerNaam: "Beheerder",
+        gewijzigdOp: "2026-10-14T10:00:00Z",
+      };
+      store.haal.mockResolvedValue(t);
+      store.versies.mockResolvedValue([v]);
+      return v;
+    }
+
+    it("Opslaan op een werkversie gebaseerd op versie 1 werkt versie 1 bij", async () => {
+      const v = tellingMetVersie();
+      store.werkVersieBij.mockImplementation(async (_t: string, _v: string, patch: object) => ({
+        ...v,
+        ...patch,
+      }));
+      store.bewaar.mockResolvedValue(undefined);
+      renderEditor("t-v");
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      fireEvent.click(await screen.findByRole("button", { name: "Openen" }));
+      fireEvent.change(screen.getByLabelText("Straat"), { target: { value: "Nieuwe straat" } });
+      fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+      await waitFor(() => expect(store.werkVersieBij).toHaveBeenCalledTimes(1));
+      const [tid, vid, patch] = store.werkVersieBij.mock.calls[0]!;
+      expect([tid, vid]).toEqual(["t-v", "v0001"]);
+      expect(patch.meta.adres).toBe("Nieuwe straat");
+      expect(patch.normen).toEqual(N);
+      expect(patch.bewerktOp).toEqual(expect.any(String));
+      await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+      expect(store.voegVersieToe).not.toHaveBeenCalled();
+    });
+
+    it("hernoemen: Enter bevestigt", async () => {
+      const v = tellingMetVersie();
+      store.werkVersieBij.mockResolvedValue({ ...v, notitie: "Na renovatie" });
+      renderEditor("t-v");
+      fireEvent.click(await screen.findByRole("button", { name: "Versie 1 hernoemen" }));
+      const veld = screen.getByLabelText("Naam van de versie");
+      expect(veld).toHaveValue("Eerste");
+      fireEvent.change(veld, { target: { value: "Na renovatie" } });
+      fireEvent.submit(veld.closest("form")!);
+      await waitFor(() =>
+        expect(store.werkVersieBij).toHaveBeenCalledWith("t-v", "v0001", {
+          notitie: "Na renovatie",
+        }),
+      );
+      expect(await screen.findByText("Na renovatie")).toBeInTheDocument();
+    });
+
+    it("verwijderen na bevestiging; aantal versies omlaag en telling opgeslagen", async () => {
+      tellingMetVersie();
+      store.verwijderVersie.mockResolvedValue(undefined);
+      store.bewaar.mockResolvedValue(undefined);
+      renderEditor("t-v");
+      fireEvent.click(await screen.findByRole("button", { name: "Versie 1 verwijderen" }));
+      expect(
+        screen.getByText(/Versie 1 \(‘Eerste’\) definitief verwijderen\?/),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Verwijderen" }));
+      await waitFor(() => expect(store.verwijderVersie).toHaveBeenCalledWith("t-v", "v0001"));
+      await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+      expect(store.bewaar.mock.calls[0]![1].aantalVersies).toBe(0);
+      expect(screen.queryByRole("button", { name: "Versie 1 verwijderen" })).toBeNull();
+    });
+
+    it("kijkrol: geen hernoemen of verwijderen", async () => {
+      tellingMetVersie();
+      renderEditor("t-v", "lezer-1", ["viewer"]);
+      expect(await screen.findByRole("button", { name: "PDF van versie 1" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Versie 1 hernoemen" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Versie 1 verwijderen" })).toBeNull();
     });
   });
 });
