@@ -59,7 +59,9 @@ describe("maakTellingStore", () => {
       ["t3", "u3", null],
     ]);
     expect(lijst[0]?.input).toEqual(doc.input);
-    expect(lijst[0]?.gewijzigdOp).toBe("2026-10-14T11:00:00Z");
+    // laatst gewijzigd = updatedAt uit het document (zoals de bron); anders de kolom
+    expect(lijst[0]?.gewijzigdOp).toBe(NU.toISOString());
+    expect(lijst[1]?.gewijzigdOp).toBe("2026-10-13T11:00:00Z");
     expect(lijst[1]?.input.vertrekken).toEqual([]);
   });
 
@@ -356,6 +358,9 @@ describe("zetFavoriet", () => {
     );
     const data = (stap(log[0], "update")![0] as { data: typeof doc }).data;
     expect(data).toEqual({ ...doc, meta: { ...doc.meta, favoriet: true } });
+    // updatedAt en lastEditedBy blijven staan: favoriet markeren is geen bewerking
+    expect(data.updatedAt).toBe(doc.updatedAt);
+    expect(data.lastEditedBy).toEqual(doc.lastEditedBy);
     expect("id" in data || "ownerId" in data).toBe(false);
   });
 });

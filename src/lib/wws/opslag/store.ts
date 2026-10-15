@@ -29,12 +29,15 @@ interface TellingRij {
 }
 
 function naarTelling(rij: TellingRij): Telling {
+  const doc = leesTellingDoc(rij.data);
   return {
-    ...leesTellingDoc(rij.data),
+    ...doc,
     id: rij.id,
     ownerId: rij.owner_id,
     ownerNaam: rij.eigenaar?.display_name || rij.eigenaar?.email || null,
-    gewijzigdOp: rij.updated_at,
+    // updatedAt uit het document, zoals de bron: favoriet markeren laat die staan (de kolom
+    // updated_at verandert bij elke schrijfactie)
+    gewijzigdOp: doc.updatedAt || rij.updated_at,
   };
 }
 
