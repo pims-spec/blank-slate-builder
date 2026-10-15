@@ -119,6 +119,8 @@ interface Props {
   input: WwsInput;
   /** Woninggegevens voor de PDF's; zonder meta geen PDF-knoppen */
   meta?: TellingMeta | undefined;
+  /** De plattegrond voor de PDF's (JPEG-data-URL), pas opgehaald bij het downloaden */
+  plattegrond?: (() => Promise<string | null>) | undefined;
   /** "Toepassen op telling": de nieuwe invoer, het aantal maatregelen en de punten daarna */
   onToepassen: (input: WwsInput, n: number, punten: number) => void;
   /** Admins kunnen de kosten als standaard voor iedereen opslaan */
@@ -133,6 +135,7 @@ export default function AdviesDialoog({
   onOpenChange,
   input,
   meta,
+  plattegrond,
   onToepassen,
   isAdmin = false,
   magToepassen = true,
@@ -153,6 +156,7 @@ export default function AdviesDialoog({
           <AdviesInhoud
             input={input}
             meta={meta}
+            plattegrond={plattegrond}
             onToepassen={onToepassen}
             isAdmin={isAdmin}
             magToepassen={magToepassen}
@@ -166,10 +170,14 @@ export default function AdviesDialoog({
 function AdviesInhoud({
   input,
   meta,
+  plattegrond,
   onToepassen,
   isAdmin,
   magToepassen,
-}: Pick<Props, "input" | "meta" | "onToepassen"> & { isAdmin: boolean; magToepassen: boolean }) {
+}: Pick<Props, "input" | "meta" | "plattegrond" | "onToepassen"> & {
+  isAdmin: boolean;
+  magToepassen: boolean;
+}) {
   const NORMEN = useNormen();
   const download = useDownload();
   const [inst, setInst] = useState<AdviesInstellingen>(() => standaardInstellingen(NORMEN));
@@ -525,8 +533,15 @@ function AdviesInhoud({
                 variant="outline"
                 disabled={!!download.bezig}
                 onClick={() =>
-                  download.pdf("route", (lib) =>
-                    maakRoutePdf(lib, { meta, input, normen: NORMEN, advies: A, overslaan: skip }),
+                  download.pdf("route", async (lib) =>
+                    maakRoutePdf(lib, {
+                      meta,
+                      input,
+                      normen: NORMEN,
+                      advies: A,
+                      overslaan: skip,
+                      plattegrond: (await plattegrond?.()) ?? null,
+                    }),
                   )
                 }
               >
@@ -536,8 +551,14 @@ function AdviesInhoud({
                 variant="outline"
                 disabled={!!download.bezig}
                 onClick={() =>
-                  download.pdf("advies", (lib) =>
-                    maakAdviesPdf(lib, { meta, input, normen: NORMEN, inst }),
+                  download.pdf("advies", async (lib) =>
+                    maakAdviesPdf(lib, {
+                      meta,
+                      input,
+                      normen: NORMEN,
+                      inst,
+                      plattegrond: (await plattegrond?.()) ?? null,
+                    }),
                   )
                 }
               >

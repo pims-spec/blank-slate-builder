@@ -41,6 +41,16 @@ import AdviesDialoog from "./AdviesDialoog";
 import EnergielabelOphalen from "./EnergielabelOphalen";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
+import PlattegrondDialoog from "./PlattegrondDialoog";
+import {
+  heeftPlattegrond,
+  plattegrondOpslag,
+  plattegrondVoorPdf,
+  usePlattegrondUrl,
+  type NieuwBeeld,
+} from "./plattegrondBeeld";
+import { bewaarBeeld, ruimOudBeeldOp } from "@/lib/wws/plattegrond/bewaren";
+import { blobNaarBytes } from "@/lib/wws/plattegrond/beeld";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
@@ -91,6 +101,11 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [delenOpen, setDelenOpen] = useState(false);
   const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
   const [indelingOpen, setIndelingOpen] = useState(false);
+  const [plattegrondOpen, setPlattegrondOpen] = useState(false);
+  /** Nieuwe plattegrond, nog niet opgeslagen: gaat bij Opslaan naar Storage */
+  const [nieuwBeeld, setNieuwBeeld] = useState<NieuwBeeld | null>(null);
+  /** Pad van de plattegrond zoals die nu is opgeslagen (om na vervangen op te ruimen) */
+  const opgeslagenPad = useRef<string | null>(null);
   const { data: klanten = [] } = useQuery(klantenQuery());
   const download = useDownload();
   const [versieNaam, setVersieNaam] = useState("");
@@ -126,6 +141,8 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         setStaat(nieuweTellingStaat(bewerker.naam));
         setEigenaar({ id: userId, naam: null });
         setVersies([]);
+        setNieuwBeeld(null);
+        opgeslagenPad.current = null;
         setDirty(false);
         setLaden("klaar");
       }
@@ -155,6 +172,8 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         });
         setEigenaar({ id: t.ownerId, naam: t.ownerNaam });
         setVersies(vs);
+        setNieuwBeeld(null);
+        opgeslagenPad.current = t.input.plattegrond?.pad ?? null;
         setDirty(false);
         setLaden("klaar");
       } catch (e) {
@@ -251,11 +270,54 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     }
   };
 
+  /**
+   * Een nieuwe plattegrond eerst naar Storage (nieuwe telling: eerst aanmaken); de telling krijgt
+   * alleen de verwijzing. Geeft de staat om op te slaan.
+   */
+  async function metBeeld() {
+    const r = await bewaarBeeld({
+      store: tellingStore,
+      opslag: plattegrondOpslag,
+      id,
+      isNieuw,
+      staat,
+      normen: NORMEN,
+      bewerker,
+      beeld: nieuwBeeld
+        ? {
+            bytes: await blobNaarBytes(nieuwBeeld.blob),
+            breedte: nieuwBeeld.breedte,
+            hoogte: nieuwBeeld.hoogte,
+          }
+        : null,
+    });
+    if (nieuwBeeld) {
+      setStaat(r.staat);
+      setNieuwBeeld(null);
+    }
+    return r;
+  }
+
+  /** Na opslaan: de vorige plattegrond weg als niets er nog naar verwijst */
+  function ruimOp(s: TellingStaat, vs: readonly Versie[]) {
+    const nieuwPad = s.input.plattegrond?.pad ?? null;
+    void ruimOudBeeldOp(plattegrondOpslag, opgeslagenPad.current, nieuwPad, vs);
+    opgeslagenPad.current = nieuwPad;
+  }
+
   async function opslaan() {
     if (bezig) return;
     setBezig(true);
     try {
-      await slaWerkversieOp(tellingStore, { id, isNieuw, staat, normen: NORMEN, bewerker });
+      const r = await metBeeld();
+      await slaWerkversieOp(tellingStore, {
+        id,
+        isNieuw: r.isNieuw,
+        staat: r.staat,
+        normen: NORMEN,
+        bewerker,
+      });
+      ruimOp(r.staat, versies);
       await naOpslaan();
       toast.success("Opgeslagen");
     } catch (e) {
@@ -269,16 +331,18 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     if (bezig) return;
     setBezig(true);
     try {
+      const b = await metBeeld();
       const r = await legVersieVast(tellingStore, {
         id,
-        isNieuw,
-        staat,
+        isNieuw: b.isNieuw,
+        staat: b.staat,
         normen: NORMEN,
         bewerker,
         naam: versieNaam,
       });
       setStaat(r.staat);
       setVersies((vs) => [r.versie, ...vs]);
+      ruimOp(r.staat, [r.versie, ...versies]);
       setVersieDialoog(false);
       setVersieNaam("");
       await naOpslaan();
@@ -317,6 +381,28 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         punten +
         " punten). Sla de telling op, of leg een nieuwe versie vast.",
     );
+  }
+
+  /** Ingelezen plattegrond overnemen: in de werkversie; de afbeelding gaat bij Opslaan naar Storage */
+  function plattegrondOvernemen(input: WwsInput, beeld: NieuwBeeld) {
+    setStaat((s) => ({ ...s, input }));
+    setNieuwBeeld(beeld);
+    setDirty(true);
+    setPlattegrondOpen(false);
+    toast("Plattegrond overgenomen. Controleer de gemarkeerde ruimten.");
+  }
+
+  /** Plattegrond-afbeelding weghalen (bij Opslaan ook uit Storage, tenzij een versie hem gebruikt) */
+  function plattegrondVerwijderen() {
+    setStaat((s) => {
+      const input = { ...s.input };
+      delete input.plattegrond;
+      delete input.plattegrondImg;
+      return { ...s, input };
+    });
+    setNieuwBeeld(null);
+    setDirty(true);
+    toast("Plattegrond-afbeelding verwijderd.");
   }
 
   /** "Toepassen op telling": in de werkversie, nog niet opgeslagen */
@@ -524,6 +610,14 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         </div>
       </fieldset>
 
+      <PlattegrondBlok
+        input={staat.input}
+        nieuw={nieuwBeeld}
+        alleenLezen={alleenLezen}
+        onInlezen={() => setPlattegrondOpen(true)}
+        onVerwijderen={plattegrondVerwijderen}
+      />
+
       <div className="flex flex-wrap items-center gap-2">
         {!alleenLezen && (
           <>
@@ -546,8 +640,13 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           variant="outline"
           disabled={download.bezig === "werkversie"}
           onClick={() =>
-            download.pdf("werkversie", (lib) =>
-              maakTellingPdf(lib, { meta: staat.meta, input: staat.input, normen: NORMEN }),
+            download.pdf("werkversie", async (lib) =>
+              maakTellingPdf(lib, {
+                meta: staat.meta,
+                input: staat.input,
+                normen: NORMEN,
+                plattegrond: await plattegrondVoorPdf(staat.input, nieuwBeeld),
+              }),
             )
           }
         >
@@ -603,13 +702,14 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
                   aria-label={"PDF van versie " + v.nr}
                   disabled={download.bezig === v.id}
                   onClick={() =>
-                    download.pdf(v.id, (lib) =>
-                      // met de normen van toen, zoals de bron (mergeNormen(v.normen))
+                    download.pdf(v.id, async (lib) =>
+                      // met de normen en de plattegrond van toen, zoals de bron (mergeNormen(v.normen))
                       maakTellingPdf(lib, {
                         meta: v.meta,
                         input: v.input,
                         normen: v.normen,
                         versie: v,
+                        plattegrond: await plattegrondVoorPdf(v.input),
                       }),
                     )
                   }
@@ -670,6 +770,15 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           !alleenLezen && <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />
         }
       />
+      {!alleenLezen && (
+        <PlattegrondDialoog
+          open={plattegrondOpen}
+          onOpenChange={setPlattegrondOpen}
+          input={staat.input}
+          meta={staat.meta}
+          onOvernemen={plattegrondOvernemen}
+        />
+      )}
       <IndelingDialoog
         open={indelingOpen}
         onOpenChange={setIndelingOpen}
@@ -690,6 +799,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         onOpenChange={setAdviesOpen}
         input={staat.input}
         meta={staat.meta}
+        plattegrond={() => plattegrondVoorPdf(staat.input, nieuwBeeld)}
         onToepassen={adviesToepassen}
         isAdmin={rechten.isAdmin}
         magToepassen={!alleenLezen}
@@ -726,5 +836,60 @@ function MetaVeld({
       <span className="text-muted-foreground">{label}</span>
       <Input type={type} value={waarde} onChange={(e) => zet(e.target.value)} />
     </label>
+  );
+}
+
+/** De plattegrond bij de telling: tonen, inlezen (Claude) en verwijderen */
+function PlattegrondBlok({
+  input,
+  nieuw,
+  alleenLezen,
+  onInlezen,
+  onVerwijderen,
+}: {
+  input: WwsInput;
+  nieuw: NieuwBeeld | null;
+  alleenLezen: boolean;
+  onInlezen: () => void;
+  onVerwijderen: () => void;
+}) {
+  const { url, laden, fout } = usePlattegrondUrl(input, nieuw);
+  const heeft = heeftPlattegrond(input, nieuw);
+  if (alleenLezen && !heeft) return null;
+  return (
+    <div className="flex flex-wrap items-start gap-4" aria-label="Plattegrond">
+      {heeft && (
+        <figure className="m-0">
+          {url ? (
+            <img
+              src={url}
+              alt="Plattegrond van deze telling"
+              className="max-h-40 max-w-xs rounded-md border border-border bg-white"
+            />
+          ) : (
+            <div className="flex h-24 w-40 items-center justify-center rounded-md border border-border text-xs text-muted-foreground">
+              {laden ? "Plattegrond laden…" : fout ? "Plattegrond niet te laden" : ""}
+            </div>
+          )}
+          {nieuw && (
+            <figcaption className="mt-1 text-xs text-muted-foreground">
+              Nieuw — wordt opgeslagen bij Opslaan
+            </figcaption>
+          )}
+        </figure>
+      )}
+      {!alleenLezen && (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={onInlezen}>
+            Plattegrond inlezen
+          </Button>
+          {heeft && (
+            <Button type="button" variant="ghost" onClick={onVerwijderen}>
+              Plattegrond verwijderen
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

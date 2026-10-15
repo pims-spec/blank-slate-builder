@@ -18,14 +18,14 @@ export function useDownload() {
 
   async function pdf(
     sleutel: string,
-    maak: (lib: PdfLib) => Bestand | null,
+    maak: (lib: PdfLib) => Bestand | null | Promise<Bestand | null>,
     melding = "PDF opgeslagen",
   ) {
     if (bezig) return;
     setBezig(sleutel);
     try {
       const lib = await laadPdfLib();
-      const b = maak(lib);
+      const b = await maak(lib);
       if (!b) return;
       bewaarBestand(b.bestandsnaam, b.blob);
       toast(melding);
