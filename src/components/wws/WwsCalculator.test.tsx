@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { legeInput, type WwsInput } from "@/lib/wws";
 import WwsCalculator from "./WwsCalculator";
@@ -79,6 +79,23 @@ describe("WwsCalculator", () => {
     fireEvent.change(overig!, { target: { value: "hal" } });
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByRole("option", { name: "Kies soort ruimte…" })).toBeNull();
+  });
+
+  it("energie: vier keuzerondjes in de volgorde van de bron; kiezen wisselt de velden", () => {
+    render(<WwsCalculator />);
+    const groep = screen.getByRole("radiogroup", { name: "Type energielabel of bouwjaar" });
+    const rondjes = within(groep).getAllByRole("radio");
+    expect(rondjes.map((r) => r.closest("label")!.textContent)).toEqual([
+      "Energielabelvóór 2015",
+      "Energie-Index2015-2021",
+      "Label vanaf 2021NTA 8800",
+      "Bouwjaargeen geldig label",
+    ]);
+    expect(within(groep).getByRole("radio", { name: /Label vanaf 2021/ })).toBeChecked();
+    expect(screen.queryByRole("combobox", { name: "Grondslag" })).toBeNull();
+    fireEvent.click(within(groep).getByRole("radio", { name: /Energie-Index/ }));
+    expect(within(groep).getByRole("radio", { name: /Energie-Index/ })).toBeChecked();
+    expect(screen.queryByRole("combobox", { name: "Labelklasse" })).toBeNull();
   });
 
   describe("samenvattingspaneel (renderSum)", () => {

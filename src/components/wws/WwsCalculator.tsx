@@ -808,23 +808,47 @@ export default function WwsCalculator({
           </Sectie>
 
           <Sectie titel="Energieprestatie" rubriek="4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Veld label="Grondslag">
-                <Keuze
-                  value={E.soort}
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.energie.soort = v as typeof E.soort;
-                    })
+            {/* vier tegels als keuzerondjes, zoals energieVeldHtml() */}
+            <div
+              className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5"
+              role="radiogroup"
+              aria-label="Type energielabel of bouwjaar"
+            >
+              {ENERGIE_TEGELS.map(([k, titel, sub]) => (
+                <label
+                  key={k}
+                  className={
+                    "relative flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 rounded-xl border-[1.5px] px-3.5 py-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary " +
+                    (E.soort === k
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:border-primary") +
+                    (alleenLezen ? " cursor-default" : "")
                   }
-                  opties={[
-                    ["label", "Energielabel vanaf 2021 (NTA 8800)"],
-                    ["labelOud", "Energielabel (vóór 2015)"],
-                    ["index", "Energie-index (2015–2021)"],
-                    ["bouwjaar", "Bouwjaar (geen geldig label)"],
-                  ]}
-                />
-              </Veld>
+                >
+                  <input
+                    type="radio"
+                    name="energie-soort"
+                    value={k}
+                    className="pointer-events-none absolute opacity-0"
+                    checked={E.soort === k}
+                    onChange={() =>
+                      wijzig((d) => {
+                        d.energie.soort = k;
+                      })
+                    }
+                  />
+                  <span className="text-sm font-semibold">{titel}</span>
+                  <span
+                    className={
+                      "text-xs " + (E.soort === k ? "opacity-80" : "text-muted-foreground")
+                    }
+                  >
+                    {sub}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               {(E.soort === "label" || E.soort === "labelOud") && (
                 <Veld label="Labelklasse">
                   <Keuze
@@ -1414,6 +1438,14 @@ export default function WwsCalculator({
     </div>
   );
 }
+
+/** De tegels van rubriek 4, in de volgorde en met de teksten van de bron */
+const ENERGIE_TEGELS: [WwsInput["energie"]["soort"], string, string][] = [
+  ["labelOud", "Energielabel", "vóór 2015"],
+  ["index", "Energie-Index", "2015-2021"],
+  ["label", "Label vanaf 2021", "NTA 8800"],
+  ["bouwjaar", "Bouwjaar", "geen geldig label"],
+];
 
 const SEG_KLEUR: Record<Segment, string> = {
   laag: "bg-seg-laag",
