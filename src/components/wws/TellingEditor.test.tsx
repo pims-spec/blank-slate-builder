@@ -520,8 +520,8 @@ describe("TellingEditor", () => {
       t.input,
       berekenVarianten(t.input, ruimtenUitTelling(t.input), PVE, "", N)[0]!,
     );
-    renderEditor("t-pve");
-    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
+    // via het startscherm Indelingsadvies ("Bestaande telling kiezen")
+    renderEditor("t-pve", ADMIN.id, ["admin", "member"], "indeling");
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
     expect(screen.getByLabelText(/Uitgangspunten \(PvE\)/)).toHaveValue("p1");
     fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
@@ -544,8 +544,8 @@ describe("TellingEditor", () => {
     const t = tellingMetPve();
     t.meta = { ...t.meta, klantId: "", pveId: "" };
     store.haal.mockResolvedValue(t);
-    renderEditor("t-pve");
-    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
+    // via het startscherm Indelingsadvies ("Bestaande telling kiezen")
+    renderEditor("t-pve", ADMIN.id, ["admin", "member"], "indeling");
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
     fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
     fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
@@ -992,8 +992,7 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
   it("bewerkt de werkversie zelf: adres opgezocht, WOZ en label staan daarna in de telling", async () => {
     telling();
     zoekAdres.mockResolvedValue({ ok: true, data: { straat: "Damrak", plaats: "Amsterdam" } });
-    renderEditor("t-s1");
-    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
+    renderEditor("t-s1", ADMIN.id, ["admin", "member"], "indeling");
     const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
     for (const h of ["Adres en WOZ", "Energielabel", "Eigenaar"])
       expect(within(dlg).getByRole("heading", { name: h })).toBeInTheDocument();
@@ -1038,8 +1037,7 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
 
   it("kijkrol: velden in stap 1 niet bewerkbaar, geen ophalen", async () => {
     telling();
-    renderEditor("t-s1", "lezer-1", ["viewer"]);
-    fireEvent.click(await screen.findByRole("button", { name: "Indeling verkennen" }));
+    renderEditor("t-s1", "lezer-1", ["viewer"], "indeling");
     const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
     expect(within(dlg).getByLabelText("Postcode")).toBeDisabled();
     expect(within(dlg).getByLabelText("WOZ-waarde (€)")).toBeDisabled();
@@ -1073,7 +1071,9 @@ describe("plaats van de knoppen, zoals wws-site.html", () => {
     expect(
       within(samenvatting).getByRole("button", { name: "Advies vrije sector" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Indeling verkennen" })).toBeInTheDocument();
+    // het indelingsadvies zit niet in de telling zelf, alleen in het menu
+    expect(screen.queryByRole("button", { name: "Indeling verkennen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Indelingsadvies" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Nieuwe telling" })).toBeNull();
     // "Telling verwijderen" staat na het formulier (na de laatste rubriek)
     const verwijder = screen.getByRole("button", { name: "Telling verwijderen" });

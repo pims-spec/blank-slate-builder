@@ -956,22 +956,6 @@ export default function TellingEditor({
         onVerwijderen={plattegrondVerwijderen}
       />
 
-      {/* Indelingsadvies — eigen kaart onder de plattegrond, niet bij een nieuwe telling (bron) */}
-      {!isNieuw && (
-        <div className="flex flex-wrap items-center gap-3.5 rounded-2xl border border-border bg-card p-4">
-          <div className="min-w-[220px] flex-1">
-            <h3 className="font-semibold">Indelingsadvies</h3>
-            <p className="text-sm text-muted-foreground">
-              Laat een paar programma-varianten (aantal slaapkamers) met WWS-punten en een eenvoudig
-              blokkenschema uitwerken voor een woning die helemaal opnieuw wordt ingedeeld.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => setIndelingOpen(true)}>
-            Indeling verkennen
-          </Button>
-        </div>
-      )}
-
       <AlertDialog open={verwijderVraag} onOpenChange={setVerwijderVraag}>
         <AlertDialogContent>
           <AlertDialogHeader>
