@@ -157,6 +157,27 @@ reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de v
 - **Antwoorden:** gecontroleerd met zod. Alleen eigen foutcodes; nooit de foutmelding van de
   dienst, in de browser noch in de log.
 
+## Huisstijl (fase 5b)
+
+- **Tokens** (`src/styles.css`): de kleuren uit de bron staan in de bestaande
+  shadcn/Tailwind-variabelen, met de hexwaarde van de bron erachter. Het gaat om
+  `--bg`/`--panel`/`--ink`/`--muted`/`--line` en `--accent` #5B41FF/`--soft`/`--orange`
+  #FF7C3A/`--field`, plus de segmentkleuren.
+  - **Donker:** de donkere set van de bron schakelt automatisch mee met de apparaatinstelling
+    (`prefers-color-scheme`).
+  - **Lettertypes:** Inter voor alles, Instrument Sans schuin voor taglines (`.tagline`).
+  - **Vormen:** knoppen als pil met paarse gloed, en een zachte gloed achter de pagina.
+- **Contrast (WCAG AA):** `src/test/contrast.test.ts` rekent de tokens na, licht en donker.
+  - Op oranje en op de segmentkleuren staat donkere inkt; wit haalt daar geen 4,5:1.
+  - Oranje tekst gebruikt `orange-ink`: #B4521A licht, #FF9A62 donker.
+- **Naam en merk:** "GoHome WWS" (`lib/merk.ts`), het woordmerk "GoHome" + "WWS"
+  (`Woordmerk.tsx`) en een favicon (paars vlak met witte G).
+- **Zijmenu** (`Zijmenu.tsx`, onderdelen in `lib/menu.ts`): breed op een computer, een
+  icoonbalk tot 720px. Een nieuw onderdeel is één regel in `menuOnderdelen`.
+- **Startscherm:** de homehero met groet en de statistieken van `berekenHomeStats`
+  (`home.ts`, met een vergelijkingstest tegen `reference/wws-site-home.cjs`).
+- **PDF's:** Inter ingesloten; zie hieronder.
+
 ## Bewuste afwijkingen van wws-site.html
 
 Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De vergelijkingstests
