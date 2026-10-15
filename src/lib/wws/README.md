@@ -163,6 +163,20 @@ Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De ver
 vergelijken steeds de kern zónder deze afwijkingen (`berekenVariantenKern`, enz.); de afwijkingen
 hebben eigen tests.
 
+### Ruimte zonder soort (`ruimteInvoer.ts`, formulier)
+
+Een nieuwe ruimte heeft, net als in de bron, nog geen soort ("Kies soort ruimte…"). Een nieuw
+vertrek is verwarmd, een nieuwe overige ruimte niet. `calc()` blijft gelijk aan de bron: een
+ruimte zonder soort telt mee als overig vertrek of overige ruimte, ook voor de verwarming. Een
+vergelijkingstest legt dat vast.
+
+Afwijking: de bron toont zo'n ruimte alleen met een gestippeld veld. De app laat hem duidelijker
+opvallen, zodat hij niet ongemerkt meetelt:
+
+- een rode rand om de ruimte;
+- de tekst "Kies het soort ruimte. Tot dan telt deze ruimte mee als …";
+- een melding in het samenvattingspaneel met het aantal ruimten zonder soort.
+
 ### Indelingsadvies (`indeling.ts`)
 
 - **Toiletvangnet** (`toiletVangnet`, getest in `indeling.test.ts`). De bron kan een variant zonder

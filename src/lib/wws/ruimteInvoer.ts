@@ -68,3 +68,28 @@ export function ruimteOpmerking(
   if (r.herkomst) return { tekst: r.herkomst, ingeschat: /ingeschat/.test(r.herkomst) };
   return null;
 }
+
+/**
+ * Nieuwe ruimte zonder soort (zoals de bron: "Kies soort ruimte…"). calc() telt hem dan, net als
+ * de bron, mee als overig vertrek of overige ruimte; daarom valt hij in het scherm duidelijk op.
+ */
+export const zonderTypeNotitie = (groep: "vertrekken" | "overig") =>
+  "Kies het soort ruimte. Tot dan telt deze ruimte mee als " +
+  (groep === "vertrekken" ? "overig vertrek." : "overige ruimte.");
+
+/** Aantal ruimten (vertrekken en overige) zonder gekozen soort */
+export const aantalZonderType = (inp: {
+  vertrekken: readonly { type: string }[];
+  overig: readonly { type: string }[];
+}) => [...inp.vertrekken, ...inp.overig].filter((r) => !r.type).length;
+
+/** Melding in het samenvattingspaneel; null als alles een soort heeft */
+export function zonderTypeMelding(n: number): string | null {
+  if (!n) return null;
+  return (
+    (n === 1 ? "1 ruimte heeft" : n + " ruimten hebben") +
+    " nog geen soort. Kies het soort ruimte; tot dan telt " +
+    (n === 1 ? "hij" : "elk") +
+    " mee als overig vertrek of overige ruimte."
+  );
+}

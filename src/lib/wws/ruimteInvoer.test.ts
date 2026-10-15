@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "./normen";
+import { calc } from "./calc";
+import { legeInput } from "./legeInput";
 import {
+  aantalZonderType,
+  zonderTypeMelding,
+  zonderTypeNotitie,
   m2Berekend,
   ruimteOpmerking,
   verwijderMaat,
@@ -69,5 +74,35 @@ describe("opmerking per ruimte (roomTable)", () => {
       ),
     ).toEqual({ tekst: "Plattegrond: ingeschat", ingeschat: true });
     expect(ruimteOpmerking("overig", { type: "berging_in", m2: 0 }, N)).toBeNull();
+  });
+});
+
+describe("ruimte zonder soort (nieuwe ruimte, zoals de bron)", () => {
+  it("telt in calc() mee als overig vertrek / overige ruimte, net als de bron", () => {
+    const a = legeInput();
+    a.vertrekken.push({ type: "", m2: 12, verwarmd: true });
+    a.overig.push({ type: "", m2: 5, verwarmd: false });
+    const b = legeInput();
+    b.vertrekken.push({ type: "overig", m2: 12, verwarmd: true });
+    b.overig.push({ type: "overig", m2: 5, verwarmd: false });
+    expect(calc(a, N).rows).toEqual(calc(b, N).rows);
+  });
+
+  it("telt de ruimten zonder soort en geeft een duidelijke melding", () => {
+    const i = legeInput();
+    expect(aantalZonderType(i)).toBe(0);
+    expect(zonderTypeMelding(0)).toBeNull();
+    i.vertrekken.push(
+      { type: "", m2: "", verwarmd: true },
+      { type: "slaapkamer", m2: 9, verwarmd: true },
+    );
+    i.overig.push({ type: "", m2: "", verwarmd: false });
+    expect(aantalZonderType(i)).toBe(2);
+    expect(zonderTypeMelding(1)).toBe(
+      "1 ruimte heeft nog geen soort. Kies het soort ruimte; tot dan telt hij mee als overig vertrek of overige ruimte.",
+    );
+    expect(zonderTypeMelding(2)).toMatch(/^2 ruimten hebben nog geen soort/);
+    expect(zonderTypeNotitie("vertrekken")).toMatch(/overig vertrek\.$/);
+    expect(zonderTypeNotitie("overig")).toMatch(/overige ruimte\.$/);
   });
 });

@@ -23,6 +23,9 @@ describe("WwsCalculator", () => {
   it("lengte × breedte: oppervlak volgt, minteken trekt af, maat toevoegen en verwijderen", () => {
     render(<WwsCalculator />);
     fireEvent.click(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]!);
+    fireEvent.change(screen.getByRole("combobox", { name: "Soort ruimte" }), {
+      target: { value: "slaapkamer" },
+    });
     const m2 = () => screen.getByTitle("Berekend uit lengte × breedte");
     fireEvent.change(screen.getByLabelText("Lengte in meter (Slaapkamer, maat 1)"), {
       target: { value: "5" },
@@ -46,10 +49,36 @@ describe("WwsCalculator", () => {
   it("opmerking onder een verkeersruimte en een te kleine ruimte", () => {
     render(<WwsCalculator />);
     fireEvent.click(screen.getByRole("button", { name: "Ruimte toevoegen" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Soort ruimte" }), {
+      target: { value: "berging_in" },
+    });
     expect(screen.queryByText(/Kleiner dan 2 m²/)).toBeNull();
     const m2 = screen.getAllByPlaceholderText("0,00")[0]!;
     fireEvent.change(m2, { target: { value: "1,5" } });
     expect(screen.getByText("Kleiner dan 2 m²: geen oppervlaktepunten.")).toBeInTheDocument();
+  });
+
+  it("nieuwe ruimte: nog geen soort (zoals de bron), valt op tot er gekozen is", () => {
+    render(<WwsCalculator />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Ruimte toevoegen" }));
+    const [vertrek, overig] = screen.getAllByRole("combobox", { name: "Soort ruimte" });
+    expect(vertrek).toHaveValue("");
+    expect(vertrek).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getAllByRole("option", { name: "Kies soort ruimte…" })[0]).toBeDisabled();
+    // verwarmd volgens de bron: nieuw vertrek wel, overige ruimte niet
+    const verwarmd = screen.getAllByRole("checkbox", { name: "Verwarmd" });
+    expect(verwarmd[0]).toBeChecked();
+    expect(verwarmd[1]).not.toBeChecked();
+    expect(
+      screen.getByText("Kies het soort ruimte. Tot dan telt deze ruimte mee als overig vertrek."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/^2 ruimten hebben nog geen soort/);
+
+    fireEvent.change(vertrek!, { target: { value: "slaapkamer" } });
+    fireEvent.change(overig!, { target: { value: "hal" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("option", { name: "Kies soort ruimte…" })).toBeNull();
   });
 
   describe("samenvattingspaneel (renderSum)", () => {

@@ -119,7 +119,8 @@ export type FacKind = Fac["kind"];
 export interface Vertrek {
   /** Herkomst van een ingelezen plattegrond, bijv. "Plattegrond: berekend" (alleen tonen) */
   herkomst?: string;
-  type: VertrekTypeKey;
+  /** Leeg = nog niet gekozen (nieuwe ruimte, zoals de bron); telt in calc() mee als "overig" */
+  type: VertrekTypeKey | "";
   naam?: string;
   m2: NumLike;
   maten?: Maat[];
@@ -130,7 +131,8 @@ export interface Vertrek {
 export interface OverigeRuimte {
   /** Herkomst van een ingelezen plattegrond, bijv. "Plattegrond: berekend" (alleen tonen) */
   herkomst?: string;
-  type: OverigTypeKey;
+  /** Leeg = nog niet gekozen (nieuwe ruimte, zoals de bron); telt in calc() mee als "overig" */
+  type: OverigTypeKey | "";
   naam?: string;
   m2: NumLike;
   maten?: Maat[];

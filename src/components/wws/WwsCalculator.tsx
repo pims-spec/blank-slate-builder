@@ -24,12 +24,15 @@ import {
   type WwsInput,
 } from "@/lib/wws";
 import {
+  aantalZonderType,
   m2Berekend,
   ruimteOpmerking,
   verwijderMaat,
   voegMaatToe,
   zetM2,
   zetMaat,
+  zonderTypeMelding,
+  zonderTypeNotitie,
 } from "@/lib/wws/ruimteInvoer";
 import type { Maat } from "@/lib/wws/types";
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
@@ -188,13 +191,29 @@ function Keuze({
   value,
   onChange,
   opties,
+  leeg,
 }: {
   value: string;
   onChange: (v: string) => void;
   opties: [string, string][];
+  /** Tekst als er nog niets gekozen is (bijv. "Kies soort ruimte…"); valt op tot er gekozen is */
+  leeg?: string;
 }) {
+  const nogLeeg = !!leeg && !value;
   return (
-    <select className={inputCls} value={value} onChange={(e) => onChange(e.target.value)}>
+    <select
+      className={
+        inputCls + (nogLeeg ? " border-dashed border-destructive text-muted-foreground" : "")
+      }
+      value={value}
+      aria-invalid={nogLeeg || undefined}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {nogLeeg && (
+        <option value="" disabled>
+          {leeg}
+        </option>
+      )}
       {opties.map(([v, l]) => (
         <option key={v} value={v}>
           {l}
@@ -380,6 +399,7 @@ export default function WwsCalculator({
       return d;
     });
   const res = useMemo(() => calc(inp, N), [inp, N]);
+  const zonderType = zonderTypeMelding(aantalZonderType(inp));
 
   /** Paneel met voorzieningen van een ruimte (keuken, badkamer, toilet, …) */
   const facPaneel = (fac: Fac, zetFac: (f: (x: Fac) => void) => void) => {
@@ -570,11 +590,17 @@ export default function WwsCalculator({
     return (
       <>
         {lijst.map((r, i) => (
-          <div key={i} className="rounded-md border border-border p-3">
+          <div
+            key={i}
+            className={
+              "rounded-md border p-3 " + (r.type ? "border-border" : "border-destructive/60")
+            }
+          >
             <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_88px_auto_auto_auto]">
               <Veld label="Soort ruimte">
                 <Keuze
                   value={r.type}
+                  leeg="Kies soort ruimte…"
                   opties={types.map((t) => [t.k, t.l])}
                   onChange={(v) =>
                     wijzig((d) => {
@@ -664,7 +690,13 @@ export default function WwsCalculator({
                 }
               />
             </div>
-            <Opmerking o={ruimteOpmerking(groep, r, N)} />
+            {r.type ? (
+              <Opmerking o={ruimteOpmerking(groep, r, N)} />
+            ) : (
+              <p className="mt-1 text-xs font-medium text-destructive" role="note">
+                {zonderTypeNotitie(groep)}
+              </p>
+            )}
             {r.fac && (
               <div className="mt-3 space-y-3 border-t border-border pt-3">
                 {r.fac.uitPve && (
@@ -695,8 +727,9 @@ export default function WwsCalculator({
           onClick={() =>
             wijzig((d) => {
               if (groep === "vertrekken")
+                // zoals de bron (data-addroom): nog geen soort, vertrek verwarmd, overige niet
                 d.vertrekken.push({
-                  type: "slaapkamer",
+                  type: "",
                   naam: "",
                   m2: "",
                   maten: [{ l: "", b: "" }],
@@ -705,7 +738,7 @@ export default function WwsCalculator({
                 });
               else
                 d.overig.push({
-                  type: "berging_in",
+                  type: "",
                   naam: "",
                   m2: "",
                   maten: [{ l: "", b: "" }],
@@ -1333,6 +1366,15 @@ export default function WwsCalculator({
               <div className="mt-1.5 text-xs text-muted-foreground">{MINDER_DAN_40}</div>
             )}
           </div>
+
+          {zonderType && (
+            <p
+              className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
+              role="alert"
+            >
+              {zonderType}
+            </p>
+          )}
 
           {res.warn.length > 0 && (
             <ul
