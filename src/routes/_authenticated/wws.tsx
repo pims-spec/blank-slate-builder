@@ -7,7 +7,12 @@ import TellingEditor from "@/components/wws/TellingEditor";
 import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
 
-const search = z.object({ id: z.string().optional() });
+const search = z.object({
+  id: z.string().optional(),
+  /** Vanaf het startscherm van het indelingsadvies (zie /indeling) */
+  indeling: z.boolean().optional(),
+  blanco: z.boolean().optional(),
+});
 
 export const Route = createFileRoute("/_authenticated/wws")({
   validateSearch: search,
@@ -27,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/wws")({
 
 function WwsPage() {
   const { user } = Route.useRouteContext();
-  const { id } = Route.useSearch();
+  const { id, indeling, blanco } = Route.useSearch();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
   const { data: normen } = useSuspenseQuery(normenQuery());
   const email = user.email ?? "";
@@ -38,6 +43,7 @@ function WwsPage() {
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}
+        magSchrijven={data.magSchrijven}
       />
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
@@ -46,6 +52,7 @@ function WwsPage() {
             userId={user.id}
             bewerker={{ id: user.id, naam: data.profile?.display_name || email, email }}
             rechten={data}
+            start={blanco ? "blanco" : indeling ? "indeling" : undefined}
           />
         </NormenProvider>
       ) : (

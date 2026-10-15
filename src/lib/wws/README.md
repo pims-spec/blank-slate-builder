@@ -23,6 +23,16 @@ Route `/wws` (`src/routes/_authenticated/wws.tsx`): alleen voor ingelogde gebrui
 member of admin, net als het overzicht. Bereikbaar via "Puntentelling" in de kopbalk en een knop
 op het overzicht. Tests draaien met `bun run test` (of `npm test`).
 
+Route `/indeling` (`IndelingStart.tsx`) is het startscherm van het indelingsadvies
+(toonIndelingStart), alleen voor wie mag schrijven:
+
+- **Bestaande telling kiezen** gaat naar `/archief?indeling=true`. Openen gaat dan naar
+  `/wws?id=…&indeling=true`, en de editor opent na het laden het indelingsadvies.
+- **Blanco** gaat naar `/wws?blanco=true`. Eerst komt het venster Nieuwe telling, ook bij Overslaan.
+  Daarna opent het indelingsadvies met de plattegrondstap (renderIndelingPlattegrondStap); die
+  vervangt altijd. Stap 1 heeft dan een knop "← Terug naar plattegrond".
+- Beide vlaggen gaan na gebruik uit de adresbalk, zodat verversen ze niet opnieuw uitvoert.
+
 ## Verificatie
 
 `calc.vergelijk.test.ts` draait de originele calc() uit wws-site.html en deze TypeScript-versie

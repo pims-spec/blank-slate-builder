@@ -32,6 +32,7 @@ function PortefeuillePage() {
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}
+        magSchrijven={data.magSchrijven}
       />
       <NormenProvider normen={normen}>
         <Portefeuille rechten={data} />

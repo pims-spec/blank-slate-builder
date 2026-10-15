@@ -95,6 +95,11 @@ interface Props {
   userId: string;
   bewerker: Bewerker;
   rechten: Rechten;
+  /**
+   * Vanaf het startscherm van het indelingsadvies: "indeling" opent na het laden meteen het
+   * indelingsadvies; "blanco" vraagt postcode/huisnummer en gaat dan naar de plattegrondstap.
+   */
+  start?: "indeling" | "blanco" | undefined;
 }
 
 type Laden = "bezig" | "klaar" | "niet-gevonden";
@@ -103,7 +108,7 @@ type Laden = "bezig" | "klaar" | "niet-gevonden";
  * Een telling bewerken en opslaan: werkversie opslaan, een versie vastleggen en een
  * eerdere versie openen — zoals in wws-site.html.
  */
-export default function TellingEditor({ tellingId, userId, bewerker, rechten }: Props) {
+export default function TellingEditor({ tellingId, userId, bewerker, rechten, start }: Props) {
   const navigate = useNavigate();
   const NORMEN = useNormen();
   const queryClient = useQueryClient();
@@ -128,6 +133,10 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
   const [vergelijkOpen, setVergelijkOpen] = useState(false);
   /** Venster "Nieuwe telling" (postcode + huisnummer) — bij elke nieuwe, lege telling */
   const [vraagAdres, setVraagAdres] = useState(!tellingId && rechten.magSchrijven);
+  /** Blanco-start: na het venster Nieuwe telling door naar de plattegrondstap (ntContext) */
+  const blancoNaAdres = useRef(start === "blanco" && !tellingId && rechten.magSchrijven);
+  /** Het indelingsadvies staat open als Blanco-start (met de plattegrondstap) */
+  const [indelingBlanco, setIndelingBlanco] = useState(false);
   /** Nieuwe plattegrond, nog niet opgeslagen: gaat bij Opslaan naar Storage */
   const [nieuwBeeld, setNieuwBeeld] = useState<NieuwBeeld | null>(null);
   /** Pad van de plattegrond zoals die nu is opgeslagen (om na vervangen op te ruimen) */
@@ -219,6 +228,21 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tellingId]);
+
+  // Startscherm van het indelingsadvies: de vlag uit de adresbalk halen (niet opnieuw bij
+  // verversen), en bij "Bestaande telling kiezen" na het laden het indelingsadvies openen
+  const indelingGeopend = useRef<string | null>(null);
+  useEffect(() => {
+    if (start === "blanco") void navigate({ to: "/wws", replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (start !== "indeling" || !tellingId || laden !== "klaar" || isNieuw) return;
+    if (indelingGeopend.current === tellingId) return;
+    indelingGeopend.current = tellingId;
+    setIndelingOpen(true);
+    void navigate({ to: "/wws", search: { id: tellingId }, replace: true });
+  }, [start, tellingId, laden, isNieuw, navigate]);
 
   const setInput: Dispatch<SetStateAction<WwsInput>> = useCallback((u) => {
     setStaat((s) => ({ ...s, input: typeof u === "function" ? u(s.input) : u }));
@@ -441,6 +465,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     setNieuwBeeld(beeld);
     setDirty(true);
     setIndelingOpen(false);
+    setIndelingBlanco(false);
     toast(
       "Indeling met " +
         nSlaap +
@@ -467,6 +492,28 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
     setStaat((s) => ({ ...s, meta: { ...s.meta, postcode, huisnummer } }));
     setDirty(true);
     planAdresOpzoeken(0);
+    vervolgBlanco();
+  }
+
+  /** "Overslaan voor nu": lege telling (bij de Blanco-start toch door naar de plattegrond) */
+  function nieuweTellingOverslaan() {
+    setVraagAdres(false);
+    vervolgBlanco();
+  }
+
+  /** vervolgIndelingBlanco(): het indelingsadvies met eerst de plattegrondstap */
+  function vervolgBlanco() {
+    if (!blancoNaAdres.current) return;
+    blancoNaAdres.current = false;
+    setIndelingBlanco(true);
+    setIndelingOpen(true);
+  }
+
+  /** Plattegrond uit de Blanco-start: in de werkversie, de afbeelding gaat bij Opslaan naar Storage */
+  function blancoPlattegrond(input: WwsInput, beeld: NieuwBeeld) {
+    setStaat((s) => ({ ...s, input }));
+    setNieuwBeeld(beeld);
+    setDirty(true);
   }
 
   /**
@@ -1020,7 +1067,7 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
         <NieuweTellingDialoog
           open={vraagAdres}
           onDoorgaan={nieuweTellingDoorgaan}
-          onOverslaan={() => setVraagAdres(false)}
+          onOverslaan={nieuweTellingOverslaan}
         />
       )}
       <WwsCalculator
@@ -1055,7 +1102,10 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
       )}
       <IndelingDialoog
         open={indelingOpen}
-        onOpenChange={setIndelingOpen}
+        onOpenChange={(o) => {
+          setIndelingOpen(o);
+          if (!o) setIndelingBlanco(false);
+        }}
         input={staat.input}
         klantId={staat.meta.klantId}
         pveId={staat.meta.pveId}
@@ -1067,6 +1117,9 @@ export default function TellingEditor({ tellingId, userId, bewerker, rechten }: 
           const m = url && /^data:(image\/jpeg);base64,(.+)$/.exec(url);
           return m ? { type: "image/jpeg", data: m[2]! } : null;
         }}
+        {...(indelingBlanco && !alleenLezen
+          ? { blanco: { meta: staat.meta, onPlattegrond: blancoPlattegrond } }
+          : {})}
         onInputWijziging={(i) => setInput(i)}
         onToepassen={(input, keuze, v, beeld, ai) =>
           indelingToepassen(input, keuze, v.nSlaap, v.R.totaal, beeld, ai)

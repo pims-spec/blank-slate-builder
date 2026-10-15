@@ -36,6 +36,7 @@ function Dashboard() {
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}
+        magSchrijven={data.magSchrijven}
       />
       <main className="mx-auto max-w-5xl px-6 py-16">
         {data.heeftToegang ? (
@@ -56,9 +57,14 @@ function Dashboard() {
                 <p className="mt-6 max-w-lg text-muted-foreground">
                   Je hebt toegang. Begin een nieuwe WWS-puntentelling.
                 </p>
-                <Button asChild className="mt-8">
-                  <Link to="/wws">Puntentelling openen</Link>
-                </Button>
+                <div className="mt-8 flex flex-wrap gap-2">
+                  <Button asChild>
+                    <Link to="/wws">Puntentelling openen</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link to="/indeling">Indelingsadvies</Link>
+                  </Button>
+                </div>
               </>
             )}
             {controle?.nodig && (

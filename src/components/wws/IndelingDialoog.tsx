@@ -30,8 +30,9 @@ import { base64NaarBytes, naarDataUrl } from "@/lib/wws/plattegrond/beeld";
 import { schemaDataUrl, type SchemaCanvas } from "@/lib/wws/schemaTekening";
 import { volgendeStatus } from "@/lib/wws/tekenen";
 import PlattegrondTekenen from "./PlattegrondTekenen";
+import { PlattegrondInlezen } from "./PlattegrondDialoog";
 import type { NieuwBeeld } from "./plattegrondBeeld";
-import type { Klant } from "@/lib/wws/opslag";
+import type { Klant, TellingMeta } from "@/lib/wws/opslag";
 import { actievePves } from "@/lib/wws/pve";
 import { useNormen } from "./NormenContext";
 
@@ -52,7 +53,8 @@ const STAPPEN = [
   ["kamers", "Ruimten"],
   ["resultaten", "Varianten"],
 ] as const;
-type Stap = (typeof STAPPEN)[number][0];
+/** "plattegrond" is de voorstap van de Blanco-start, vóór de drie genummerde stappen */
+type Stap = (typeof STAPPEN)[number][0] | "plattegrond";
 
 const selCls =
   "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -86,6 +88,15 @@ interface Props {
   plattegrondUrl: string | null;
   /** De plattegrond als afbeelding voor de AI (JPEG, base64); null = geen */
   plattegrondVoorAi: () => Promise<Afbeelding | null>;
+  /**
+   * Blanco-start (vervolgIndelingBlanco): eerst de plattegrondstap op deze nieuwe, lege telling,
+   * met daarna in stap 1 een knop terug naar de plattegrond.
+   */
+  blanco?: {
+    meta: TellingMeta;
+    /** "Doorgaan met Indelingsadvies →": de ingelezen invoer en afbeelding in de werkversie */
+    onPlattegrond: (input: WwsInput, beeld: NieuwBeeld) => void;
+  };
   /** Tekenen op de plattegrond wijzigt de telling zelf (werkversie), zoals in de bron */
   onInputWijziging: (input: WwsInput) => void;
   /** Toepassen; beeld = de AI-afbeelding of het blokkenschema als nieuwe plattegrond */
@@ -130,9 +141,10 @@ function IndelingInhoud({
   plattegrondVoorAi,
   onInputWijziging,
   onToepassen,
+  blanco,
 }: Props) {
   const N = useNormen();
-  const [stap, setStap] = useState<Stap>("eigenaar");
+  const [stap, setStap] = useState<Stap>(blanco ? "plattegrond" : "eigenaar");
   const [klantId, setKlantId] = useState(startKlant);
   const standaardPve = (kid: string, voorkeur: string) => {
     const actief = actievePves(klanten.find((k) => k.id === kid)?.pves ?? []);
@@ -228,21 +240,45 @@ function IndelingInhoud({
 
   return (
     <div className="min-w-0 space-y-4">
-      <ol className="flex flex-wrap gap-2 text-sm" aria-label="Stappen">
-        {STAPPEN.map(([k, l], i) => (
-          <li
-            key={k}
-            aria-current={stap === k ? "step" : undefined}
-            className={`rounded-full border px-3 py-1 ${
-              stap === k
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {i + 1}. {l}
-          </li>
-        ))}
-      </ol>
+      {blanco && (
+        // blijft staan (verborgen) zodat "← Terug naar plattegrond" het resultaat nog heeft
+        <div hidden={stap !== "plattegrond"}>
+          <PlattegrondInlezen
+            input={input}
+            meta={blanco.meta}
+            vastVervangen
+            knopTekst="Doorgaan met Indelingsadvies →"
+            onOvernemen={(nieuw, beeld) => {
+              // applyIndPlat() → openIndeling(true): ruimten opnieuw uit de telling, naar stap 1
+              const w = { input: nieuw, rooms: ruimtenUitTelling(nieuw) };
+              werkRef.current = w;
+              setWerk(w);
+              setVarianten([]);
+              setAi({});
+              blanco.onPlattegrond(nieuw, beeld);
+              setStap("eigenaar");
+            }}
+          />
+        </div>
+      )}
+
+      {stap !== "plattegrond" && (
+        <ol className="flex flex-wrap gap-2 text-sm" aria-label="Stappen">
+          {STAPPEN.map(([k, l], i) => (
+            <li
+              key={k}
+              aria-current={stap === k ? "step" : undefined}
+              className={`rounded-full border px-3 py-1 ${
+                stap === k
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {i + 1}. {l}
+            </li>
+          ))}
+        </ol>
+      )}
 
       {stap === "eigenaar" && (
         <div className="space-y-4">
@@ -293,7 +329,14 @@ function IndelingInhoud({
                 : "Zonder eigenaar gebruikt de tool redelijke standaardvoorzieningen (geen indelingswensen)."}
             </p>
           )}
-          <Button onClick={() => setStap("kamers")}>Volgende stap →</Button>
+          <div className="flex flex-wrap gap-2">
+            {blanco && (
+              <Button variant="ghost" onClick={() => setStap("plattegrond")}>
+                ← Terug naar plattegrond
+              </Button>
+            )}
+            <Button onClick={() => setStap("kamers")}>Volgende stap →</Button>
+          </div>
         </div>
       )}
 

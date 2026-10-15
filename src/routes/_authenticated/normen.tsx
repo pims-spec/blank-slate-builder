@@ -24,7 +24,7 @@ function NormenPage() {
   const { data: normen, dataUpdatedAt } = useSuspenseQuery(normenQuery());
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin />
+      <AppHeader isAdmin magSchrijven />
       {/* key: na opslaan het formulier opnieuw vullen met de opgeslagen normen */}
       <NormenBeheer key={dataUpdatedAt} normen={normen} />
     </div>

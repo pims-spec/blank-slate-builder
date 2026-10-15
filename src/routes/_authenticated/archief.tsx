@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import Archief from "@/components/wws/Archief";
@@ -7,6 +8,8 @@ import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
 
 export const Route = createFileRoute("/_authenticated/archief")({
+  // indeling: kiezen voor het indelingsadvies (vanaf /indeling)
+  validateSearch: z.object({ indeling: z.boolean().optional() }),
   head: () => ({
     meta: [
       { title: "Archief — Werkplaats" },
@@ -23,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/archief")({
 
 function ArchiefPage() {
   const { user } = Route.useRouteContext();
+  const { indeling } = Route.useSearch();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
   const { data: normen } = useSuspenseQuery(normenQuery());
 
@@ -32,10 +36,11 @@ function ArchiefPage() {
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}
+        magSchrijven={data.magSchrijven}
       />
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
-          <Archief rechten={data} userId={user.id} />
+          <Archief rechten={data} userId={user.id} voorIndeling={!!indeling} />
         </NormenProvider>
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">

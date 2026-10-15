@@ -65,7 +65,7 @@ function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader isAdmin />
+      <AppHeader isAdmin magSchrijven />
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-4xl text-foreground">Gebruikers</h1>
         <p className="mt-2 text-muted-foreground">

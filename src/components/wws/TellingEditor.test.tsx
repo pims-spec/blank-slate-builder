@@ -67,6 +67,39 @@ vi.mock("@/lib/wws/opzoeken/opzoeken.functions", () => ({
   zoekEnergielabel: vi.fn(),
 }));
 
+// Plattegrond inlezen (Claude) is elders getest; hier een nep-stap die een vaste uitkomst overneemt
+const platStap = vi.hoisted(() => ({ props: null as null | Record<string, unknown> }));
+vi.mock("./PlattegrondDialoog", async (orig) => ({
+  ...(await orig<typeof import("./PlattegrondDialoog")>()),
+  PlattegrondInlezen: (p: {
+    input: WwsInput;
+    knopTekst: string;
+    vastVervangen: boolean;
+    onOvernemen: (i: WwsInput, b: { blob: Blob; breedte: number; hoogte: number }) => void;
+  }) => {
+    platStap.props = p;
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          p.onOvernemen(
+            {
+              ...p.input,
+              vertrekken: [
+                { type: "woonkamer", naam: "Woonkamer", m2: "31,5", verwarmd: true, maten: [] },
+                { type: "slaapkamer", naam: "Slaapkamer", m2: "12", verwarmd: true, maten: [] },
+              ],
+            },
+            { blob: new Blob(["x"], { type: "image/jpeg" }), breedte: 800, hoogte: 600 },
+          )
+        }
+      >
+        {p.knopTekst}
+      </button>
+    );
+  },
+}));
+
 const N = DEFAULT_NORMEN as unknown as Normen;
 const ADMIN = { id: "admin-1", naam: "Beheerder", email: "admin@x.nl" };
 
@@ -74,6 +107,7 @@ function renderEditor(
   tellingId: string | undefined,
   userId = ADMIN.id,
   roles: AppRole[] = ["admin", "member"],
+  start?: "indeling" | "blanco",
 ) {
   const qc = new QueryClient();
   return render(
@@ -86,6 +120,7 @@ function renderEditor(
           userId={userId}
           bewerker={ADMIN}
           rechten={rechtenVan(roles)}
+          start={start}
         />
       </QueryClientProvider>
     </StrictMode>,
@@ -788,5 +823,85 @@ describe("TellingEditor", () => {
       fireEvent.click(screen.getByRole("button", { name: "Uitleg: Buitenruimten" }));
       expect(await screen.findByText(/Een Frans balkon telt niet\./)).toBeInTheDocument();
     });
+  });
+});
+
+describe("startscherm indelingsadvies (toonIndelingStart)", () => {
+  beforeEach(() => {
+    URL.createObjectURL ??= () => "blob:test";
+    URL.revokeObjectURL ??= () => {};
+  });
+
+  it("Blanco: eerst Nieuwe telling, dan de plattegrondstap; doorgaan vult de telling en gaat naar stap 1", async () => {
+    zoekAdres.mockResolvedValue({ ok: false, fout: "geen_resultaat" });
+    renderEditor(undefined, ADMIN.id, ["admin", "member"], "blanco");
+    expect(navigate).toHaveBeenCalledWith({ to: "/wws", replace: true });
+    fireEvent.change(await screen.findByPlaceholderText("1234 AB"), {
+      target: { value: "1053lb" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("12 A"), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Doorgaan" }));
+
+    const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
+    expect(platStap.props).toMatchObject({ vastVervangen: true });
+    expect(within(dlg).queryByRole("list", { name: "Stappen" })).toBeNull();
+    fireEvent.click(within(dlg).getByRole("button", { name: "Doorgaan met Indelingsadvies →" }));
+
+    expect(await within(dlg).findByRole("list", { name: "Stappen" })).toBeInTheDocument();
+    expect(within(dlg).getByLabelText("Eigenaar")).toBeInTheDocument();
+    // terug naar de plattegrond en weer door
+    fireEvent.click(within(dlg).getByRole("button", { name: "← Terug naar plattegrond" }));
+    expect(within(dlg).queryByRole("list", { name: "Stappen" })).toBeNull();
+    fireEvent.click(within(dlg).getByRole("button", { name: "Doorgaan met Indelingsadvies →" }));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Volgende stap →" }));
+    expect(within(dlg).getByLabelText("Status van Woonkamer")).toBeInTheDocument();
+    expect(within(dlg).getByLabelText("Status van Slaapkamer")).toBeInTheDocument();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Indelingsadvies" })).toBeNull(),
+    );
+    expect(screen.getByLabelText("Postcode")).toHaveValue("1053 LB");
+    expect(screen.getByRole("status", { name: "Opslagstatus" })).toHaveTextContent(
+      "Niet-opgeslagen wijzigingen",
+    );
+    // weer openen via de knop: gewoon indelingsadvies, zonder plattegrondstap
+    fireEvent.click(screen.getByRole("button", { name: "Indelingsadvies" }));
+    const opnieuw = await screen.findByRole("dialog", { name: "Indelingsadvies" });
+    expect(within(opnieuw).getByRole("list", { name: "Stappen" })).toBeInTheDocument();
+    expect(within(opnieuw).queryByRole("button", { name: "← Terug naar plattegrond" })).toBeNull();
+  });
+
+  it("Blanco met Overslaan voor nu: toch door naar de plattegrondstap", async () => {
+    renderEditor(undefined, ADMIN.id, ["admin", "member"], "blanco");
+    fireEvent.click(await screen.findByRole("button", { name: "Overslaan voor nu" }));
+    const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
+    expect(
+      within(dlg).getByRole("button", { name: "Doorgaan met Indelingsadvies →" }),
+    ).toBeInTheDocument();
+  });
+
+  it("Blanco niet voor de kijkrol", async () => {
+    renderEditor(undefined, "lezer-1", ["viewer"], "blanco");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole("heading", { name: "Nieuwe telling" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Indelingsadvies" })).toBeNull();
+  });
+
+  it("Bestaande telling gekozen: na het laden meteen het indelingsadvies, vlag uit de adresbalk", async () => {
+    const st = nieuweTellingStaat("Beheerder");
+    st.input.vertrekken.push({ type: "woonkamer", m2: 30, verwarmd: true });
+    store.haal.mockResolvedValue({
+      ...maakTellingDoc({ ...st, versieCount: 0, aantalVersies: 0 }, N, null),
+      id: "t-b",
+      ownerId: ADMIN.id,
+      ownerNaam: "Beheerder",
+      gewijzigdOp: "2026-10-14T10:00:00Z",
+    });
+    renderEditor("t-b", ADMIN.id, ["admin", "member"], "indeling");
+    const dlg = await screen.findByRole("dialog", { name: "Indelingsadvies" });
+    expect(within(dlg).getByLabelText("Eigenaar")).toBeInTheDocument();
+    expect(within(dlg).queryByRole("button", { name: "← Terug naar plattegrond" })).toBeNull();
+    expect(navigate).toHaveBeenCalledWith({ to: "/wws", search: { id: "t-b" }, replace: true });
   });
 });

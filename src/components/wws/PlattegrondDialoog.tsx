@@ -62,13 +62,24 @@ export default function PlattegrondDialoog(p: Props) {
             oppervlakten alleen een schatting.
           </DialogDescription>
         </DialogHeader>
-        {p.open && <Inhoud {...p} />}
+        {p.open && <PlattegrondInlezen {...p} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function Inhoud({ input, meta, onOvernemen }: Props) {
+/**
+ * Het inlezen zelf (bestand, Claude, controle, overnemen). Ook gebruikt als plattegrondstap van de
+ * "Blanco"-start van het indelingsadvies (renderIndelingPlattegrondStap): dan altijd vervangen
+ * (de telling is nog leeg) en een andere knoptekst — applyIndPlat().
+ */
+export function PlattegrondInlezen({
+  input,
+  meta,
+  onOvernemen,
+  vastVervangen = false,
+  knopTekst = "Overnemen",
+}: Omit<Props, "open" | "onOpenChange"> & { vastVervangen?: boolean; knopTekst?: string }) {
   const [bestand, setBestand] = useState<File | null>(null);
   const [notitie, setNotitie] = useState("");
   const [beeld, setBeeld] = useState<NieuwBeeld | null>(null);
@@ -138,7 +149,7 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
         return;
       }
       setR(r.data);
-      setK(standaardKeuzes(r.data));
+      setK({ ...standaardKeuzes(r.data), vervangen: vastVervangen });
       setStatus("Klaar. Controleer de ruimten en neem ze over.");
     } finally {
       setBezig(false);
@@ -311,11 +322,13 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
                 (R.buitenruimten.length ? ": " + buitenTekst(R) : " (niet gevonden)")
               }
             />
-            <Vink
-              aan={k.vervangen}
-              zet={(v) => setK({ ...k, vervangen: v })}
-              tekst="Bestaande ruimten vervangen (anders toevoegen)"
-            />
+            {!vastVervangen && (
+              <Vink
+                aan={k.vervangen}
+                zet={(v) => setK({ ...k, vervangen: v })}
+                tekst="Bestaande ruimten vervangen (anders toevoegen)"
+              />
+            )}
           </div>
           {R.nameten.length > 0 && (
             <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2">
@@ -339,7 +352,7 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
           disabled={!R || !k || !beeld || bezig}
           onClick={() => R && k && beeld && onOvernemen(platToepassen(input, R, k), beeld)}
         >
-          Overnemen
+          {knopTekst}
         </Button>
       </DialogFooter>
     </div>

@@ -31,6 +31,7 @@ function EigenarenPage() {
         isAdmin={data.isAdmin}
         heeftToegang={data.heeftToegang}
         zietAlles={data.zietAlles}
+        magSchrijven={data.magSchrijven}
       />
       <NormenProvider normen={normen}>
         <Eigenaren rechten={data} />

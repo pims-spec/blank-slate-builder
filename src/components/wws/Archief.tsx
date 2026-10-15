@@ -43,10 +43,12 @@ const veldCls =
 interface Props {
   rechten: Rechten;
   userId: string;
+  /** "Bestaande telling kiezen" voor het indelingsadvies (indelingNaOpenen in de bron) */
+  voorIndeling?: boolean;
 }
 
 /** Archief: zoeken, filteren, per collega groeperen, openen en verwijderen — renderArchief() */
-export default function Archief({ rechten, userId }: Props) {
+export default function Archief({ rechten, userId, voorIndeling = false }: Props) {
   const queryClient = useQueryClient();
   const NORMEN = useNormen();
   const { data, isPending, error } = useQuery(tellingenQuery());
@@ -114,7 +116,11 @@ export default function Archief({ rechten, userId }: Props) {
           </button>
         </td>
         <td className="px-3 py-2">
-          <Link to="/wws" search={{ id: r.t.id }} className="font-medium hover:underline">
+          <Link
+            to="/wws"
+            search={voorIndeling ? { id: r.t.id, indeling: true } : { id: r.t.id }}
+            className="font-medium hover:underline"
+          >
             {r.titel}
           </Link>
           {r.adres && <div className="text-xs text-muted-foreground">{r.adres}</div>}
@@ -129,7 +135,7 @@ export default function Archief({ rechten, userId }: Props) {
         <td className="px-3 py-2 text-muted-foreground">{datumTijd(r.t.gewijzigdOp)}</td>
         <td className="whitespace-nowrap px-3 py-1 text-right">
           <Button asChild size="sm" variant="ghost">
-            <Link to="/wws" search={{ id: r.t.id }}>
+            <Link to="/wws" search={voorIndeling ? { id: r.t.id, indeling: true } : { id: r.t.id }}>
               Openen
             </Link>
           </Button>
@@ -155,6 +161,14 @@ export default function Archief({ rechten, userId }: Props) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Archief</h1>
+          {voorIndeling && (
+            <p className="mt-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
+              Kies een telling om het indelingsadvies voor te openen.{" "}
+              <Link to="/archief" className="underline">
+                Gewoon het archief
+              </Link>
+            </p>
+          )}
           <p className="mt-1 text-sm text-muted-foreground">
             {rechten.zietAlles
               ? "Alle tellingen van jou en je collega's."

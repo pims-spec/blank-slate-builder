@@ -8,7 +8,9 @@ import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opsl
 import Archief from "./Archief";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+  Link: ({ children, search }: { children: ReactNode; search?: object }) => (
+    <a data-search={search ? JSON.stringify(search) : undefined}>{children}</a>
+  ),
 }));
 
 const tellingStore = vi.hoisted(() => ({
@@ -37,10 +39,10 @@ function telling(id: string, naam: string, ownerId: string, ownerNaam: string, k
   };
 }
 
-function toon(roles: AppRole[], userId: string) {
+function toon(roles: AppRole[], userId: string, voorIndeling = false) {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Archief rechten={rechtenVan(roles)} userId={userId} />
+      <Archief rechten={rechtenVan(roles)} userId={userId} voorIndeling={voorIndeling} />
     </QueryClientProvider>,
   );
 }
@@ -139,5 +141,21 @@ describe("Archief", () => {
       .map((r) => r.querySelector("td:nth-child(2) a")?.textContent)
       .filter(Boolean);
     expect(namen).toEqual(["Zzz", "Aaa", "Bbb"]);
+  });
+
+  it("kiezen voor het indelingsadvies: melding, en Openen gaat naar de telling met het indelingsadvies", async () => {
+    toon(["member"], "bob", true);
+    await screen.findByText("Eigen telling");
+    expect(screen.getByText(/Kies een telling om het indelingsadvies voor te openen/)).toBeTruthy();
+    const open = within(rijVan("Eigen telling")).getByText("Openen").closest("a")!;
+    expect(JSON.parse(open.dataset["search"]!)).toEqual({ id: "t1", indeling: true });
+  });
+
+  it("gewoon archief: Openen zonder indelingsadvies", async () => {
+    toon(["member"], "bob");
+    await screen.findByText("Eigen telling");
+    expect(screen.queryByText(/Kies een telling om het indelingsadvies/)).toBeNull();
+    const open = within(rijVan("Eigen telling")).getByText("Openen").closest("a")!;
+    expect(JSON.parse(open.dataset["search"]!)).toEqual({ id: "t1" });
   });
 });

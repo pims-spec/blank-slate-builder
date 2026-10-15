@@ -17,6 +17,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedArchiefRouteImport } from './routes/_authenticated/archief'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEigenarenRouteImport } from './routes/_authenticated/eigenaren'
+import { Route as AuthenticatedIndelingRouteImport } from './routes/_authenticated/indeling'
 import { Route as AuthenticatedNormenRouteImport } from './routes/_authenticated/normen'
 import { Route as AuthenticatedPortefeuilleRouteImport } from './routes/_authenticated/portefeuille'
 import { Route as AuthenticatedWwsRouteImport } from './routes/_authenticated/wws'
@@ -60,6 +61,11 @@ const AuthenticatedEigenarenRoute = AuthenticatedEigenarenRouteImport.update({
   path: '/eigenaren',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIndelingRoute = AuthenticatedIndelingRouteImport.update({
+  id: '/indeling',
+  path: '/indeling',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedNormenRoute = AuthenticatedNormenRouteImport.update({
   id: '/normen',
   path: '/normen',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/archief': typeof AuthenticatedArchiefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
+  '/indeling': typeof AuthenticatedIndelingRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/portefeuille': typeof AuthenticatedPortefeuilleRoute
   '/wws': typeof AuthenticatedWwsRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/archief': typeof AuthenticatedArchiefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
+  '/indeling': typeof AuthenticatedIndelingRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/portefeuille': typeof AuthenticatedPortefeuilleRoute
   '/wws': typeof AuthenticatedWwsRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/_authenticated/archief': typeof AuthenticatedArchiefRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/eigenaren': typeof AuthenticatedEigenarenRoute
+  '/_authenticated/indeling': typeof AuthenticatedIndelingRoute
   '/_authenticated/normen': typeof AuthenticatedNormenRoute
   '/_authenticated/portefeuille': typeof AuthenticatedPortefeuilleRoute
   '/_authenticated/wws': typeof AuthenticatedWwsRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/archief'
     | '/dashboard'
     | '/eigenaren'
+    | '/indeling'
     | '/normen'
     | '/portefeuille'
     | '/wws'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/archief'
     | '/dashboard'
     | '/eigenaren'
+    | '/indeling'
     | '/normen'
     | '/portefeuille'
     | '/wws'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/_authenticated/archief'
     | '/_authenticated/dashboard'
     | '/_authenticated/eigenaren'
+    | '/_authenticated/indeling'
     | '/_authenticated/normen'
     | '/_authenticated/portefeuille'
     | '/_authenticated/wws'
@@ -220,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEigenarenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/indeling': {
+      id: '/_authenticated/indeling'
+      path: '/indeling'
+      fullPath: '/indeling'
+      preLoaderRoute: typeof AuthenticatedIndelingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/normen': {
       id: '/_authenticated/normen'
       path: '/normen'
@@ -249,6 +268,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedArchiefRoute: typeof AuthenticatedArchiefRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEigenarenRoute: typeof AuthenticatedEigenarenRoute
+  AuthenticatedIndelingRoute: typeof AuthenticatedIndelingRoute
   AuthenticatedNormenRoute: typeof AuthenticatedNormenRoute
   AuthenticatedPortefeuilleRoute: typeof AuthenticatedPortefeuilleRoute
   AuthenticatedWwsRoute: typeof AuthenticatedWwsRoute
@@ -259,6 +279,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedArchiefRoute: AuthenticatedArchiefRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEigenarenRoute: AuthenticatedEigenarenRoute,
+  AuthenticatedIndelingRoute: AuthenticatedIndelingRoute,
   AuthenticatedNormenRoute: AuthenticatedNormenRoute,
   AuthenticatedPortefeuilleRoute: AuthenticatedPortefeuilleRoute,
   AuthenticatedWwsRoute: AuthenticatedWwsRoute,
