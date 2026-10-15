@@ -117,6 +117,8 @@ export type Fac = FacKeuken | FacBadkamer | FacSlaapSan | FacToilet | FacWas;
 export type FacKind = Fac["kind"];
 
 export interface Vertrek {
+  /** Herkomst van een ingelezen plattegrond, bijv. "Plattegrond: berekend" (alleen tonen) */
+  herkomst?: string;
   type: VertrekTypeKey;
   naam?: string;
   m2: NumLike;
@@ -126,6 +128,8 @@ export interface Vertrek {
   fac?: Fac;
 }
 export interface OverigeRuimte {
+  /** Herkomst van een ingelezen plattegrond, bijv. "Plattegrond: berekend" (alleen tonen) */
+  herkomst?: string;
   type: OverigTypeKey;
   naam?: string;
   m2: NumLike;

@@ -21,6 +21,15 @@ import {
   type VoorzDef,
   type WwsInput,
 } from "@/lib/wws";
+import {
+  m2Berekend,
+  ruimteOpmerking,
+  verwijderMaat,
+  voegMaatToe,
+  zetM2,
+  zetMaat,
+} from "@/lib/wws/ruimteInvoer";
+import type { Maat } from "@/lib/wws/types";
 import { useNormen } from "./NormenContext";
 
 // ---------- bouwstenen ----------
@@ -53,22 +62,87 @@ function Getal({
   value,
   onChange,
   placeholder = "0",
+  title,
 }: {
   value: NumLike | undefined;
   onChange: (v: string) => void;
   placeholder?: string;
+  title?: string | undefined;
 }) {
   return (
     <input
       type="text"
       inputMode="decimal"
       className={inputCls}
+      title={title}
       value={value === 0 ? "" : (value ?? "")}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
     />
   );
 }
+/**
+ * Lengte × breedte (m), meerdere maten; een minteken trekt een deel af — matenCell() in
+ * wws-site.html. Het oppervlak volgt (zetMaat in ruimteInvoer.ts).
+ */
+function MatenVeld({
+  maten,
+  label,
+  onZet,
+  onToevoegen,
+  onVerwijder,
+}: {
+  maten: Maat[] | undefined;
+  label: string;
+  onZet: (j: number, veld: "l" | "b", waarde: string) => void;
+  onToevoegen: () => void;
+  onVerwijder: (j: number) => void;
+}) {
+  const lijst = maten || [];
+  const veld = (j: number, k: "l" | "b", v: NumLike, al: string) => (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={inputCls + " w-20" + (num(v) < 0 ? " text-destructive" : "")}
+      value={v ?? ""}
+      placeholder="0,00"
+      aria-label={al + " (" + label + ", maat " + (j + 1) + ")"}
+      title="Gebruik een minteken om een deel af te trekken, bijv. -0,30 × 0,60 voor een meterkast"
+      onChange={(e) => onZet(j, k, e.target.value)}
+    />
+  );
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      <span className="text-muted-foreground">Lengte × breedte (m)</span>
+      {lijst.map((m, j) => (
+        <div key={j} className="flex items-center gap-1.5">
+          {veld(j, "l", m.l, "Lengte in meter")}
+          <span aria-hidden="true">×</span>
+          {veld(j, "b", m.b, "Breedte in meter")}
+          {lijst.length > 1 && (
+            <button
+              type="button"
+              className="px-1.5 text-muted-foreground hover:text-destructive"
+              aria-label={"Maat " + (j + 1) + " verwijderen (" + label + ")"}
+              title="Maat verwijderen"
+              onClick={() => onVerwijder(j)}
+            >
+              −
+            </button>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        className="self-start text-sm text-primary hover:underline"
+        onClick={onToevoegen}
+      >
+        + lengte × breedte
+      </button>
+    </div>
+  );
+}
+
 function Vink({
   label,
   checked,
@@ -496,9 +570,10 @@ export default function WwsCalculator({
                 <Getal
                   value={r.m2}
                   placeholder="0,00"
+                  title={m2Berekend(r) ? "Berekend uit lengte × breedte" : undefined}
                   onChange={(v) =>
                     wijzig((d) => {
-                      d[groep][i]!.m2 = v;
+                      d[groep][i] = zetM2(d[groep][i]!, v) as never;
                     })
                   }
                 />
@@ -537,6 +612,28 @@ export default function WwsCalculator({
                 Verwijderen
               </button>
             </div>
+            <div className="mt-2">
+              <MatenVeld
+                maten={r.maten}
+                label={r.naam || types.find((t) => t.k === r.type)?.l || "ruimte"}
+                onZet={(j, veld, v) =>
+                  wijzig((d) => {
+                    d[groep][i] = zetMaat(d[groep][i]!, j, veld, v) as never;
+                  })
+                }
+                onToevoegen={() =>
+                  wijzig((d) => {
+                    d[groep][i] = voegMaatToe(d[groep][i]!) as never;
+                  })
+                }
+                onVerwijder={(j) =>
+                  wijzig((d) => {
+                    d[groep][i] = verwijderMaat(d[groep][i]!, j) as never;
+                  })
+                }
+              />
+            </div>
+            <Opmerking o={ruimteOpmerking(groep, r, N)} />
             {r.fac && (
               <div className="mt-3 space-y-3 border-t border-border pt-3">
                 {r.fac.uitPve && (
@@ -571,10 +668,18 @@ export default function WwsCalculator({
                   type: "slaapkamer",
                   naam: "",
                   m2: "",
+                  maten: [{ l: "", b: "" }],
                   verwarmd: true,
                   verkoeld: false,
                 });
-              else d.overig.push({ type: "berging_in", naam: "", m2: "", verwarmd: false });
+              else
+                d.overig.push({
+                  type: "berging_in",
+                  naam: "",
+                  m2: "",
+                  maten: [{ l: "", b: "" }],
+                  verwarmd: false,
+                });
               const nieuw = d[groep][d[groep].length - 1]!;
               pasRuimteAan?.(groep, nieuw);
             })
@@ -768,6 +873,7 @@ export default function WwsCalculator({
                   <Getal
                     value={b.m2}
                     placeholder="0,00"
+                    title={m2Berekend(b) ? "Berekend uit lengte × breedte" : undefined}
                     onChange={(v) =>
                       wijzig((d) => {
                         d.buiten.ruimten[i]!.m2 = v;
@@ -786,6 +892,27 @@ export default function WwsCalculator({
                 >
                   Verwijderen
                 </button>
+                <div className="col-span-2 sm:col-span-4">
+                  <MatenVeld
+                    maten={b.maten}
+                    label={BUITEN_SOORTEN.find(([k]) => k === b.soort)?.[1] ?? "buitenruimte"}
+                    onZet={(j, veld, v) =>
+                      wijzig((d) => {
+                        d.buiten.ruimten[i] = zetMaat(d.buiten.ruimten[i]!, j, veld, v);
+                      })
+                    }
+                    onToevoegen={() =>
+                      wijzig((d) => {
+                        d.buiten.ruimten[i] = voegMaatToe(d.buiten.ruimten[i]!);
+                      })
+                    }
+                    onVerwijder={(j) =>
+                      wijzig((d) => {
+                        d.buiten.ruimten[i] = verwijderMaat(d.buiten.ruimten[i]!, j);
+                      })
+                    }
+                  />
+                </div>
               </div>
             ))}
             <div className="flex flex-wrap items-end gap-3">
@@ -794,7 +921,12 @@ export default function WwsCalculator({
                 className={knopCls}
                 onClick={() =>
                   wijzig((d) => {
-                    d.buiten.ruimten.push({ soort: "balkon", groep: "priv", m2: "" });
+                    d.buiten.ruimten.push({
+                      soort: "balkon",
+                      groep: "priv",
+                      m2: "",
+                      maten: [{ l: "", b: "" }],
+                    });
                   })
                 }
               >
@@ -846,6 +978,7 @@ export default function WwsCalculator({
                     <Getal
                       value={r.m2}
                       placeholder="0,00"
+                      title={m2Berekend(r) ? "Berekend uit lengte × breedte" : undefined}
                       onChange={(v) =>
                         wijzig((d) => {
                           d.gem[g][i]!.m2 = v;
@@ -864,6 +997,31 @@ export default function WwsCalculator({
                   >
                     Verwijderen
                   </button>
+                  <div className="col-span-2 sm:col-span-3">
+                    <MatenVeld
+                      maten={r.maten}
+                      label={
+                        (g === "vertrekken" ? VERTREK_TYPES : OVERIG_TYPES).find(
+                          (t) => t.k === r.type,
+                        )?.l ?? "ruimte"
+                      }
+                      onZet={(j, veld, v) =>
+                        wijzig((d) => {
+                          d.gem[g][i] = zetMaat(d.gem[g][i]!, j, veld, v);
+                        })
+                      }
+                      onToevoegen={() =>
+                        wijzig((d) => {
+                          d.gem[g][i] = voegMaatToe(d.gem[g][i]!);
+                        })
+                      }
+                      onVerwijder={(j) =>
+                        wijzig((d) => {
+                          d.gem[g][i] = verwijderMaat(d.gem[g][i]!, j);
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               )),
             )}
@@ -873,7 +1031,7 @@ export default function WwsCalculator({
                 className={knopCls}
                 onClick={() =>
                   wijzig((d) => {
-                    d.gem.vertrekken.push({ type: "overig", m2: "" });
+                    d.gem.vertrekken.push({ type: "overig", m2: "", maten: [{ l: "", b: "" }] });
                   })
                 }
               >
@@ -884,7 +1042,7 @@ export default function WwsCalculator({
                 className={knopCls}
                 onClick={() =>
                   wijzig((d) => {
-                    d.gem.overig.push({ type: "berging_in", m2: "" });
+                    d.gem.overig.push({ type: "berging_in", m2: "", maten: [{ l: "", b: "" }] });
                   })
                 }
               >
@@ -1155,5 +1313,15 @@ export default function WwsCalculator({
         </div>
       </aside>
     </div>
+  );
+}
+
+/** Opmerking onder een ruimte (verkeersruimte, te klein, herkomst van de plattegrond) */
+function Opmerking({ o }: { o: ReturnType<typeof ruimteOpmerking> }) {
+  if (!o) return null;
+  return (
+    <p className={"mt-1 text-xs " + (o.ingeschat ? "text-orange-600" : "text-muted-foreground")}>
+      {o.tekst}
+    </p>
   );
 }
