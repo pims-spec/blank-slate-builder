@@ -29,7 +29,7 @@ function Index() {
           Alleen op uitnodiging
         </p>
         <h1 className="mt-4 max-w-3xl font-display text-6xl leading-[1.05] text-foreground md:text-7xl">
-          GoHome advice
+          GoHome <span className="text-[0.625em] text-muted-foreground">advice</span>
         </h1>
         <p className="tagline mt-3 text-xl">Punten, huur en advies per woning.</p>
         <div className="mt-10">
