@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { Button } from "@/components/ui/button";
+import { HomeHero, HomeStats } from "@/components/wws/HomeStart";
 import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
 import { controleStatus } from "@/lib/wws/opslag";
@@ -38,11 +39,11 @@ function Dashboard() {
         zietAlles={data.zietAlles}
         magSchrijven={data.magSchrijven}
       />
-      <main className="mx-auto max-w-5xl px-6 py-16">
+      <main className="mx-auto max-w-3xl px-6 py-11 max-[720px]:px-4 max-[720px]:py-6">
         {data.heeftToegang ? (
           <>
-            <p className="text-sm uppercase tracking-widest text-muted-foreground">Welkom terug</p>
-            <h1 className="mt-2 font-display text-5xl text-foreground">{name}</h1>
+            <HomeHero naam={name ?? ""} />
+            <HomeStats userId={user.id} />
             {data.isViewer ? (
               <>
                 <p className="mt-6 max-w-lg text-muted-foreground">

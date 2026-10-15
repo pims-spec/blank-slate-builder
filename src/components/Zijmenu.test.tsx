@@ -45,7 +45,7 @@ describe("Zijmenu", () => {
       ["Eigenaren", "/eigenaren"],
       ["Normen", "/normen"],
       ["Gebruikers", "/admin"],
-    ]) {
+    ] as const) {
       const link = within(nav).getByRole("link", { name: naam });
       expect(link).toHaveAttribute("href", to);
       expect(link).toHaveAttribute("title", naam);
