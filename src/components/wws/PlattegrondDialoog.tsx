@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -78,6 +78,7 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
   const [R, setR] = useState<PlattegrondAntwoord | null>(null);
   const [k, setK] = useState<PlatKeuzes | null>(null);
   const [gebruik, setGebruik] = useState<Gebruik | undefined>();
+  const ctl = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!beeld) return;
@@ -115,8 +116,10 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
       setStatus("Claude leest de plattegrond… dit duurt meestal 15 tot 40 seconden.");
       const data = bytesNaarBase64(await blobNaarBytes(jpeg));
       let r;
+      ctl.current = new AbortController();
       try {
         r = await leesPlattegrond({
+          signal: ctl.current.signal,
           data: {
             afbeelding: { data, type: "image/jpeg" },
             // eigen gegevens van de telling eruit; Claude krijgt alleen de tekening en de instructie
@@ -124,7 +127,9 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
           },
         });
       } catch {
-        setStatus(aiMelding("geen_verbinding", "plattegrond"));
+        setStatus(
+          ctl.current?.signal.aborted ? "Gestopt." : aiMelding("geen_verbinding", "plattegrond"),
+        );
         return;
       }
       setGebruik(r.gebruik);
@@ -188,6 +193,11 @@ function Inhoud({ input, meta, onOvernemen }: Props) {
         <Button onClick={inlezen} disabled={bezig}>
           Plattegrond inlezen
         </Button>
+        {bezig && (
+          <Button variant="outline" onClick={() => ctl.current?.abort()}>
+            Stoppen
+          </Button>
+        )}
         <span className="text-muted-foreground" role="status">
           {status}
         </span>

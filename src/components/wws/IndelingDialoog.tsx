@@ -159,6 +159,7 @@ function IndelingInhoud({
     onInputWijziging(nieuw.input);
   };
   const [ai, setAi] = useState<Record<number, AiStaat>>({});
+  const aiCtl = useRef<Record<number, AbortController>>({});
   const [extraSlaap, setExtraSlaap] = useState("");
   const [varianten, setVarianten] = useState<IndelingVariant[]>([]);
 
@@ -192,13 +193,22 @@ function IndelingInhoud({
           ...v.vertrekken.map((r) => ({ groep: "vertrekken" as const, r })),
           ...v.overig.map((r) => ({ groep: "overig" as const, r })),
         ].map(({ groep, r }) => ({ groep, type: r.type, m2: num(r.m2), vast: !!r._indVast }));
-        const r = await maakVariantAfbeelding({ data: { afbeelding: ref, ruimten } });
+        const c = (aiCtl.current[i] = new AbortController());
+        const r = await maakVariantAfbeelding({
+          data: { afbeelding: ref, ruimten },
+          signal: c.signal,
+        });
         staat = r.ok
           ? { bezig: false, beeld: r.data, gebruik: r.gebruik }
           : { bezig: false, fout: aiMelding(r.fout, "afbeelding", r.gebruik), gebruik: r.gebruik };
       }
     } catch {
-      staat = { bezig: false, fout: aiMelding("geen_verbinding", "afbeelding") };
+      staat = {
+        bezig: false,
+        fout: aiCtl.current[i]?.signal.aborted
+          ? "Gestopt."
+          : aiMelding("geen_verbinding", "afbeelding"),
+      };
     }
     setAi((a) => ({ ...a, [i]: staat }));
   }
@@ -388,6 +398,7 @@ function IndelingInhoud({
           ai={ai}
           aiMogelijk={!!plattegrondUrl && magToepassen}
           onAi={genereerAi}
+          onAiStop={(i) => aiCtl.current[i]?.abort()}
           onTerug={() => setStap("kamers")}
           onToepassen={pasToe}
         />
@@ -404,6 +415,7 @@ function Resultaten({
   ai,
   aiMogelijk,
   onAi,
+  onAiStop,
   onTerug,
   onToepassen,
 }: {
@@ -414,6 +426,7 @@ function Resultaten({
   ai: Record<number, AiStaat>;
   aiMogelijk: boolean;
   onAi: (i: number) => void;
+  onAiStop: (i: number) => void;
   onTerug: () => void;
   onToepassen: (i: number, v: IndelingVariant) => void;
 }) {
@@ -502,6 +515,11 @@ function Resultaten({
                         : ai[i]?.beeld
                           ? "Opnieuw genereren (± € 0,03)"
                           : "Genereer AI-afbeelding (± € 0,03)"}
+                    </Button>
+                  )}
+                  {ai[i]?.bezig && (
+                    <Button variant="outline" onClick={() => onAiStop(i)}>
+                      Stoppen
                     </Button>
                   )}
                   {magToepassen && (

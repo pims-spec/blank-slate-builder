@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { eur, num, type EnergieAdvies } from "@/lib/wws";
@@ -28,6 +28,7 @@ export default function EnergieAdviesBlok({ advies, meta, magBewerken, onZet }: 
   const [bezig, setBezig] = useState(false);
   const [status, setStatus] = useState("");
   const [gebruik, setGebruik] = useState<Gebruik | undefined>();
+  const ctl = useRef<AbortController | null>(null);
 
   async function inlezen() {
     if (!bestand) {
@@ -50,10 +51,16 @@ export default function EnergieAdviesBlok({ advies, meta, magBewerken, onZet }: 
       }
       setStatus("Claude leest het advies… dit duurt meestal 15 tot 45 seconden.");
       let r;
+      ctl.current = new AbortController();
       try {
-        r = await leesEnergieAdvies({ data: { tekst: anonimiseer(T.text, meta) } });
+        r = await leesEnergieAdvies({
+          data: { tekst: anonimiseer(T.text, meta) },
+          signal: ctl.current.signal,
+        });
       } catch {
-        setStatus(aiMelding("geen_verbinding", "advies"));
+        setStatus(
+          ctl.current?.signal.aborted ? "Gestopt." : aiMelding("geen_verbinding", "advies"),
+        );
         return;
       }
       setGebruik(r.gebruik);
@@ -174,6 +181,11 @@ export default function EnergieAdviesBlok({ advies, meta, magBewerken, onZet }: 
             <Button onClick={inlezen} disabled={bezig}>
               Advies inlezen
             </Button>
+            {bezig && (
+              <Button variant="outline" onClick={() => ctl.current?.abort()}>
+                Stoppen
+              </Button>
+            )}
             <span className="text-muted-foreground" role="status">
               {bezig && !status ? "Bezig…" : status}
             </span>

@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Normen } from "@/lib/wws";
-import { AI_LIMIET_STANDAARD } from "@/lib/wws/normen";
+import { AI_LIMIET_STANDAARD, mergeNormen } from "@/lib/wws/normen";
 import { MAATREGELEN } from "@/lib/wws/advies";
 import {
   ENERGIE_RIJEN,
@@ -68,10 +68,23 @@ const datumLang = (iso: string) =>
 /** Normen en parameters beheren (alleen admins) — renderNormen()/saveNormen() in wws-site.html */
 export default function NormenBeheer({ normen }: { normen: Normen }) {
   const qc = useQueryClient();
+  // de normen waarop het formulier is gebaseerd (na "terugzetten" de standaard)
+  const [basis, setBasis] = useState(normen);
   const [getallen, setGetallen] = useState(() => beginwaarden(normen));
   const [naam, setNaam] = useState(normen.naam);
   const [gecontroleerd, setGecontroleerd] = useState(normen.gecontroleerd || "");
   const [bevestig, setBevestig] = useState(false);
+  const [terugzetten, setTerugzetten] = useState(false);
+
+  /** btnNormReset: het formulier vullen met de standaardwaarden; pas opgeslagen bij "Normen opslaan" */
+  function zetStandaardTerug() {
+    const d = mergeNormen(null);
+    setBasis(d);
+    setGetallen(beginwaarden(d));
+    setNaam(d.naam);
+    setGecontroleerd(d.gecontroleerd || "");
+    toast("Standaardwaarden ingevuld. Klik op ‘Normen opslaan’ om ze te bewaren.");
+  }
   const status = controleStatus(normen.gecontroleerd);
 
   const opslaan = useMutation({
@@ -81,7 +94,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
   });
 
   const nieuw = useMemo(() => {
-    const n = normenUitFormulier(metAiLimiet(normen), getallen, { naam, gecontroleerd });
+    const n = normenUitFormulier(metAiLimiet(basis), getallen, { naam, gecontroleerd });
     // hele getallen 0–9999 (de database accepteert alleen die; anders geldt de standaard)
     const heel = (x: number, d: number) =>
       Number.isFinite(x) ? Math.max(0, Math.min(9999, Math.round(x))) : d;
@@ -90,7 +103,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
       afbeelding: heel(n.aiLimiet!.afbeelding, AI_LIMIET_STANDAARD.afbeelding),
     };
     return n;
-  }, [normen, getallen, naam, gecontroleerd]);
+  }, [basis, getallen, naam, gecontroleerd]);
 
   const zet = (pad: string, waarde: string) => setGetallen((g) => ({ ...g, [pad]: waarde }));
   const veld = (v: NormVeld) => (
@@ -307,11 +320,32 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
         </p>
 
         <div className="sticky bottom-0 -mx-6 border-t border-border bg-background px-6 py-3">
-          <Button type="submit" disabled={opslaan.isPending}>
-            Normen opslaan
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={opslaan.isPending}>
+              Normen opslaan
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setTerugzetten(true)}>
+              Normen terugzetten naar standaard
+            </Button>
+          </div>
         </div>
       </form>
+
+      <AlertDialog open={terugzetten} onOpenChange={setTerugzetten}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Normen terugzetten?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle normen terugzetten naar de standaardwaarden? Het formulier wordt gevuld met de
+              standaard; er wordt pas iets opgeslagen als je daarna op ‘Normen opslaan’ klikt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={zetStandaardTerug}>Terugzetten</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={bevestig} onOpenChange={setBevestig}>
         <AlertDialogContent>
