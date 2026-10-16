@@ -38,6 +38,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bloxs_objecten: {
+        Row: {
+          adres_id: string | null
+          bloxs_ref: string
+          id: string
+          laatst_gezien_op: string
+          portefeuille_id: string
+          soort: string
+          sync_id: string
+        }
+        Insert: {
+          adres_id?: string | null
+          bloxs_ref: string
+          id?: string
+          laatst_gezien_op?: string
+          portefeuille_id: string
+          soort: string
+          sync_id: string
+        }
+        Update: {
+          adres_id?: string | null
+          bloxs_ref?: string
+          id?: string
+          laatst_gezien_op?: string
+          portefeuille_id?: string
+          soort?: string
+          sync_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloxs_objecten_adres_id_portefeuille_id_fkey"
+            columns: ["adres_id", "portefeuille_id"]
+            isOneToOne: false
+            referencedRelation: "portefeuille_adressen"
+            referencedColumns: ["id", "portefeuille_id"]
+          },
+          {
+            foreignKeyName: "bloxs_objecten_portefeuille_id_fkey"
+            columns: ["portefeuille_id"]
+            isOneToOne: false
+            referencedRelation: "portefeuilles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instellingen: {
         Row: {
           data: Json
@@ -167,9 +212,12 @@ export type Database = {
           huisletter: string
           huisnummer: number
           id: string
+          niet_in_bloxs_sinds: string | null
           portefeuille_id: string
           postcode: string
+          straat: string | null
           toevoeging: string
+          woonplaats: string | null
         }
         Insert: {
           bag_id?: string | null
@@ -178,9 +226,12 @@ export type Database = {
           huisletter?: string
           huisnummer: number
           id?: string
+          niet_in_bloxs_sinds?: string | null
           portefeuille_id: string
           postcode: string
+          straat?: string | null
           toevoeging?: string
+          woonplaats?: string | null
         }
         Update: {
           bag_id?: string | null
@@ -189,9 +240,12 @@ export type Database = {
           huisletter?: string
           huisnummer?: number
           id?: string
+          niet_in_bloxs_sinds?: string | null
           portefeuille_id?: string
           postcode?: string
+          straat?: string | null
           toevoeging?: string
+          woonplaats?: string | null
         }
         Relationships: [
           {
@@ -263,6 +317,9 @@ export type Database = {
       portefeuilles: {
         Row: {
           bloks_id: string | null
+          bloxs_complex_ref: string | null
+          bloxs_eigenaar_ref: string | null
+          bloxs_gesynchroniseerd_op: string | null
           bron: string
           created_at: string
           created_by: string | null
@@ -273,6 +330,9 @@ export type Database = {
         }
         Insert: {
           bloks_id?: string | null
+          bloxs_complex_ref?: string | null
+          bloxs_eigenaar_ref?: string | null
+          bloxs_gesynchroniseerd_op?: string | null
           bron?: string
           created_at?: string
           created_by?: string | null
@@ -283,6 +343,9 @@ export type Database = {
         }
         Update: {
           bloks_id?: string | null
+          bloxs_complex_ref?: string | null
+          bloxs_eigenaar_ref?: string | null
+          bloxs_gesynchroniseerd_op?: string | null
           bron?: string
           created_at?: string
           created_by?: string | null
@@ -466,6 +529,14 @@ export type Database = {
     }
     Functions: {
       ai_gebruik_boeken: { Args: { _soort: string }; Returns: Json }
+      bloxs_sync_afronden: {
+        Args: { p_portefeuille: string; p_sync: string }
+        Returns: {
+          gemarkeerd: number
+          teruggekeerd: number
+          vervallen_objecten: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
