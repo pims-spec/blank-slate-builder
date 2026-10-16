@@ -70,7 +70,12 @@ import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
 import PveToepassenDialoog, { type PveVraag } from "./PveToepassenDialoog";
-import WwsCalculator, { EnergieVelden, Ontgrendel, WozWaardeVeld } from "./WwsCalculator";
+import WwsCalculator, {
+  EnergieVelden,
+  Ontgrendel,
+  WoningtypeVeld,
+  WozWaardeVeld,
+} from "./WwsCalculator";
 import {
   adresZoek,
   isVergrendeld,
@@ -872,38 +877,39 @@ export default function TellingEditor({
           </p>
         )
       )}
-      <fieldset disabled={alleenLezen} className="m-0 min-w-0 border-0 p-0">
-        <div className="grid gap-3 sm:grid-cols-6">
+      {/* Eén compacte kaart "Woning", zoals .metaform in de bron: 5 kolommen, 2 rijen */}
+      <fieldset
+        disabled={alleenLezen}
+        className="m-0 min-w-0 rounded-2xl border border-border bg-card p-4"
+        aria-label="Woning"
+      >
+        <h3 className="mb-2 font-semibold">Woning</h3>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
           <MetaVeld
             label="Naam"
-            className="sm:col-span-6"
+            className="col-span-2 sm:col-span-1"
+            placeholder="Wordt automatisch het adres"
             waarde={m.naam}
             zet={(v) => zetMeta("naam", v)}
           />
           <MetaVeld
             label="Straat"
-            className="sm:col-span-3"
+            className="col-span-2 sm:col-span-1"
             waarde={m.adres}
             zet={(v) => zetMeta("adres", v)}
             onOntgrendel={
               isVergrendeld(m, "adres", m.adres) ? () => ontgrendel("adres") : undefined
             }
           />
+          <MetaVeld label="Postcode" waarde={m.postcode} zet={(v) => zetMeta("postcode", v)} />
           <MetaVeld
             label="Huisnummer"
-            className="sm:col-span-1"
             waarde={m.huisnummer}
             zet={(v) => zetMeta("huisnummer", v)}
           />
           <MetaVeld
-            label="Postcode"
-            className="sm:col-span-2"
-            waarde={m.postcode}
-            zet={(v) => zetMeta("postcode", v)}
-          />
-          <MetaVeld
             label="Plaats"
-            className="sm:col-span-3"
+            className="col-span-2 sm:col-span-1"
             waarde={m.plaats}
             zet={(v) => zetMeta("plaats", v)}
             onOntgrendel={
@@ -912,7 +918,6 @@ export default function TellingEditor({
           />
           <MetaVeld
             label="Bouwjaar"
-            className="sm:col-span-2"
             waarde={m.bouwjaar}
             zet={(v) => zetMeta("bouwjaar", v)}
             onOntgrendel={
@@ -922,11 +927,25 @@ export default function TellingEditor({
           <MetaVeld
             label="Peildatum"
             type="date"
-            className="sm:col-span-3"
             waarde={m.peildatum}
             zet={(v) => zetMeta("peildatum", v)}
           />
-          <div className="sm:col-span-6">
+          <WoningtypeVeld
+            className="col-span-2 sm:col-span-1"
+            waarde={staat.input.woningtype}
+            zet={(v) =>
+              wijzigInput((d) => {
+                d.woningtype = v;
+              })
+            }
+            vergrendeld={
+              isVergrendeld(m, "woningtype", staat.input.woningtype)
+                ? { onOntgrendel: () => ontgrendel("woningtype") }
+                : undefined
+            }
+            alleenLezen={alleenLezen}
+          />
+          <div className="col-span-2 min-w-0">
             <EigenaarKeuze
               klantId={m.klantId}
               onKies={eigenaarGekozen}
@@ -1220,11 +1239,7 @@ export default function TellingEditor({
           </>
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
-        woningtypeVergrendeld={
-          isVergrendeld(m, "woningtype", staat.input.woningtype)
-            ? { onOntgrendel: () => ontgrendel("woningtype") }
-            : undefined
-        }
+        woningtypeElders
       />
       {!alleenLezen && (
         <PlattegrondDialoog

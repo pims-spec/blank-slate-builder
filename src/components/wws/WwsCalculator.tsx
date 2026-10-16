@@ -382,6 +382,8 @@ export interface WwsCalculatorProps {
   wozExtra?: ReactNode;
   /** Woningtype automatisch overgenomen (EP-Online): alleen-lezen met "wijzigen" */
   woningtypeVergrendeld?: { onOntgrendel: () => void } | undefined;
+  /** Het woningtype staat elders (in de kaart "Woning" van de telling, zoals in de bron) */
+  woningtypeElders?: boolean;
 }
 
 export default function WwsCalculator({
@@ -396,6 +398,7 @@ export default function WwsCalculator({
   energieExtra,
   wozExtra,
   woningtypeVergrendeld,
+  woningtypeElders = false,
 }: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
@@ -784,29 +787,21 @@ export default function WwsCalculator({
         {boven}
 
         <fieldset disabled={alleenLezen} className="m-0 min-w-0 border-0 p-0">
-          <Sectie titel="Woning">
-            <div className="flex max-w-md items-end gap-2">
-              <Veld label="Woningtype" className="max-w-xs flex-1">
-                <fieldset disabled={!!woningtypeVergrendeld} className="m-0 min-w-0 border-0 p-0">
-                  <Keuze
-                    value={inp.woningtype}
-                    onChange={(v) =>
-                      wijzig((d) => {
-                        d.woningtype = v as WwsInput["woningtype"];
-                      })
-                    }
-                    opties={[
-                      ["eengezins", "Eengezinswoning"],
-                      ["meergezins", "Meergezinswoning"],
-                    ]}
-                  />
-                </fieldset>
-              </Veld>
-              {woningtypeVergrendeld && !alleenLezen && (
-                <Ontgrendel onClick={woningtypeVergrendeld.onOntgrendel} veld="Woningtype" />
-              )}
-            </div>
-          </Sectie>
+          {!woningtypeElders && (
+            <Sectie titel="Woning">
+              <WoningtypeVeld
+                className="max-w-md"
+                waarde={inp.woningtype}
+                zet={(v) =>
+                  wijzig((d) => {
+                    d.woningtype = v;
+                  })
+                }
+                vergrendeld={woningtypeVergrendeld}
+                alleenLezen={alleenLezen}
+              />
+            </Sectie>
+          )}
 
           <Sectie titel="Vertrekken" rubriek="1">
             {ruimteLijst("vertrekken")}
@@ -1373,6 +1368,41 @@ export function WozWaardeVeld({
  * energieVeldHtml() in wws-site.html. Ook gebruikt in stap 1 van het indelingsadvies; beide
  * bewerken dezelfde invoer (via wijzig).
  */
+/** Woningtype (eengezins/meergezins), met "wijzigen" als het uit EP-Online is overgenomen */
+export function WoningtypeVeld({
+  waarde,
+  zet,
+  vergrendeld,
+  alleenLezen = false,
+  className = "",
+}: {
+  waarde: WwsInput["woningtype"];
+  zet: (v: WwsInput["woningtype"]) => void;
+  vergrendeld?: { onOntgrendel: () => void } | undefined;
+  alleenLezen?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`flex min-w-0 items-end gap-2 ${className}`}>
+      <Veld label="Woningtype" className="min-w-0 flex-1">
+        <fieldset disabled={!!vergrendeld} className="m-0 min-w-0 border-0 p-0">
+          <Keuze
+            value={waarde}
+            onChange={(v) => zet(v as WwsInput["woningtype"])}
+            opties={[
+              ["eengezins", "Eengezinswoning"],
+              ["meergezins", "Meergezinswoning"],
+            ]}
+          />
+        </fieldset>
+      </Veld>
+      {vergrendeld && !alleenLezen && (
+        <Ontgrendel onClick={vergrendeld.onOntgrendel} veld="Woningtype" />
+      )}
+    </div>
+  );
+}
+
 export function EnergieVelden({
   energie: E,
   wijzig,
