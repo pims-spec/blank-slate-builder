@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Colleague email invitations use an admin-verified server function and Cloud Auth invitation links to a public activation page; assign access in the protected roles table, never in auth metadata, to prevent privilege escalation.

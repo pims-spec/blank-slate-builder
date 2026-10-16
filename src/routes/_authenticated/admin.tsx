@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tansta
 import { toast } from "sonner";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { BloxsBeheer } from "@/components/wws/BloxsBeheer";
+import { CollegaUitnodigen } from "@/components/CollegaUitnodigen";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,7 +81,10 @@ function Admin() {
     <div className={"min-h-screen " + zijmenuRuimte}>
       <Zijmenu isAdmin magSchrijven />
       <main className="mx-auto max-w-5xl px-6 py-12">
-        <h1 className="font-display text-4xl text-foreground">Gebruikers</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="font-display text-4xl text-foreground">Gebruikers</h1>
+          <CollegaUitnodigen />
+        </div>
         <p className="mt-2 text-muted-foreground">
           Nieuwe aanmeldingen hebben pas toegang nadat jij ze een rol geeft. Een lezer kan alles
           bekijken, maar niets aanmaken, wijzigen of verwijderen.

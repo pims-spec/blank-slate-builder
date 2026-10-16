@@ -11,6 +11,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("@/components/Zijmenu", () => ({ Zijmenu: () => null, zijmenuRuimte: "" }));
 vi.mock("@/components/wws/BloxsBeheer", () => ({ BloxsBeheer: () => null }));
+vi.mock("@/components/CollegaUitnodigen", () => ({ CollegaUitnodigen: () => null }));
 vi.mock("@/lib/wws/opzoeken/opzoeken.functions", () => ({
   serverStatus: async () => ({ sleutels: {}, modellen: {} }),
 }));
