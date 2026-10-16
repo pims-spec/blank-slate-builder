@@ -217,6 +217,8 @@ export type Database = {
           postcode: string
           straat: string | null
           toevoeging: string
+          uitgesloten_door: string | null
+          uitgesloten_op: string | null
           woonplaats: string | null
         }
         Insert: {
@@ -231,6 +233,8 @@ export type Database = {
           postcode: string
           straat?: string | null
           toevoeging?: string
+          uitgesloten_door?: string | null
+          uitgesloten_op?: string | null
           woonplaats?: string | null
         }
         Update: {
@@ -245,6 +249,8 @@ export type Database = {
           postcode?: string
           straat?: string | null
           toevoeging?: string
+          uitgesloten_door?: string | null
+          uitgesloten_op?: string | null
           woonplaats?: string | null
         }
         Relationships: [
@@ -253,6 +259,13 @@ export type Database = {
             columns: ["portefeuille_id"]
             isOneToOne: false
             referencedRelation: "portefeuilles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portefeuille_adressen_uitgesloten_door_fkey"
+            columns: ["uitgesloten_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
