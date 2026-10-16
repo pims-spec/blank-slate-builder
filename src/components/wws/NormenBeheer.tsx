@@ -24,6 +24,13 @@ import {
   type NormVeld,
 } from "@/lib/wws/normenVelden";
 import { CONTROLE_VRAAG, controleStatus } from "@/lib/wws/opslag";
+import { LABELS } from "@/lib/wws";
+import {
+  efgOmschrijving,
+  portefeuilleNormen,
+  type GeenLabelEfg,
+  type PortefeuilleNormen,
+} from "@/lib/wws/portefeuille/analyse";
 import { instellingenStore } from "./tellingStore";
 
 /** Kostenramingen van het verbeteradvies, als standaard voor iedereen */
@@ -75,6 +82,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
   const [gecontroleerd, setGecontroleerd] = useState(normen.gecontroleerd || "");
   const [bevestig, setBevestig] = useState(false);
   const [terugzetten, setTerugzetten] = useState(false);
+  const [pf, setPf] = useState<PortefeuilleNormen>(() => portefeuilleNormen(normen.portefeuille));
 
   /** btnNormReset: het formulier vullen met de standaardwaarden; pas opgeslagen bij "Normen opslaan" */
   function zetStandaardTerug() {
@@ -83,6 +91,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     setGetallen(beginwaarden(d));
     setNaam(d.naam);
     setGecontroleerd(d.gecontroleerd || "");
+    setPf(portefeuilleNormen(null));
     toast("Standaardwaarden ingevuld. Klik op ‘Normen opslaan’ om ze te bewaren.");
   }
   const status = controleStatus(normen.gecontroleerd);
@@ -102,8 +111,10 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
       lezen: heel(n.aiLimiet!.lezen, AI_LIMIET_STANDAARD.lezen),
       afbeelding: heel(n.aiLimiet!.afbeelding, AI_LIMIET_STANDAARD.afbeelding),
     };
+    // portefeuille-analyse: gecontroleerd aangevuld (ongeldige waarden → standaard)
+    n.portefeuille = portefeuilleNormen(pf);
     return n;
-  }, [basis, getallen, naam, gecontroleerd]);
+  }, [basis, getallen, naam, gecontroleerd, pf]);
 
   const zet = (pad: string, waarde: string) => setGetallen((g) => ({ ...g, [pad]: waarde }));
   const veld = (v: NormVeld) => (
@@ -315,6 +326,94 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
             pogingen tellen mee.
           </p>
           <div className="grid gap-3 sm:grid-cols-3">{AI_VELDEN.map(veld)}</div>
+        </Sectie>
+
+        <Sectie titel="Portefeuille-analyse">
+          <p className="mb-3 text-xs text-muted-foreground">
+            Instellingen voor de analyse van energielabels per portefeuille. De EFG-regels zijn
+            instelbaar omdat de wettelijke invulling nog gecontroleerd moet worden; de analyse en de
+            PDF tonen de omschrijving hieronder.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">
+                EP-Online: aanvragen per seconde (max. 10)
+              </span>
+              <Input
+                inputMode="decimal"
+                className="tabular-nums"
+                value={String(pf.epPerSeconde)}
+                onChange={(e) =>
+                  setPf({ ...pf, epPerSeconde: Number(e.target.value.replace(",", ".")) })
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">Verouderd: geregistreerd vóór</span>
+              <Input
+                type="date"
+                value={pf.verouderdVoor}
+                onChange={(e) => setPf({ ...pf, verouderdVoor: e.target.value })}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">EFG-regels: ingangsdatum</span>
+              <Input
+                type="date"
+                value={pf.efg.ingangsdatum}
+                onChange={(e) => setPf({ ...pf, efg: { ...pf.efg, ingangsdatum: e.target.value } })}
+              />
+            </label>
+          </div>
+          <fieldset className="mt-3">
+            <legend className="text-sm text-muted-foreground">
+              EFG-regels: labels die eronder vallen
+            </legend>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              {LABELS.map((l) => (
+                <label key={l} className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={pf.efg.klassen.includes(l)}
+                    onChange={(e) =>
+                      setPf({
+                        ...pf,
+                        efg: {
+                          ...pf.efg,
+                          klassen: e.target.checked
+                            ? LABELS.filter((x) => x === l || pf.efg.klassen.includes(x))
+                            : pf.efg.klassen.filter((x) => x !== l),
+                        },
+                      })
+                    }
+                  />
+                  {l}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="mt-3 flex max-w-md flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">
+              EFG-regels: woningen zonder geregistreerd label
+            </span>
+            <select
+              className="h-9 rounded-xl border border-input bg-background px-2 text-sm"
+              value={pf.efg.geenLabel}
+              onChange={(e) =>
+                setPf({ ...pf, efg: { ...pf.efg, geenLabel: e.target.value as GeenLabelEfg } })
+              }
+            >
+              <option value="apart">Apart vermelden</option>
+              <option value="meetellen">Meetellen in de EFG-groep</option>
+              <option value="negeren">Niet vermelden</option>
+            </select>
+          </label>
+          <p
+            className="mt-3 rounded-md border border-border bg-muted px-3 py-2 text-xs"
+            aria-live="polite"
+          >
+            Omschrijving in de analyse: {efgOmschrijving(portefeuilleNormen(pf).efg)}
+          </p>
         </Sectie>
 
         <p className="text-xs text-muted-foreground">

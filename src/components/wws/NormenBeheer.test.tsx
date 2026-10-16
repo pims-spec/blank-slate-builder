@@ -37,3 +37,39 @@ describe("Normen terugzetten naar standaard (btnNormReset)", () => {
     expect(opgeslagen.naam).toBe(N.naam);
   });
 });
+
+describe("Normen: portefeuille-analyse", () => {
+  it("EFG-regels, grens verouderd en limiet instellen; omschrijving volgt; opgeslagen in normen.portefeuille", async () => {
+    instellingenStore.slaNormenOp.mockResolvedValue(undefined);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NormenBeheer normen={structuredClone(N)} />
+      </QueryClientProvider>,
+    );
+    expect(
+      screen.getByText(
+        /Omschrijving in de analyse: Woningen met label E, F of G per 1 januari 2029/,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "D" }));
+    fireEvent.change(screen.getByLabelText("EFG-regels: ingangsdatum"), {
+      target: { value: "2030-01-01" },
+    });
+    fireEvent.change(screen.getByLabelText("EFG-regels: woningen zonder geregistreerd label"), {
+      target: { value: "meetellen" },
+    });
+    fireEvent.change(screen.getByLabelText("EP-Online: aanvragen per seconde (max. 10)"), {
+      target: { value: "1,5" },
+    });
+    expect(screen.getByText(/label D, E, F of G per 1 januari 2030/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalled());
+    const n = instellingenStore.slaNormenOp.mock.calls.at(-1)![0] as Normen;
+    expect(n.portefeuille).toEqual({
+      epPerSeconde: 1.5,
+      verouderdVoor: "2021-01-01",
+      efg: { ingangsdatum: "2030-01-01", klassen: ["D", "E", "F", "G"], geenLabel: "meetellen" },
+    });
+  });
+});
