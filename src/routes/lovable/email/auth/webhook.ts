@@ -43,6 +43,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
                 React.createElement(InviteEmail, {
                   siteName: SITE_NAME,
                   siteUrl: SITE_URL,
+                  recipient: data.email,
                   confirmationUrl: data.url,
                 }),
             },
