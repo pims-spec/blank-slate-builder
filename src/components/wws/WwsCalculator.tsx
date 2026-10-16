@@ -281,15 +281,22 @@ function Voorzieningen({
   lijst,
   waarden,
   zet,
+  toelichting,
 }: {
   lijst: readonly VoorzDef[];
   waarden: Record<string, unknown>;
   zet: (k: string, v: boolean | string | undefined) => void;
+  /** Kleine regel onder de kop (bv. het maximum aan punten) */
+  toelichting?: string;
 }) {
   const groepen = [...new Set(lijst.filter((it) => it.g).map((it) => it.g!))];
   const groepNaam: Record<string, string> = { kook: "Kookplaat", oven: "Oven", kraan: "Kraan" };
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3">
+      <div>
+        <div className="text-sm font-medium">Extra voorzieningen</div>
+        {toelichting && <p className="text-xs text-muted-foreground">{toelichting}</p>}
+      </div>
       {groepen.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-3">
           {groepen.map((g) => {
@@ -319,37 +326,41 @@ function Voorzieningen({
           })}
         </div>
       )}
-      <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+      {/* elke regel dezelfde drie kolommen, zoals .vzr in de bron: invoer | naam | punten */}
+      <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         {lijst
           .filter((it) => !it.g)
-          .map((it) =>
-            it.n ? (
-              <div key={it.k} className="flex items-center gap-2 text-sm">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className={`${inputCls} w-14`}
-                  placeholder="0"
-                  aria-label={`Aantal: ${it.l}`}
-                  value={String(waarden[it.k] ?? "")}
-                  onChange={(e) => zet(it.k, e.target.value)}
-                />
-                <span className="flex-1">{it.l}</span>
-                <span className="tabular-nums text-muted-foreground">{fmt(it.p)} p/st</span>
-              </div>
-            ) : (
-              <label key={it.k} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-primary"
-                  checked={num(waarden[it.k]) > 0}
-                  onChange={(e) => zet(it.k, e.target.checked || undefined)}
-                />
-                <span className="flex-1">{it.l}</span>
-                <span className="tabular-nums text-muted-foreground">{fmt(it.p)} p</span>
-              </label>
-            ),
-          )}
+          .map((it) => (
+            <label
+              key={it.k}
+              className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md py-0.5 text-sm"
+            >
+              <span className="flex justify-center">
+                {it.n ? (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className={`${inputCls} h-8 w-12 px-1 text-center`}
+                    placeholder="0"
+                    aria-label={`Aantal: ${it.l}`}
+                    value={String(waarden[it.k] ?? "")}
+                    onChange={(e) => zet(it.k, e.target.value)}
+                  />
+                ) : (
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={num(waarden[it.k]) > 0}
+                    onChange={(e) => zet(it.k, e.target.checked || undefined)}
+                  />
+                )}
+              </span>
+              <span className="leading-snug">{it.l}</span>
+              <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                {fmt(it.p)} {it.n ? "p/st" : "p"}
+              </span>
+            </label>
+          ))}
       </div>
     </div>
   );
@@ -434,10 +445,8 @@ export default function WwsCalculator({
               ]}
             />
           </Veld>
-          <p className="text-xs text-muted-foreground">
-            Extra voorzieningen tellen samen maximaal de punten van het aanrecht.
-          </p>
           <Voorzieningen
+            toelichting="Tellen samen maximaal de punten van het aanrecht."
             lijst={N.voorzKeuken}
             waarden={k.voorz}
             zet={(key, v) =>
@@ -460,6 +469,7 @@ export default function WwsCalculator({
         });
       return (
         <>
+          <div className="text-sm font-medium">Sanitair in deze ruimte</div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Teller
               label="Staand toilet"
@@ -499,10 +509,8 @@ export default function WwsCalculator({
             checked={s.eisenOk}
             onChange={(b) => zet("eisenOk", b)}
           />
-          <p className="text-xs text-muted-foreground">
-            Extra voorzieningen tellen samen maximaal de punten van douche en bad in deze ruimte.
-          </p>
           <Voorzieningen
+            toelichting="Tellen samen maximaal de punten van douche en bad in deze ruimte."
             lijst={N.voorzSan}
             waarden={s.voorz}
             zet={(key, v) =>
