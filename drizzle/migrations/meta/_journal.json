@@ -64,6 +64,13 @@
       "when": 1792151981798,
       "tag": "0008_portefeuilles_delen",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792154907232,
+      "tag": "0009_tweestaps_verplicht",
+      "breakpoints": true
     }
   ]
 }
