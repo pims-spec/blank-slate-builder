@@ -144,4 +144,17 @@ describe("BAG ophalen", () => {
     const r2 = await haalBagPortie(kapot as unknown as typeof fetch, 0, [vraag("a", 1)], geenSlaap);
     expect(r2).toEqual({ resultaten: [], stop: "dienst_onbereikbaar" });
   });
+
+  it("volgt geen doorverwijzing (manual) en telt die als fout per adres", async () => {
+    const fetchFn = vi.fn(() => Promise.resolve(new Response(null, { status: 302 })));
+    const r = await haalBagPortie(
+      fetchFn as unknown as typeof fetch,
+      0,
+      [vraag("a", 1)],
+      geenSlaap,
+    );
+    expect(r.stop).toBeUndefined();
+    expect(r.resultaten[0]!.resultaat.status).toBe("fout");
+    expect((fetchFn.mock.calls[0] as unknown[])[1]).toMatchObject({ redirect: "manual" });
+  });
 });

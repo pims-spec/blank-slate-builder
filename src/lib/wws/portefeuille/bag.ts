@@ -60,19 +60,40 @@ const gelijk = (a: string | null | undefined, b: string) =>
 
 type Antwoord = { ok: true; json: unknown } | { ok: false; stop: BagStop } | { ok: false };
 
+/** Alleen onze code en de HTTP-status loggen, nooit de URL (die bevat het adres) of de body */
+const log = (code: string, status?: number) =>
+  console.warn(`[bag] ${code}${status ? ` (HTTP ${status})` : ""}`);
+
 async function haal(fetchFn: typeof fetch, url: string): Promise<Antwoord> {
+  let res: Response;
   try {
-    const res = await fetchFn(url, {
+    res = await fetchFn(url, {
       headers: { Accept: "application/json" },
-      redirect: "error",
+      // geen doorverwijzingen volgen; "error" kent Cloudflare Workers niet, dus "manual"
+      redirect: "manual",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (res.status === 429) return { ok: false, stop: "te_veel_verzoeken" };
-    if (res.status >= 500) return { ok: false, stop: "dienst_onbereikbaar" };
-    if (!res.ok) return { ok: false };
+  } catch (e) {
+    log(e instanceof Error && e.name === "TimeoutError" ? "time-out" : "geen_verbinding");
+    return { ok: false, stop: "dienst_onbereikbaar" };
+  }
+  if (res.status === 429) {
+    log("te_veel_verzoeken", 429);
+    return { ok: false, stop: "te_veel_verzoeken" };
+  }
+  if (res.status >= 500) {
+    log("dienst_onbereikbaar", res.status);
+    return { ok: false, stop: "dienst_onbereikbaar" };
+  }
+  if (!res.ok) {
+    if (res.status !== 404) log("fout", res.status);
+    return { ok: false };
+  }
+  try {
     return { ok: true, json: await res.json() };
   } catch {
-    return { ok: false, stop: "dienst_onbereikbaar" };
+    log("geen_json", res.status);
+    return { ok: false };
   }
 }
 
