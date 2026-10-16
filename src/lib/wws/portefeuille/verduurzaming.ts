@@ -6,6 +6,12 @@
 // geen bedrag (alleen de stappen).
 import { LABELS } from "../basis";
 
+/** Vaste uitleg bij de raming (scherm en PDF) */
+export const RAMING_UITLEG =
+  "Grove indicatie op basis van labelstappen, de gebruiksoppervlakte en het bouwjaar uit de BAG; " +
+  "geen offerte. Woningen zonder geregistreerd label krijgen een aangenomen label op grond van " +
+  "het bouwjaar (gemarkeerd met *).";
+
 export const BOUWJAAR_KLASSEN = ["tot1945", "1945-1974", "1975-1991", "vanaf1992"] as const;
 export type BouwjaarKlasse = (typeof BOUWJAAR_KLASSEN)[number];
 export const BOUWJAAR_NAMEN: Record<BouwjaarKlasse, string> = {

@@ -6,7 +6,8 @@
 // van EP-Online.
 import { EFG_TOELICHTING, efgTekst, type AnalyseUitkomst } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
-import { aantal, periode } from "../portefeuille/tekst";
+import { aantal, bandbreedte, periode } from "../portefeuille/tekst";
+import { RAMING_UITLEG } from "../portefeuille/verduurzaming";
 import { pdfBanner, pdfVoorblad } from "./delen";
 import {
   PDF_ALT,
@@ -224,6 +225,53 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   else {
     tekst("Geen woningen.");
     y += 4;
+  }
+
+  // verduurzamingsraming (oudere opgeslagen analyses hebben die niet)
+  const r = u.raming;
+  if (r) {
+    kop("Verduurzamingsraming");
+    tekst(RAMING_UITLEG, 8);
+    if (!r.ingesteld) tekst("Bedragen nog niet ingesteld; alleen de labelstappen.", 8.5, PDF_INK);
+    else if (r.regels.length)
+      tekst(
+        "Naar minimaal label D: " +
+          bandbreedte(r.totaalD) +
+          ". Naar label C: " +
+          bandbreedte(r.totaalC) +
+          "." +
+          (r.zonderBedrag
+            ? " Exclusief " + aantal(r.zonderBedrag, "woning", "woningen") + " zonder bedrag."
+            : ""),
+        9,
+        PDF_INK,
+      );
+    if (r.bagNietOpgehaald)
+      tekst(
+        "Van " +
+          aantal(r.bagNietOpgehaald, "woning", "woningen") +
+          " zijn de BAG-gegevens nog niet opgehaald.",
+        8.5,
+      );
+    if (r.regels.length)
+      y =
+        tabel(lib, doc, {
+          startY: y,
+          head: [["Adres", "Label", "Bouwjaar", "m²", "Naar D", "Naar C"]],
+          body: r.regels.map((x) => [
+            x.adres + (x.opmerking ? " (" + x.opmerking.toLowerCase() + ")" : ""),
+            (x.label ?? "–") + (x.labelGeschat ? "*" : ""),
+            x.bouwjaar ? String(x.bouwjaar) : "–",
+            x.m2 ? String(x.m2) : "–",
+            aantal(x.stappenD, "stap", "stappen") + (x.naarD ? ", " + bandbreedte(x.naarD) : ""),
+            aantal(x.stappenC, "stap", "stappen") + (x.naarC ? ", " + bandbreedte(x.naarC) : ""),
+          ]),
+          ...stijl,
+        }) + 8;
+    else {
+      tekst("Geen woningen met een label slechter dan C.");
+      y += 4;
+    }
   }
 
   // woningen zonder geregistreerd label (ook "niet gevonden" bij EP-Online); oudere opgeslagen

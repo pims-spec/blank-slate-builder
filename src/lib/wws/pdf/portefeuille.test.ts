@@ -86,6 +86,48 @@ describe("PDF portefeuille-analyse", () => {
     expect(t).not.toContain("instelling in Normen");
   });
 
+  it("verduurzamingsraming: totalen en tabel per woning", async () => {
+    const met = (a: AnalyseAdres, oppervlakte: number, bouwjaar: number): AnalyseAdres => ({
+      ...a,
+      bag: { status: "gevonden", oppervlakte, bouwjaar },
+    });
+    const u = analyseer(
+      [met(adres(1, "F", "2019-05-05"), 60, 1980), met(adres(2, "B", "2022-01-01"), 80, 2010)],
+      "2026-10-15",
+      3,
+      {
+        ...PORTEFEUILLE_STANDAARD,
+        raming: {
+          ...PORTEFEUILLE_STANDAARD.raming,
+          ingesteld: true,
+          perM2Laag: 100,
+          perM2Hoog: 150,
+        },
+      },
+    );
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u });
+    // het streepje in een helvetica-regel komt uit de tekstextractie als "-"
+    const t = (await pdfTekst(pdf.blob))
+      .flat()
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .replace(/ - /g, " – ");
+    const volgorde = [
+      "Verduurzamingsraming",
+      "Grove indicatie",
+      "Naar minimaal label D: € 12.000 – € 18.000. Naar label C: € 18.000 – € 27.000.",
+      "Adres Label Bouwjaar m² Naar D Naar C",
+      "1053 ZD 1 F 1980 60 2 stappen, € 12.000 – € 18.000 3 stappen, € 18.000 – € 27.000",
+    ];
+    let vanaf = 0;
+    for (const stuk of volgorde) {
+      const i = t.indexOf(stuk, vanaf);
+      expect(i, stuk).toBeGreaterThanOrEqual(0);
+      vanaf = i + 1;
+    }
+    expect(t).not.toContain("1053 ZD 2 B");
+  });
+
   it("EFG met toelichting; te controleren als lijst met reden", async () => {
     const u = analyseer(
       [

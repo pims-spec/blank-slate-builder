@@ -1,12 +1,6 @@
 import type { ReactNode } from "react";
 import { aantal, bandbreedte } from "@/lib/wws/portefeuille/tekst";
-import type { Raming } from "@/lib/wws/portefeuille/verduurzaming";
-
-/** Vaste uitleg bij de raming (scherm en PDF) */
-export const RAMING_UITLEG =
-  "Grove indicatie op basis van labelstappen, de gebruiksoppervlakte en het bouwjaar uit de BAG; " +
-  "geen offerte. Woningen zonder geregistreerd label krijgen een aangenomen label op grond van " +
-  "het bouwjaar (gemarkeerd met *).";
+import { RAMING_UITLEG, type Raming } from "@/lib/wws/portefeuille/verduurzaming";
 
 /**
  * Verduurzamingsraming bij de EFG-regels: per woning de stappen en kosten naar D en naar C, met

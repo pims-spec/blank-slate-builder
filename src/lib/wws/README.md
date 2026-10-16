@@ -266,6 +266,22 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
 enkel en gecombineerd, met zoeken, bekijken, PDF en verwijderen (maker of admin). De kijkrol kan
 bekijken en de PDF downloaden.
 
+**Verduurzamingsraming (migratie 0012, nieuw, niet in de bron).** Bij de EFG-regels een grove
+kostenindicatie om woningen naar minimaal label D en naar C te brengen.
+- **BAG:** "BAG-gegevens ophalen" vraagt per beoordeelde woning de gebruiksoppervlakte en het
+  gebruiksdoel op bij de PDOK BAG OGC API (geen sleutel), plus het bouwjaar van het pand (één keer
+  per pand). Server function `haalBagGegevens` (2FA en schrijfrol, zod op invoer en antwoord,
+  pand-links alleen naar dezelfde API, eigen foutcodes, porties van 10, ca. 4 per seconde, stopt
+  bij 429 of storing). Opgeslagen in `portefeuille_adressen.bag_*`; de Bloxs-sync raakt die niet.
+- **Berekening** (`verduurzaming.ts`): labelstappen × m² × € per m² per stap × factor per
+  bouwjaarklasse, met een lage en hoge prijs (bandbreedte), afgerond op € 100. Alleen woningen
+  slechter dan C. Zonder geregistreerd label: een aangenomen label per bouwjaarklasse (gemarkeerd
+  met *). Zonder oppervlakte of bouwjaar: in de lijst, zonder bedrag.
+- **Normen → Verduurzamingsraming:** bedragen (laag/hoog), factor en aangenomen label per
+  bouwjaarklasse. Zolang er geen bedragen zijn opgeslagen, toont de raming alleen de stappen.
+- **Uitkomst:** `AnalyseUitkomst.raming`, dus ook in opgeslagen en gecombineerde analyses en in de
+  PDF (na de lijst met EFG-woningen). Analyses van vóór deze functie hebben geen raming.
+
 **Analyses bewaren bij verwijderen (migratie 0011).** Een opgeslagen analyse hing aan zijn
 portefeuille en verdween mee bij verwijderen. Nu kopieert een trigger (`before delete` op
 `portefeuilles`) de analyses eerst naar `portefeuille_analyses_archief`, met de naam en eigenaar
