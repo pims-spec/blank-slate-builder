@@ -14,3 +14,13 @@ export function periode(van: string, tot: string | null, opmaak: (iso: string) =
   const b = tot ? opmaak(tot) : a;
   return a === b ? a : a + " t/m " + b;
 }
+
+/** "€ 18.000" (hele euro's, Nederlandse opmaak) */
+export function euro(n: number): string {
+  return "€ " + Math.round(n).toLocaleString("nl-NL");
+}
+
+/** "€ 18.000 – € 27.000", of één bedrag als laag en hoog gelijk zijn */
+export function bandbreedte(b: { laag: number; hoog: number }): string {
+  return b.laag === b.hoog ? euro(b.laag) : euro(b.laag) + " – " + euro(b.hoog);
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aantal, periode } from "./tekst";
+import { aantal, bandbreedte, euro, periode } from "./tekst";
 
 describe("aantal", () => {
   it("enkelvoud alleen bij 1", () => {
@@ -21,5 +21,11 @@ describe("periode", () => {
     expect(periode("2026-10-16T09:20:01Z", "2026-10-16T09:21:00Z", minuut)).toBe(
       "2026-10-16T09:20 t/m 2026-10-16T09:21",
     );
+  });
+
+  it("bedragen en bandbreedte", () => {
+    expect(euro(18000)).toBe("€ 18.000");
+    expect(bandbreedte({ laag: 18000, hoog: 27000 })).toBe("€ 18.000 – € 27.000");
+    expect(bandbreedte({ laag: 0, hoog: 0 })).toBe("€ 0");
   });
 });

@@ -17,6 +17,7 @@ const store = vi.hoisted(() => ({
   verwijderAnalyse: vi.fn(),
   bewerk: vi.fn(),
   sluitUit: vi.fn(),
+  slaBagOp: vi.fn(),
 }));
 vi.mock("../tellingStore", () => ({
   portefeuilleStore: store,
@@ -35,9 +36,11 @@ vi.mock("../tellingStore", () => ({
   }),
 }));
 const haalLabelsOp = vi.hoisted(() => vi.fn());
+const haalBagGegevens = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/wws/portefeuille/portefeuille.functions", () => ({
   MAX_PER_PORTIE: 10,
   haalLabelsOp,
+  haalBagGegevens,
 }));
 const bewaar = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/wws/pdf/laden", async (orig) => ({
@@ -175,6 +178,26 @@ describe("Portefeuille-analyse", () => {
     toon(["viewer"], "lezer");
     await screen.findByRole("region", { name: /Te controleren/ });
     expect(screen.queryByRole("button", { name: /Uit de analyse halen/ })).toBeNull();
+  });
+
+  it("verduurzamingsraming: BAG ophalen voor beoordeelde woningen en opslaan", async () => {
+    haalBagGegevens.mockResolvedValue({
+      resultaten: [
+        {
+          id: adressen[0]!.id,
+          resultaat: { status: "gevonden", oppervlakte: 60, bouwjaar: 1930, gebruiksdoel: null },
+        },
+      ],
+    });
+    store.slaBagOp.mockResolvedValue(undefined);
+    toon(["member"]);
+    const kaart = await screen.findByRole("region", { name: "Verduurzamingsraming" });
+    expect(within(kaart).getByText(/Bedragen nog niet ingesteld/)).toBeInTheDocument();
+    fireEvent.click(within(kaart).getByRole("button", { name: "BAG-gegevens ophalen (1)" }));
+    await waitFor(() => expect(store.slaBagOp).toHaveBeenCalled());
+    expect(
+      haalBagGegevens.mock.calls[0]![0].data.adressen.map((a: { id: string }) => a.id),
+    ).toEqual([adressen[0]!.id]);
   });
 
   it("eigenaar in GoHome koppelen aan een bestaande portefeuille", async () => {

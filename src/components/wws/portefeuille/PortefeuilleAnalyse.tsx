@@ -28,6 +28,7 @@ import { aantal } from "@/lib/wws/portefeuille/tekst";
 import { stopMelding } from "@/lib/wws/portefeuille/ophalen";
 import {
   MAX_PER_PORTIE,
+  haalBagGegevens,
   haalLabelsOp,
   vulAdressenAanBijPdok,
 } from "@/lib/wws/portefeuille/portefeuille.functions";
@@ -100,6 +101,7 @@ export default function PortefeuilleAnalyse({
   const [opnieuw, setOpnieuw] = useState<OpnieuwKeuze>("probleem");
   const [voortgang, setVoortgang] = useState<Voortgang | null>(null);
   const [aanvullen, setAanvullen] = useState<{ gedaan: number; totaal: number } | null>(null);
+  const [bagBezig, setBagBezig] = useState<{ gedaan: number; totaal: number } | null>(null);
   const [melding, setMelding] = useState("");
   const stoppen = useRef(false);
 
@@ -122,7 +124,12 @@ export default function PortefeuilleAnalyse({
   const zonderResultaat = adressen.filter((a) => !a.resultaat);
   // PDOK alleen voor geïmporteerde portefeuilles; bij Bloxs komen straat en woonplaats uit Bloxs
   const zonderStraat = uitBloxs ? [] : adressen.filter((a) => !a.straat);
-  const bezig = voortgang !== null || aanvullen !== null;
+  const bezig = voortgang !== null || aanvullen !== null || bagBezig !== null;
+  // BAG alleen voor beoordeelde woningen (die tellen in de raming), nog zonder BAG-gegevens
+  const zonderBag = adressen.filter(
+    (a) =>
+      !a.bag && (a.resultaat?.status === "gevonden" || a.resultaat?.status === "niet_gevonden"),
+  );
 
   /** Een (andere) GoHome-eigenaar aan de portefeuille koppelen; ook zichtbaar in het archief */
   async function koppelEigenaar(portefeuilleId: string, klantId: string | null) {
@@ -196,6 +203,43 @@ export default function PortefeuilleAnalyse({
     } finally {
       setAanvullen(null);
       void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", portefeuilleId] });
+    }
+  }
+
+  /** BAG-gegevens (oppervlakte, bouwjaar) ophalen bij PDOK in porties van 10, en opslaan */
+  async function haalBag(lijst: readonly AnalyseAdres[]) {
+    if (!p || !lijst.length || bezig) return;
+    const id = p.id;
+    setBagBezig({ gedaan: 0, totaal: lijst.length });
+    let gedaan = 0;
+    try {
+      for (let i = 0; i < lijst.length; i += MAX_PER_PORTIE) {
+        const portie = lijst.slice(i, i + MAX_PER_PORTIE).map((a) => ({
+          id: a.id,
+          postcode: a.postcode,
+          huisnummer: a.huisnummer,
+          huisletter: a.huisletter,
+          toevoeging: a.toevoeging,
+        }));
+        const r = await haalBagGegevens({ data: { adressen: portie } });
+        await portefeuilleStore.slaBagOp(r.resultaten);
+        gedaan += r.resultaten.length;
+        setBagBezig({ gedaan, totaal: lijst.length });
+        if (r.stop) {
+          toast.error(
+            r.stop === "te_veel_verzoeken"
+              ? "De BAG (PDOK) geeft aan dat er te veel verzoeken zijn. Probeer het over een paar minuten opnieuw."
+              : "De BAG (PDOK) is nu niet bereikbaar. Probeer het later opnieuw.",
+          );
+          break;
+        }
+      }
+      if (gedaan === lijst.length) toast.success("BAG-gegevens opgehaald (" + gedaan + ").");
+    } catch {
+      toast.error("BAG-gegevens ophalen lukte niet. Probeer het opnieuw.");
+    } finally {
+      setBagBezig(null);
+      void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", id] });
     }
   }
 
@@ -733,6 +777,20 @@ export default function PortefeuilleAnalyse({
               ) : (
                 <AnalyseWeergave
                   uitkomst={toon}
+                  ramingActie={
+                    rechten.magSchrijven && !bekeken && (zonderBag.length > 0 || bagBezig) ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={bezig}
+                        onClick={() => void haalBag(zonderBag)}
+                      >
+                        {bagBezig
+                          ? `BAG ophalen… ${bagBezig.gedaan}/${bagBezig.totaal}`
+                          : `BAG-gegevens ophalen (${zonderBag.length})`}
+                      </Button>
+                    ) : undefined
+                  }
                   onUitsluiten={
                     rechten.magSchrijven && !bekeken && !bezig
                       ? (tekst) => void sluitUit(idsVoorAdres(tekst), true)

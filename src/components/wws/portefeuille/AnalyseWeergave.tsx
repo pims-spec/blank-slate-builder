@@ -4,6 +4,7 @@ import { nlDatum } from "@/lib/wws/portefeuille/datum";
 import { aantal, periode } from "@/lib/wws/portefeuille/tekst";
 import { AdresLijstDialoog, type Doorklik } from "./AdresLijstDialoog";
 import { LabelGrafiek } from "./LabelGrafiek";
+import { RamingKaart } from "./RamingKaart";
 
 const pctTekst = (p: number) => p.toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%";
 const tijd = (iso: string | null) =>
@@ -26,9 +27,12 @@ function Kaart({ titel, children }: { titel: string; children: ReactNode }) {
 export function AnalyseWeergave({
   uitkomst: u,
   onUitsluiten,
+  ramingActie,
 }: {
   uitkomst: AnalyseUitkomst;
   onUitsluiten?: ((adres: string) => void) | undefined;
+  /** Knop om BAG-gegevens op te halen, in de verduurzamingsraming (alleen actuele analyse) */
+  ramingActie?: ReactNode;
 }) {
   const c = u.teControleren;
   const aantalControle =
@@ -147,6 +151,8 @@ export function AnalyseWeergave({
           <p className="text-sm text-muted-foreground">Geen woningen in deze periode.</p>
         )}
       </Kaart>
+
+      {u.raming && <RamingKaart raming={u.raming} actie={ramingActie} />}
 
       <Kaart titel={`Woningen onder de EFG-regels (${u.efg.woningen.length})`}>
         {u.efg.woningen.length ? (
