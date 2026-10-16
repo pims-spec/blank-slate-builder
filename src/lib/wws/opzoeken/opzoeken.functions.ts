@@ -3,6 +3,7 @@
 // met de Supabase-client MET het token van die gebruiker (RLS geldt) — nooit de service role.
 import { createServerFn } from "@tanstack/react-start";
 import { STANDAARD_CLAUDE_MODEL, STANDAARD_GEMINI_MODEL } from "../ai/dienst";
+import { bloxsSecretsAanwezig } from "../bloxs/bron";
 import { vereisAdmin, vereisSchrijfrol } from "../rollenMiddleware";
 import {
   AdresVraagSchema,
@@ -31,6 +32,7 @@ export const serverStatus = createServerFn({ method: "POST" })
       EP_ONLINE_API_KEY: !!process.env["EP_ONLINE_API_KEY"],
       ANTHROPIC_API_KEY: !!process.env["ANTHROPIC_API_KEY"],
       GEMINI_API_KEY: !!process.env["GEMINI_API_KEY"],
+      ...bloxsSecretsAanwezig(process.env),
     },
     // modelnamen zijn geen geheim; zo is te zien of CLAUDE_MODEL/GEMINI_IMAGE_MODEL doorkomen
     modellen: {

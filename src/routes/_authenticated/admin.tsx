@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
+import { BloxsBeheer } from "@/components/wws/BloxsBeheer";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { allUsersQuery, myAccessQuery } from "@/lib/access";
@@ -154,6 +155,7 @@ function ServerStatus() {
           ))}
         </ul>
       )}
+      <BloxsBeheer />
     </section>
   );
 }
