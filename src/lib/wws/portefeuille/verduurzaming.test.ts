@@ -86,11 +86,14 @@ describe("verduurzamingsraming", () => {
     expect(r.bagNietOpgehaald).toBe(1);
   });
 
-  it("standaardinschatting: € 70–120 per m² per stap, oudere woningen duurder", () => {
-    expect(RAMING_STANDAARD).toMatchObject({ ingesteld: true, perM2Laag: 70, perM2Hoog: 120 });
-    // G, 60 m², vóór 1945 (×1,3): naar D 3 stappen = 60×70×3×1,3 = 16.380 → 16.400
+  it("standaardinschatting: € 7.500 per stap bij 70 m² (€ 107 per m²), oudere woningen duurder", () => {
+    expect(RAMING_STANDAARD).toMatchObject({ ingesteld: true, perM2Laag: 107, perM2Hoog: 107 });
+    // 70 m², 1975–1991 (×1): één stap ≈ € 7.500
+    const een = maakRaming([{ adres: "A 1", klasse: "D", bag: bag(70, 1980) }], ramingNormen(null));
+    expect(een.regels[0]!.naarC).toEqual({ laag: 7500, hoog: 7500 });
+    // G, 60 m², vóór 1945 (×1,3): naar D 3 stappen = 60×107×3×1,3 = 25.038 → 25.000
     const r = maakRaming([{ adres: "A 1", klasse: "G", bag: bag(60, 1930) }], ramingNormen(null));
-    expect(r.regels[0]!.naarD).toEqual({ laag: 16400, hoog: 28100 });
+    expect(r.regels[0]!.naarD).toEqual({ laag: 25000, hoog: 25000 });
   });
 
   it("bedragen niet ingesteld: wel stappen, geen bedragen", () => {

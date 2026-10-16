@@ -34,21 +34,20 @@ export interface RamingNormen {
 }
 
 /**
- * Standaardinschatting (aan te passen in Normen). Basis: gemiddeld € 5.000 per labelstap per woning
- * (Kamerstuk 29 453, nr. 450, 2017; exclusief subsidie, inclusief kleine maatregelen, zonder groot
- * onderhoud). Bij ca. 70 m² is dat ca. € 70 per m² per stap (prijspeil 2017, de lage kant); de hoge
- * kant rekent met de sindsdien sterk gestegen bouwkosten. De factoren per bouwjaar zijn een eigen
- * aanname: oudere woningen (massief, slecht geïsoleerd) zijn duurder per stap.
+ * Standaardinschatting (aan te passen in Normen): € 7.500 per labelstap per woning (keuze GoHome),
+ * omgerekend naar € 107 per m² per stap bij een woning van ca. 70 m². Laag en hoog gelijk: één
+ * bedrag; een beheerder kan in Normen een bandbreedte instellen. De factoren per bouwjaar zijn een
+ * eigen aanname: oudere woningen (massief, slecht geïsoleerd) zijn duurder per stap.
  */
 export const RAMING_BRON =
-  "Standaard afgeleid van gemiddeld € 5.000 per labelstap per woning (Kamerstuk 29 453, nr. 450, " +
-  "2017) bij ca. 70 m², met een hoge kant voor de gestegen bouwkosten; factoren per bouwjaar zijn " +
-  "een aanname. Pas aan naar eigen ervaringscijfers.";
+  "Standaard € 7.500 per labelstap per woning, omgerekend naar € 107 per m² per stap bij ca. " +
+  "70 m²; factoren per bouwjaar zijn een aanname. Vul een lage en hoge prijs in voor een " +
+  "bandbreedte, of pas aan naar eigen ervaringscijfers.";
 
 export const RAMING_STANDAARD: RamingNormen = {
   ingesteld: true,
-  perM2Laag: 70,
-  perM2Hoog: 120,
+  perM2Laag: 107,
+  perM2Hoog: 107,
   factor: { tot1945: 1.3, "1945-1974": 1.15, "1975-1991": 1, vanaf1992: 0.9 },
   aangenomen: { tot1945: "G", "1945-1974": "G", "1975-1991": "E", vanaf1992: "C" },
 };

@@ -278,9 +278,9 @@ kostenindicatie om woningen naar minimaal label D en naar C te brengen.
   slechter dan C. Zonder geregistreerd label: een aangenomen label per bouwjaarklasse (gemarkeerd
   met *). Zonder oppervlakte of bouwjaar: in de lijst, zonder bedrag.
 - **Normen → Verduurzamingsraming:** bedragen (laag/hoog), factor en aangenomen label per
-  bouwjaarklasse. Standaard € 70–120 per m² per stap (afgeleid van € 5.000 per labelstap per
-  woning, Kamerstuk 29 453, nr. 450, 2017, bij ca. 70 m², met een hoge kant voor de gestegen
-  bouwkosten) en factoren 1,3 / 1,15 / 1,0 / 0,9 (eigen aanname: oudere woningen duurder).
+  bouwjaarklasse. Standaard € 7.500 per labelstap per woning (keuze GoHome), omgerekend naar
+  € 107 per m² per stap bij ca. 70 m² (laag en hoog gelijk), en factoren 1,3 / 1,15 / 1,0 / 0,9
+  (eigen aanname: oudere woningen duurder).
 - **Uitkomst:** `AnalyseUitkomst.raming`, dus ook in opgeslagen en gecombineerde analyses en in de
   PDF (na de lijst met EFG-woningen). Analyses van vóór deze functie hebben geen raming.
 
