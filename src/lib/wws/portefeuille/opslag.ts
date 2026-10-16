@@ -140,7 +140,7 @@ export function maakPortefeuilleStore(db: Db) {
         const { data, error } = await db
           .from("portefeuille_adressen")
           .select(
-            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, niet_in_bloxs_sinds, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
+            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, niet_in_bloxs_sinds, uitgesloten_op, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
           )
           .eq("portefeuille_id", portefeuilleId)
           .order("postcode")
@@ -161,6 +161,7 @@ export function maakPortefeuilleStore(db: Db) {
             straat: r.straat,
             woonplaats: r.woonplaats,
             nietInBloxsSinds: r.niet_in_bloxs_sinds,
+            uitgeslotenOp: r.uitgesloten_op,
             resultaat:
               l && status && STATUSSEN.includes(status)
                 ? ({
@@ -212,6 +213,23 @@ export function maakPortefeuilleStore(db: Db) {
           .eq("id", r.id);
         if (error) throw error;
       }
+    },
+
+    /** Adressen uit de analyse halen (`uit`) of terugzetten; ze blijven in de portefeuille */
+    async sluitUit(ids: readonly string[], userId: string, uit: boolean): Promise<void> {
+      if (!ids.length) return;
+      const { data, error } = await db
+        .from("portefeuille_adressen")
+        .update(
+          uit
+            ? { uitgesloten_op: new Date().toISOString(), uitgesloten_door: userId }
+            : { uitgesloten_op: null, uitgesloten_door: null },
+        )
+        .in("id", [...ids])
+        .select("id");
+      if (error) throw error;
+      if ((data?.length ?? 0) < ids.length)
+        throw new Error("Geen rechten om deze portefeuille te wijzigen.");
     },
 
     async verwijderAdres(id: string): Promise<void> {

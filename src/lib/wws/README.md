@@ -266,6 +266,13 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
 enkel en gecombineerd, met zoeken, bekijken, PDF en verwijderen (maker of admin). De kijkrol kan
 bekijken en de PDF downloaden.
 
+**Adres uit de analyse halen (migratie 0010).** Bij "Te controleren" staat per adres een kruisje
+(alleen in de actuele analyse, met schrijfrechten). Het adres krijgt `uitgesloten_op`/
+`uitgesloten_door`, blijft in de portefeuille (ook na opnieuw inladen uit Bloxs: de sync raakt die
+kolommen niet), telt nergens meer mee (`analyseer`, `combineerAdressen`) en wordt niet meer
+opgehaald. "Uit de analyse gehaald" bij het ophalen toont ze, met "Terugzetten". Opgeslagen
+analyses blijven zoals ze waren.
+
 **Eigenaar in GoHome bij Bloxs.** Bij het kiezen van een Bloxs-eigenaar stelt het venster de
 GoHome-eigenaar voor (`bloxs/eigenaarKoppeling.ts`):
 1. die van een eerdere portefeuille van dezelfde Bloxs-eigenaar;

@@ -194,6 +194,28 @@ describe("analyse van een portefeuille", () => {
     for (const k of u.perKlasse) expect(k.adressen).toHaveLength(k.aantal);
   });
 
+  it("uit de analyse gehaalde adressen tellen nergens mee", () => {
+    const basis = adressen();
+    const weg = adresTekst(basis[1]!); // adres 2 (label C)
+    const voor = analyseer(basis, D, 3, N);
+    const fout = { ...adres(77, { ...label(null, null), status: "fout" }), uitgeslotenOp: "x" };
+    const na = analyseer(
+      basis
+        .map((a, i) => (i === 1 ? { ...a, uitgeslotenOp: "2026-10-16T10:00:00Z" } : a))
+        .concat(fout),
+      D,
+      3,
+      N,
+    );
+    expect(na.aantalAdressen).toBe(voor.aantalAdressen - 1);
+    expect(na.teControleren.fout).not.toContain("1053 ZD 77");
+    const overal = [
+      ...na.perKlasse.flatMap((k) => k.adressen ?? []),
+      ...na.risico.flatMap((r) => r.adressen ?? []),
+    ].map((r) => r.adres);
+    expect(overal).not.toContain(weg);
+  });
+
   it("EFG: klassen en 'geen label' volgens de instellingen", () => {
     const apart = analyseer(adressen(), D, 3, N);
     expect(apart.efg.woningen.map((w) => w.adres)).toEqual(["1053 ZD 3", "1053 ZD 4", "1053 ZD 5"]);

@@ -12,15 +12,15 @@ function beter(a: AnalyseAdres, b: AnalyseAdres): boolean {
 }
 
 /**
- * Adressen van meerdere portefeuilles samenvoegen: adressen die niet meer in Bloxs staan tellen
- * niet mee, en een adres dat in meer portefeuilles staat telt één keer (de versie met het nieuwste
+ * Adressen van meerdere portefeuilles samenvoegen: adressen die niet meer in Bloxs staan of uit de
+ * analyse zijn gehaald tellen niet mee, en een adres dat in meer portefeuilles staat telt één keer (de versie met het nieuwste
  * labelresultaat).
  */
 export function combineerAdressen(lijsten: readonly (readonly AnalyseAdres[])[]): AnalyseAdres[] {
   const per = new Map<string, AnalyseAdres>();
   for (const lijst of lijsten)
     for (const a of lijst) {
-      if (a.nietInBloxsSinds) continue;
+      if (a.nietInBloxsSinds || a.uitgeslotenOp) continue;
       const k = adresSleutel(a);
       const huidig = per.get(k);
       if (!huidig || beter(a, huidig)) per.set(k, a);

@@ -18,8 +18,18 @@ function Kaart({ titel, children }: { titel: string; children: ReactNode }) {
   );
 }
 
-/** De uitkomst van een analyse (live of opgeslagen): grafiek, risico, EFG en de lijsten */
-export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) {
+/**
+ * De uitkomst van een analyse (live of opgeslagen): grafiek, risico, EFG en de lijsten. Met
+ * `onUitsluiten` (alleen de actuele analyse, met schrijfrechten) staat bij "Te controleren" per adres
+ * een kruisje om het uit de analyse te halen.
+ */
+export function AnalyseWeergave({
+  uitkomst: u,
+  onUitsluiten,
+}: {
+  uitkomst: AnalyseUitkomst;
+  onUitsluiten?: ((adres: string) => void) | undefined;
+}) {
   const c = u.teControleren;
   const aantalControle =
     c.nietGevonden.length + c.meerdere.length + c.fout.length + c.nietOpgehaald.length;
@@ -183,7 +193,20 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
                   </div>
                   <ul className="mt-1 max-h-40 overflow-y-auto text-muted-foreground">
                     {lijst.map((a) => (
-                      <li key={a}>{a}</li>
+                      <li key={a} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0">{a}</span>
+                        {onUitsluiten && (
+                          <button
+                            type="button"
+                            className="shrink-0 rounded px-1.5 text-base leading-none hover:bg-muted hover:text-destructive"
+                            title="Uit de analyse halen"
+                            aria-label={"Uit de analyse halen: " + a}
+                            onClick={() => onUitsluiten(a)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </li>
                     ))}
                   </ul>
                 </div>

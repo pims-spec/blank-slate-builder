@@ -16,6 +16,7 @@ const store = vi.hoisted(() => ({
   verwijder: vi.fn(),
   verwijderAnalyse: vi.fn(),
   bewerk: vi.fn(),
+  sluitUit: vi.fn(),
 }));
 vi.mock("../tellingStore", () => ({
   portefeuilleStore: store,
@@ -151,6 +152,29 @@ describe("Portefeuille-analyse", () => {
       expect(screen.queryByRole("button", { name: naam })).toBeNull();
     expect(screen.getByRole("button", { name: "PDF" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Eigenaar: geen" })).toBeDisabled();
+  });
+
+  it("te controleren: kruisje haalt een adres uit de analyse; terugzetten", async () => {
+    store.sluitUit.mockResolvedValue(undefined);
+    store.adressen.mockResolvedValue(
+      adressen.map((a, i) => (i === 2 ? { ...a, uitgeslotenOp: "2026-10-16T10:00:00Z" } : a)),
+    );
+    toon(["member"]);
+    const kaart = await screen.findByRole("region", { name: /Te controleren/ });
+    expect(within(kaart).queryByText("1053 ZD 3")).toBeNull();
+    fireEvent.click(within(kaart).getByRole("button", { name: "Uit de analyse halen: 1053 ZD 2" }));
+    await waitFor(() => expect(store.sluitUit).toHaveBeenCalledWith([adressen[1]!.id], "u1", true));
+    fireEvent.click(screen.getByText(/1 adres uit de analyse gehaald/));
+    fireEvent.click(screen.getByRole("button", { name: "Terugzetten" }));
+    await waitFor(() =>
+      expect(store.sluitUit).toHaveBeenCalledWith([adressen[2]!.id], "u1", false),
+    );
+  });
+
+  it("kijkrol: geen kruisjes bij te controleren", async () => {
+    toon(["viewer"], "lezer");
+    await screen.findByRole("region", { name: /Te controleren/ });
+    expect(screen.queryByRole("button", { name: /Uit de analyse halen/ })).toBeNull();
   });
 
   it("eigenaar in GoHome koppelen aan een bestaande portefeuille", async () => {

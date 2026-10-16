@@ -31,6 +31,8 @@ export interface AnalyseAdres extends PortefeuilleAdres {
   resultaat: LabelResultaat | null;
   /** Gezet als het adres bij de laatste volledige Bloxs-sync niet meer voorkwam */
   nietInBloxsSinds?: string | null;
+  /** Gezet als iemand het adres uit de analyse heeft gehaald (het blijft in de portefeuille) */
+  uitgeslotenOp?: string | null;
 }
 
 export type GeenLabelEfg = "apart" | "meetellen" | "negeren";
@@ -221,7 +223,9 @@ export function analyseer(
 ): AnalyseUitkomst {
   // dubbele adressen tellen één keer (de eerste)
   const gezien = new Set<string>();
+  // uit de analyse gehaalde adressen tellen nergens mee
   const uniek = adressen.filter((a) => {
+    if (a.uitgeslotenOp) return false;
     const s = adresSleutel(a);
     if (gezien.has(s)) return false;
     gezien.add(s);

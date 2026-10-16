@@ -45,6 +45,14 @@ describe("combineerAdressen", () => {
     ]);
     expect(r.map((x) => x.id)).toEqual(["y"]);
   });
+
+  it("uit de analyse gehaalde adressen tellen niet mee", () => {
+    const r = combineerAdressen([
+      [a("x", 1, "2026-10-01T00:00:00Z", { uitgeslotenOp: "2026-10-02T00:00:00Z" })],
+      [a("y", 2, null)],
+    ]);
+    expect(r.map((x) => x.id)).toEqual(["y"]);
+  });
 });
 
 describe("combiTitel", () => {

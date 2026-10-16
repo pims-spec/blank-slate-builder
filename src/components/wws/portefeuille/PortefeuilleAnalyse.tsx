@@ -75,9 +75,17 @@ export default function PortefeuilleAnalyse({
   const adressenQ = useQuery({ ...portefeuilleAdressenQuery(p?.id ?? ""), enabled: !!p });
   const analysesQ = useQuery({ ...portefeuilleAnalysesQuery(p?.id ?? ""), enabled: !!p });
   const alleAdressen = useMemo(() => adressenQ.data ?? [], [adressenQ.data]);
-  // adressen die bij de laatste Bloxs-sync niet meer voorkwamen tellen niet mee (wel zichtbaar)
-  const adressen = useMemo(() => alleAdressen.filter((a) => !a.nietInBloxsSinds), [alleAdressen]);
+  // adressen die bij de laatste Bloxs-sync niet meer voorkwamen, of die iemand uit de analyse
+  // heeft gehaald, tellen niet mee (wel zichtbaar) en worden ook niet opgehaald
+  const adressen = useMemo(
+    () => alleAdressen.filter((a) => !a.nietInBloxsSinds && !a.uitgeslotenOp),
+    [alleAdressen],
+  );
   const vervallen = useMemo(() => alleAdressen.filter((a) => a.nietInBloxsSinds), [alleAdressen]);
+  const uitgesloten = useMemo(
+    () => alleAdressen.filter((a) => !a.nietInBloxsSinds && a.uitgeslotenOp),
+    [alleAdressen],
+  );
   const uitBloxs = p?.bron === "bloxs";
 
   const [importOpen, setImportOpen] = useState<"nieuw" | "toevoegen" | null>(null);
@@ -127,6 +135,21 @@ export default function PortefeuilleAnalyse({
       await qc.invalidateQueries({ queryKey: ["archief-analyses"] });
     }
   }
+
+  /** Uit de analyse halen (vanaf het adres zoals de analyse het toont) of terugzetten */
+  async function sluitUit(ids: string[], uit: boolean) {
+    if (!p || !ids.length) return;
+    try {
+      await portefeuilleStore.sluitUit(ids, userId, uit);
+      toast.success(uit ? "Uit de analyse gehaald." : "Weer in de analyse.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Dat lukte niet.");
+    } finally {
+      vernieuw();
+    }
+  }
+  const idsVoorAdres = (tekst: string) =>
+    adressen.filter((a) => adresTekst(a) === tekst).map((a) => a.id);
 
   function vernieuw() {
     if (!p) return;
@@ -625,6 +648,30 @@ export default function PortefeuilleAnalyse({
                     )}
                   </details>
                 )}
+                {uitgesloten.length > 0 && (
+                  <details className="mt-2 text-sm">
+                    <summary>
+                      {aantal(uitgesloten.length, "adres", "adressen")} uit de analyse gehaald
+                    </summary>
+                    <ul className="mt-1 max-h-40 overflow-y-auto text-muted-foreground">
+                      {uitgesloten.map((a) => (
+                        <li key={a.id} className="flex items-center justify-between gap-2">
+                          <span className="min-w-0">{adresTekst(a)}</span>
+                          {rechten.magSchrijven && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={bezig}
+                              onClick={() => void sluitUit([a.id], false)}
+                            >
+                              Terugzetten
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </section>
 
               {/* ---------- analyse ---------- */}
@@ -681,7 +728,14 @@ export default function PortefeuilleAnalyse({
               {adressenQ.isPending ? (
                 <p className="text-muted-foreground">Adressen laden…</p>
               ) : (
-                <AnalyseWeergave uitkomst={toon} />
+                <AnalyseWeergave
+                  uitkomst={toon}
+                  onUitsluiten={
+                    rechten.magSchrijven && !bekeken && !bezig
+                      ? (tekst) => void sluitUit(idsVoorAdres(tekst), true)
+                      : undefined
+                  }
+                />
               )}
 
               {/* ---------- opgeslagen analyses ---------- */}
