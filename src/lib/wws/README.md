@@ -215,6 +215,7 @@ eronder vallen, en hoe "geen label" meetelt (apart, meetellen of niet vermelden)
 de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat geen wettekst in.
 
 **Te controleren.** Apart getoond, en niet meegeteld in de percentages:
+
 - niet eenduidig: meerdere verschillende labels voor één adres;
 - ophalen mislukt;
 - nog niet opgehaald.
@@ -222,6 +223,7 @@ de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat gee
 "Niet gevonden" staat er ook bij, maar telt in het risicoprofiel als "geen geregistreerd label".
 
 **EP-Online.**
+
 - **Aanvragen:** per adres via de bestaande kern uit fase 4a (`zoekEnergielabelsBijEpOnline`), in
   porties van 10 met maximaal 2 aanvragen per seconde. De limiet staat in Normen en de server
   dwingt hem af.
@@ -247,6 +249,7 @@ paginanummers lopen vanaf 2, net als bij de WWS-rapporten.
 
 **Bloxs (OData-feed).** Bloxs (met x) via de OData-feed (`[klantomgeving].bloxs.io/odatafeed`),
 niet de REST-API.
+
 - **Secrets:** `BLOXS_ODATA_URL`, `BLOXS_ODATA_GEBRUIKER`, `BLOXS_ODATA_WACHTWOORD`.
 - **Inloggen:** Basic auth, alleen op de server (`bloxs/bron.ts`). De inloggegevens gaan nooit naar
   de browser of de logs. Alleen https-adressen van `*.bloxs.io`/`*.bloxs.com`, en geen
@@ -255,11 +258,31 @@ niet de REST-API.
 - **Stap 1 (gebouwd):** op /admin → Serverinstellingen kan een beheerder de verbinding testen en
   de structuur ophalen. Dat zijn alleen de namen van entiteiten, velden, sleutels en navigatie uit
   `$metadata` (`bloxs/metadata.ts`), nooit rijen of waarden.
-- **Stap 2 (na akkoord):** eigenaren, objecten en BAG-gegevens.
-  - Alleen de nodige velden, met `$select`/`$filter` of anders via zod.
-  - Porties en een instelbare limiet per seconde, en netjes stoppen bij 429.
-  - De sync met `bloxs_objecten`, waarbij verdwenen objecten worden gemarkeerd
-    (`niet_in_bloxs_sinds`) in plaats van verwijderd.
+- **Stap 2 (gebouwd): de sync.**
+  - **Allowlist (`bloxs/odata.ts`):** de inlog van de feed ziet alles (127 entiteiten, ook
+    personen, contracten en financiën). De code kan daarom alleen deze velden opvragen, met
+    filters die ze zelf opbouwt:
+    - `owners`: OwnerId, Reference, DisplayName, ArchiveDate;
+    - `Units`: RealEstateObjectId, Reference, OwnerId, ComplexId, ComplexName, AddressId,
+      SalesDate;
+    - `Buildings`: RealEstateObjectId, Reference, OwnerId, AddressId, SalesDate;
+    - `Addresses`: AddressId, PostalCode, HouseNumber, Street, City.
+  - **Eerst een test:** een vraag met `$top=0` (geen rijen). Werken `$select`/`$filter` niet, dan
+    stopt alles en worden er nooit hele tabellen opgehaald.
+  - **Controle per antwoord:** staan er andere velden in dan gevraagd, of rijen buiten het
+    filter, dan stopt de sync zonder iets te bewaren. Een `@odata.nextLink` wordt alleen gevolgd
+    als hij naar dezelfde feed en entiteit wijst.
+  - **Adressen:** alleen per AddressId van onze eigen objecten, in porties van 50; de tabel bevat
+    ook adressen van personen. Het huisnummer wordt gesplitst met `normaliseerAdres`; lukt dat
+    niet, dan staat het object bij "zonder bruikbaar adres".
+  - **Tempo:** standaard 1 aanvraag per seconde (Normen, max. 5), afgedwongen op de server. Elke
+    stap meldt het aantal aanvragen; het dialoogvenster toont het totaal.
+  - **Opslaan (`bloxsSyncOpslaan`):** alleen na een volledige sync. Adressen worden toegevoegd of
+    bijgewerkt (straat en woonplaats uit Bloxs, geen PDOK), objecten gekoppeld met een sync-id, en
+    daarna rondt `bloxs_sync_afronden` af. Verdwenen adressen worden gemarkeerd
+    (`niet_in_bloxs_sinds`) en tellen niet mee in de analyse, maar worden niet verwijderd;
+    labelresultaten blijven staan. Een sync zonder objecten wordt nooit opgeslagen. Verkochte
+    objecten (verkoopdatum vandaag of eerder) tellen niet mee.
 - **Database:** de oude kolommen `bloks_id` en `bloks_object_id` zijn leeg en worden niet gebruikt
   (migratie 0006 is additief). Bron `'bloks'` in de database betekent Bloxs; in de code heet het
   `bloxs`.
@@ -301,7 +324,7 @@ Aanvulling op de bron:
 ### Indelingsadvies (`indeling.ts`)
 
 - **Toiletvangnet** (`toiletVangnet`, getest in `indeling.test.ts`). De bron kan een variant zonder
-  enig toilet opleveren: bij "geen aparte toiletruimte" krijgt alleen een *nieuw* voorgestelde
+  enig toilet opleveren: bij "geen aparte toiletruimte" krijgt alleen een _nieuw_ voorgestelde
   badkamer een toilet, niet een behouden badkamer zonder toilet; en bij "auto" komt er geen losse
   toiletruimte bij zodra er een behouden badkamer is — vervalt de bestaande toiletruimte, dan blijft
   er niets over. Na `bouwVariant` controleert de app daarom of de variant ergens een toilet heeft

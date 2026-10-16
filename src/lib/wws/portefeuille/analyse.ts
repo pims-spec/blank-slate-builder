@@ -29,6 +29,8 @@ export interface LabelResultaat {
 export interface AnalyseAdres extends PortefeuilleAdres {
   id: string;
   resultaat: LabelResultaat | null;
+  /** Gezet als het adres bij de laatste volledige Bloxs-sync niet meer voorkwam */
+  nietInBloxsSinds?: string | null;
 }
 
 export type GeenLabelEfg = "apart" | "meetellen" | "negeren";
@@ -36,6 +38,8 @@ export type GeenLabelEfg = "apart" | "meetellen" | "negeren";
 export interface PortefeuilleNormen {
   /** Maximaal aantal EP-Online-aanvragen per seconde */
   epPerSeconde: number;
+  /** Maximaal aantal aanvragen per seconde naar de Bloxs OData-feed (limieten onbekend) */
+  bloxsPerSeconde: number;
   /** Geregistreerd vóór deze datum = oude methodiek (verouderd) */
   verouderdVoor: string;
   efg: {
@@ -48,6 +52,7 @@ export interface PortefeuilleNormen {
 /** Standaardinstellingen; in Normen aan te passen (normen.portefeuille) */
 export const PORTEFEUILLE_STANDAARD: PortefeuilleNormen = {
   epPerSeconde: 2,
+  bloxsPerSeconde: 1,
   verouderdVoor: "2021-01-01",
   efg: { ingangsdatum: "2029-01-01", klassen: ["E", "F", "G"], geenLabel: "apart" },
 };
@@ -57,8 +62,10 @@ export function portefeuilleNormen(n: Partial<PortefeuilleNormen> | null | undef
   const d = PORTEFEUILLE_STANDAARD;
   const efg: Partial<PortefeuilleNormen["efg"]> = n?.efg ?? {};
   const ps = Number(n?.epPerSeconde);
+  const bs = Number(n?.bloxsPerSeconde);
   return {
     epPerSeconde: ps > 0 && ps <= 10 ? ps : d.epPerSeconde,
+    bloxsPerSeconde: bs > 0 && bs <= 5 ? bs : d.bloxsPerSeconde,
     verouderdVoor: isIsoDatum(n?.verouderdVoor) ? n!.verouderdVoor! : d.verouderdVoor,
     efg: {
       ingangsdatum: isIsoDatum(efg.ingangsdatum) ? efg.ingangsdatum : d.efg.ingangsdatum,

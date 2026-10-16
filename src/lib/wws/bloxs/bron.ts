@@ -76,9 +76,25 @@ export async function haalBloxs(
   wat: string,
   maxTekens: number,
 ): Promise<BloxsUitkomst<string>> {
+  return haalBloxsUrl(fetchFn, cfg, cfg.basis + (pad ? "/" + pad : ""), accept, wat, maxTekens);
+}
+
+/** Als haalBloxs, met een volledige URL; die moet binnen onze eigen feed liggen */
+export async function haalBloxsUrl(
+  fetchFn: typeof fetch,
+  cfg: BloxsConfig,
+  url: string,
+  accept: string,
+  wat: string,
+  maxTekens: number,
+): Promise<BloxsUitkomst<string>> {
+  if (url !== cfg.basis && !url.startsWith(cfg.basis + "/")) {
+    logFout(wat, "onverwacht_antwoord");
+    return { ok: false, fout: "onverwacht_antwoord" };
+  }
   let res: Response;
   try {
-    res = await fetchFn(cfg.basis + (pad ? "/" + pad : ""), {
+    res = await fetchFn(url, {
       method: "GET",
       headers: { Authorization: cfg.authorization, Accept: accept },
       redirect: "manual",

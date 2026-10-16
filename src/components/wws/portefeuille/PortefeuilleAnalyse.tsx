@@ -20,8 +20,10 @@ import {
   type AnalyseAdres,
   type AnalyseUitkomst,
 } from "@/lib/wws/portefeuille/analyse";
+import { adresTekst } from "@/lib/wws/portefeuille/adres";
 import { nlDatum, plusMaanden, vandaag } from "@/lib/wws/portefeuille/datum";
 import type { ImportUitkomst } from "@/lib/wws/portefeuille/importeren";
+import { aantal } from "@/lib/wws/portefeuille/tekst";
 import { stopMelding } from "@/lib/wws/portefeuille/ophalen";
 import {
   MAX_PER_PORTIE,
@@ -39,6 +41,7 @@ import {
 } from "../tellingStore";
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
+import { BloxsDialoog } from "./BloxsDialoog";
 import { ImportDialoog } from "./ImportDialoog";
 
 type OpnieuwKeuze = "alle" | "probleem" | "oud";
@@ -68,9 +71,14 @@ export default function PortefeuilleAnalyse({
   const p = portefeuilles.find((x) => x.id === gekozen) ?? portefeuilles[0] ?? null;
   const adressenQ = useQuery({ ...portefeuilleAdressenQuery(p?.id ?? ""), enabled: !!p });
   const analysesQ = useQuery({ ...portefeuilleAnalysesQuery(p?.id ?? ""), enabled: !!p });
-  const adressen = useMemo(() => adressenQ.data ?? [], [adressenQ.data]);
+  const alleAdressen = useMemo(() => adressenQ.data ?? [], [adressenQ.data]);
+  // adressen die bij de laatste Bloxs-sync niet meer voorkwamen tellen niet mee (wel zichtbaar)
+  const adressen = useMemo(() => alleAdressen.filter((a) => !a.nietInBloxsSinds), [alleAdressen]);
+  const vervallen = useMemo(() => alleAdressen.filter((a) => a.nietInBloxsSinds), [alleAdressen]);
+  const uitBloxs = p?.bron === "bloxs";
 
   const [importOpen, setImportOpen] = useState<"nieuw" | "toevoegen" | null>(null);
+  const [bloxsOpen, setBloxsOpen] = useState<"nieuw" | "opnieuw" | null>(null);
   const [verwijderVraag, setVerwijderVraag] = useState(false);
   const [datum, setDatum] = useState(vandaag());
   const [venster, setVenster] = useState("3");
@@ -98,7 +106,8 @@ export default function PortefeuilleAnalyse({
     rechten.magSchrijven && (createdBy === userId || rechten.isAdmin);
   const eigenaarNaam = p?.klantId ? (klanten.find((k) => k.id === p.klantId)?.naam ?? null) : null;
   const zonderResultaat = adressen.filter((a) => !a.resultaat);
-  const zonderStraat = adressen.filter((a) => !a.straat);
+  // PDOK alleen voor geïmporteerde portefeuilles; bij Bloxs komen straat en woonplaats uit Bloxs
+  const zonderStraat = uitBloxs ? [] : adressen.filter((a) => !a.straat);
   const bezig = voortgang !== null || aanvullen !== null;
 
   function vernieuw() {
@@ -222,6 +231,25 @@ export default function PortefeuilleAnalyse({
     );
   }
 
+  async function verwijderVervallen() {
+    if (!p) return;
+    try {
+      await portefeuilleStore.verwijderAdressen(vervallen.map((a) => a.id));
+      toast.success(aantal(vervallen.length, "adres", "adressen") + " verwijderd.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Verwijderen lukte niet.");
+    } finally {
+      vernieuw();
+    }
+  }
+
+  async function bloxsKlaar(id: string) {
+    setGekozen(id);
+    setBekeken(null);
+    await qc.invalidateQueries({ queryKey: ["portefeuilles"] });
+    await qc.invalidateQueries({ queryKey: ["portefeuille-adressen", id] });
+  }
+
   async function verwijderPortefeuille() {
     if (!p) return;
     try {
@@ -300,18 +328,19 @@ export default function PortefeuilleAnalyse({
             <Button onClick={() => setImportOpen("nieuw")} disabled={bezig}>
               Portefeuille importeren
             </Button>
-            {p && (
+            {p && !uitBloxs && (
               <Button variant="outline" onClick={() => setImportOpen("toevoegen")} disabled={bezig}>
                 Adressen toevoegen
               </Button>
             )}
-            <Button
-              variant="ghost"
-              disabled
-              title="De koppeling met Bloxs (OData-feed) is in voorbereiding"
-            >
-              Uit Bloxs (volgt)
+            <Button variant="outline" onClick={() => setBloxsOpen("nieuw")} disabled={bezig}>
+              Uit Bloxs
             </Button>
+            {p && uitBloxs && (
+              <Button variant="outline" onClick={() => setBloxsOpen("opnieuw")} disabled={bezig}>
+                Opnieuw inladen uit Bloxs
+              </Button>
+            )}
           </>
         )}
         {p && magBeheren(p.createdBy) && (
@@ -429,6 +458,42 @@ export default function PortefeuilleAnalyse({
                 {melding}
               </p>
             )}
+            {uitBloxs && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Uit Bloxs
+                {p.bloxsGesynchroniseerdOp
+                  ? " · laatst ingeladen " +
+                    new Date(p.bloxsGesynchroniseerdOp).toLocaleString("nl-NL", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  : ""}
+              </p>
+            )}
+            {vervallen.length > 0 && (
+              <details className="mt-2 text-sm">
+                <summary className="text-orange-ink">
+                  {aantal(vervallen.length, "adres", "adressen")} niet meer in Bloxs (telt niet mee
+                  in de analyse)
+                </summary>
+                <ul className="mt-1 max-h-40 overflow-y-auto text-muted-foreground">
+                  {vervallen.map((a) => (
+                    <li key={a.id}>{adresTekst(a)}</li>
+                  ))}
+                </ul>
+                {rechten.magSchrijven && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="mt-1 text-destructive hover:text-destructive"
+                    disabled={bezig}
+                    onClick={() => void verwijderVervallen()}
+                  >
+                    Deze adressen verwijderen
+                  </Button>
+                )}
+              </details>
+            )}
           </section>
 
           {/* ---------- analyse ---------- */}
@@ -543,6 +608,13 @@ export default function PortefeuilleAnalyse({
         </div>
       )}
 
+      <BloxsDialoog
+        open={bloxsOpen !== null}
+        onOpenChange={(o) => !o && setBloxsOpen(null)}
+        klanten={klanten}
+        bestaand={bloxsOpen === "opnieuw" ? p : null}
+        onKlaar={bloxsKlaar}
+      />
       <ImportDialoog
         open={importOpen !== null}
         onOpenChange={(o) => !o && setImportOpen(null)}

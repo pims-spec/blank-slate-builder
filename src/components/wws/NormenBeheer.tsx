@@ -349,6 +349,17 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">Bloxs: aanvragen per seconde (max. 5)</span>
+              <Input
+                inputMode="decimal"
+                className="tabular-nums"
+                value={String(pf.bloxsPerSeconde)}
+                onChange={(e) =>
+                  setPf({ ...pf, bloxsPerSeconde: Number(e.target.value.replace(",", ".")) })
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
               <span className="text-muted-foreground">Verouderd: geregistreerd vóór</span>
               <Input
                 type="date"

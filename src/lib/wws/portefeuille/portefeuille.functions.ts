@@ -5,12 +5,10 @@
 // Opslaan doet de browser daarna zelf, met RLS (label_resultaten).
 import { createServerFn } from "@tanstack/react-start";
 import * as z from "zod";
-import { mergeNormen, type Normen } from "../normen";
-import { NORMEN_KEY } from "../opslag/instellingen";
 import { zoekAdresBijPdok, zoekEnergielabelsBijEpOnline } from "../opzoeken/dienst";
 import { vereisSchrijfrol } from "../rollenMiddleware";
 import { epVraagVoor, schoonNaam } from "./adres";
-import { portefeuilleNormen } from "./analyse";
+import { leesPortefeuilleNormen } from "./normenDb";
 import { resultaatUitEp, wachtMs, type OpgeslagenResultaat, type StopFout } from "./ophalen";
 
 export const MAX_PER_PORTIE = 10;
@@ -40,13 +38,7 @@ export const haalLabelsOp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<PortieAntwoord> => {
     // de limiet komt uit de normen in de database (met het token van de gebruiker), niet uit
     // de browser
-    const { data: rij } = await context.supabase
-      .from("instellingen")
-      .select("data")
-      .eq("key", NORMEN_KEY)
-      .maybeSingle();
-    const normen = mergeNormen((rij?.data ?? null) as Partial<Normen> | null);
-    const wacht = wachtMs(portefeuilleNormen(normen.portefeuille).epPerSeconde);
+    const wacht = wachtMs((await leesPortefeuilleNormen(context.supabase)).epPerSeconde);
 
     return haalPortie(fetch, process.env["EP_ONLINE_API_KEY"], wacht, data.adressen);
   });

@@ -200,11 +200,13 @@ describe("instellingen en omschrijving", () => {
     expect(
       portefeuilleNormen({
         epPerSeconde: 50,
+        bloxsPerSeconde: 9,
         verouderdVoor: "31-12-2020",
         efg: { ingangsdatum: "2030-01-01", klassen: ["G", "Z", "E"], geenLabel: "x" as never },
       }),
     ).toEqual({
       epPerSeconde: 2,
+      bloxsPerSeconde: 1,
       verouderdVoor: "2021-01-01",
       efg: { ingangsdatum: "2030-01-01", klassen: ["E", "G"], geenLabel: "apart" },
     });
@@ -218,6 +220,24 @@ describe("instellingen en omschrijving", () => {
     ).toBe(
       "Woningen met label G per 1 juli 2030 (instelling in Normen; de wettelijke invulling is nog te controleren). Woningen zonder geregistreerd label tellen mee.",
     );
+  });
+});
+
+describe("huisnummer met letter én toevoeging", () => {
+  it.each([
+    ["49A-2", "A", "2"],
+    ["49 a 2", "A", "2"],
+    ["49A", "A", ""],
+    ["49-2", "", "2"],
+    ["49 BIS", "", "BIS"],
+    ["49-A", "A", ""],
+  ])("%s", (hn, letter, toev) => {
+    const a = normaliseerAdres({ postcode: "1053ZD", huisnummer: hn });
+    expect(a.ok && [a.adres.huisnummer, a.adres.huisletter, a.adres.toevoeging]).toEqual([
+      49,
+      letter,
+      toev,
+    ]);
   });
 });
 

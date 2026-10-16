@@ -8,7 +8,11 @@ export type BloxsFout =
   | "niet_gevonden"
   | "te_veel_verzoeken"
   | "niet_bereikbaar"
-  | "onverwacht_antwoord";
+  | "onverwacht_antwoord"
+  | "functie_niet_ondersteund"
+  | "select_genegeerd"
+  | "filter_genegeerd"
+  | "volgende_link_ongeldig";
 
 /** Tekst voor de beheerder bij een foutcode */
 export function bloxsFoutTekst(f: BloxsFout): string {
@@ -27,5 +31,13 @@ export function bloxsFoutTekst(f: BloxsFout): string {
       return "Bloxs is niet bereikbaar.";
     case "onverwacht_antwoord":
       return "Bloxs gaf een onverwacht antwoord.";
+    case "functie_niet_ondersteund":
+      return "De Bloxs-feed ondersteunt het opvragen van alleen de nodige velden ($select/$filter) niet. Er is niets opgehaald; neem contact op met de beheerder.";
+    case "select_genegeerd":
+      return "Bloxs stuurde meer velden dan gevraagd. Het ophalen is gestopt en er is niets bewaard; neem contact op met de beheerder.";
+    case "filter_genegeerd":
+      return "Bloxs stuurde gegevens buiten het gevraagde filter. Het ophalen is gestopt en er is niets bewaard; neem contact op met de beheerder.";
+    case "volgende_link_ongeldig":
+      return "Bloxs verwees voor de volgende pagina naar een ander adres. Het ophalen is gestopt.";
   }
 }

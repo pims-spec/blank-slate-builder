@@ -3,7 +3,8 @@
 // schrijfrol, een portefeuille of analyse verwijderen alleen door de maker of een admin.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import type { PortefeuilleAdres } from "./adres";
+import type { SyncPlan } from "../bloxs/syncPlan";
+import { adresSleutel, type PortefeuilleAdres } from "./adres";
 import type { AnalyseAdres, AnalyseUitkomst, LabelResultaat, LabelStatus } from "./analyse";
 import type { OpgeslagenResultaat } from "./ophalen";
 
@@ -18,6 +19,10 @@ export interface Portefeuille {
   createdBy: string | null;
   createdAt: string;
   aantalAdressen: number;
+  /** Alleen bij bron "bloxs": de selectie in Bloxs (ids als tekst) */
+  bloxsEigenaarRef: string | null;
+  bloxsComplexRef: string | null;
+  bloxsGesynchroniseerdOp: string | null;
 }
 
 export interface OpgeslagenAnalyse {
@@ -40,7 +45,9 @@ export function maakPortefeuilleStore(db: Db) {
     async lijst(): Promise<Portefeuille[]> {
       const { data, error } = await db
         .from("portefeuilles")
-        .select("id, naam, klant_id, bron, created_by, created_at, portefeuille_adressen(count)")
+        .select(
+          "id, naam, klant_id, bron, created_by, created_at, bloxs_eigenaar_ref, bloxs_complex_ref, bloxs_gesynchroniseerd_op, portefeuille_adressen(count)",
+        )
         .order("naam");
       if (error) throw error;
       return (data ?? []).map((r) => ({
@@ -52,13 +59,28 @@ export function maakPortefeuilleStore(db: Db) {
         createdAt: r.created_at,
         aantalAdressen:
           (r.portefeuille_adressen as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
+        bloxsEigenaarRef: r.bloxs_eigenaar_ref,
+        bloxsComplexRef: r.bloxs_complex_ref,
+        bloxsGesynchroniseerdOp: r.bloxs_gesynchroniseerd_op,
       }));
     },
 
-    async maak(naam: string, klantId: string | null): Promise<string> {
+    async maak(
+      naam: string,
+      klantId: string | null,
+      bloxs?: { eigenaarRef: string; complexRef: string | null },
+    ): Promise<string> {
       const { data, error } = await db
         .from("portefeuilles")
-        .insert({ naam: naam.trim().slice(0, 200), klant_id: klantId, bron: "import" })
+        .insert({
+          naam: naam.trim().slice(0, 200),
+          klant_id: klantId,
+          // "bloks" = Bloxs (oude spelling in de database, zie migratie 0006)
+          bron: bloxs ? "bloks" : "import",
+          ...(bloxs
+            ? { bloxs_eigenaar_ref: bloxs.eigenaarRef, bloxs_complex_ref: bloxs.complexRef }
+            : {}),
+        })
         .select("id")
         .single();
       if (error) throw error;
@@ -93,7 +115,7 @@ export function maakPortefeuilleStore(db: Db) {
         const { data, error } = await db
           .from("portefeuille_adressen")
           .select(
-            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
+            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, niet_in_bloxs_sinds, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
           )
           .eq("portefeuille_id", portefeuilleId)
           .order("postcode")
@@ -113,6 +135,7 @@ export function maakPortefeuilleStore(db: Db) {
             toevoeging: r.toevoeging,
             straat: r.straat,
             woonplaats: r.woonplaats,
+            nietInBloxsSinds: r.niet_in_bloxs_sinds,
             resultaat:
               l && status && STATUSSEN.includes(status)
                 ? ({
@@ -169,6 +192,84 @@ export function maakPortefeuilleStore(db: Db) {
     async verwijderAdres(id: string): Promise<void> {
       const { error } = await db.from("portefeuille_adressen").delete().eq("id", id);
       if (error) throw error;
+    },
+
+    /** Adressen verwijderen (met hun labelresultaten, via cascade) */
+    async verwijderAdressen(ids: readonly string[]): Promise<void> {
+      for (let i = 0; i < ids.length; i += PORTIE) {
+        const { error } = await db
+          .from("portefeuille_adressen")
+          .delete()
+          .in("id", ids.slice(i, i + PORTIE));
+        if (error) throw error;
+      }
+    },
+
+    /**
+     * Een volledige Bloxs-sync opslaan: adressen toevoegen of bijwerken (straat en woonplaats),
+     * objecten koppelen met dit sync-id, en daarna afronden in de database: objecten die niet meer
+     * voorkwamen weg, adressen zonder object gemarkeerd (niet verwijderd), teruggekeerde adressen
+     * weer actief. Bestaande labelresultaten blijven staan.
+     */
+    async bloxsSyncOpslaan(
+      portefeuilleId: string,
+      plan: SyncPlan,
+      syncId: string,
+    ): Promise<{ vervallenObjecten: number; gemarkeerd: number; teruggekeerd: number }> {
+      const idPerSleutel = new Map<string, string>();
+      for (let i = 0; i < plan.adressen.length; i += PORTIE) {
+        const { data, error } = await db
+          .from("portefeuille_adressen")
+          .upsert(
+            plan.adressen.slice(i, i + PORTIE).map((a) => ({
+              portefeuille_id: portefeuilleId,
+              postcode: a.postcode,
+              huisnummer: a.huisnummer,
+              huisletter: a.huisletter,
+              toevoeging: a.toevoeging,
+              straat: a.straat ?? null,
+              woonplaats: a.woonplaats ?? null,
+            })),
+            { onConflict: "portefeuille_id,postcode,huisnummer,huisletter,toevoeging" },
+          )
+          .select("id, postcode, huisnummer, huisletter, toevoeging");
+        if (error) throw error;
+        for (const r of data ?? []) idPerSleutel.set(adresSleutel(r), r.id);
+      }
+      const nu = new Date().toISOString();
+      for (let i = 0; i < plan.objecten.length; i += PORTIE) {
+        const { error } = await db.from("bloxs_objecten").upsert(
+          plan.objecten.slice(i, i + PORTIE).map((o) => ({
+            portefeuille_id: portefeuilleId,
+            soort: o.soort,
+            bloxs_ref: o.ref,
+            adres_id: o.adresSleutel ? (idPerSleutel.get(o.adresSleutel) ?? null) : null,
+            sync_id: syncId,
+            laatst_gezien_op: nu,
+          })),
+          { onConflict: "portefeuille_id,soort,bloxs_ref" },
+        );
+        if (error) throw error;
+      }
+      const { data, error } = await db.rpc("bloxs_sync_afronden", {
+        p_portefeuille: portefeuilleId,
+        p_sync: syncId,
+      });
+      if (error) throw error;
+      const r = (
+        data as unknown as
+          | {
+              vervallen_objecten: number;
+              gemarkeerd: number;
+              teruggekeerd: number;
+            }[]
+          | null
+      )?.[0];
+      return {
+        vervallenObjecten: r?.vervallen_objecten ?? 0,
+        gemarkeerd: r?.gemarkeerd ?? 0,
+        teruggekeerd: r?.teruggekeerd ?? 0,
+      };
     },
 
     /** Resultaten van EP-Online opslaan (laatste per adres; vervangt een eerder resultaat) */

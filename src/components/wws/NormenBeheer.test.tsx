@@ -61,6 +61,9 @@ describe("Normen: portefeuille-analyse", () => {
     fireEvent.change(screen.getByLabelText("EP-Online: aanvragen per seconde (max. 10)"), {
       target: { value: "1,5" },
     });
+    fireEvent.change(screen.getByLabelText("Bloxs: aanvragen per seconde (max. 5)"), {
+      target: { value: "0,5" },
+    });
     expect(screen.getByText(/label D, E, F of G per 1 januari 2030/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
     fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
@@ -68,6 +71,7 @@ describe("Normen: portefeuille-analyse", () => {
     const n = instellingenStore.slaNormenOp.mock.calls.at(-1)![0] as Normen;
     expect(n.portefeuille).toEqual({
       epPerSeconde: 1.5,
+      bloxsPerSeconde: 0.5,
       verouderdVoor: "2021-01-01",
       efg: { ingangsdatum: "2030-01-01", klassen: ["D", "E", "F", "G"], geenLabel: "meetellen" },
     });

@@ -54,7 +54,14 @@ export function normaliseerAdres(ruw: {
       .replace(/[^A-Z0-9]/g, "");
   let huisletter = schoon(ruw.huisletter);
   let toevoeging = schoon(ruw.toevoeging);
-  const rest = schoon(m[2]);
+  let rest = schoon(m[2]);
+  // "49A-2" of "49 a 2": huisletter A en toevoeging 2
+  const lt = /^([A-Za-z])\s*[-\s]\s*([A-Za-z0-9]+)$/.exec(m[2]!.trim());
+  if (lt && !huisletter && !toevoeging) {
+    huisletter = lt[1]!.toUpperCase();
+    toevoeging = schoon(lt[2]);
+    rest = "";
+  }
   if (rest) {
     // "12A" → letter A; "12-2" of "12 BIS" → toevoeging
     if (!huisletter && /^[A-Z]$/.test(rest)) huisletter = rest;
