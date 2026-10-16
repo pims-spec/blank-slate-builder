@@ -206,7 +206,12 @@ export type Database = {
       }
       portefeuille_adressen: {
         Row: {
+          bag_bouwjaar: number | null
+          bag_gebruiksdoel: string | null
           bag_id: string | null
+          bag_opgehaald_op: string | null
+          bag_oppervlakte: number | null
+          bag_status: string | null
           bloks_object_id: string | null
           created_at: string
           huisletter: string
@@ -222,7 +227,12 @@ export type Database = {
           woonplaats: string | null
         }
         Insert: {
+          bag_bouwjaar?: number | null
+          bag_gebruiksdoel?: string | null
           bag_id?: string | null
+          bag_opgehaald_op?: string | null
+          bag_oppervlakte?: number | null
+          bag_status?: string | null
           bloks_object_id?: string | null
           created_at?: string
           huisletter?: string
@@ -238,7 +248,12 @@ export type Database = {
           woonplaats?: string | null
         }
         Update: {
+          bag_bouwjaar?: number | null
+          bag_gebruiksdoel?: string | null
           bag_id?: string | null
+          bag_opgehaald_op?: string | null
+          bag_oppervlakte?: number | null
+          bag_status?: string | null
           bloks_object_id?: string | null
           created_at?: string
           huisletter?: string
