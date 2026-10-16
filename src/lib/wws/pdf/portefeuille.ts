@@ -26,8 +26,11 @@ import {
 } from "./stijl";
 
 export interface PortefeuillePdfInvoer {
+  /** Naam van de portefeuille, of de titel van een gecombineerde analyse */
   portefeuille: string;
   eigenaar?: string | null;
+  /** Bij een gecombineerde analyse: de namen van de portefeuilles */
+  delen?: readonly string[] | null;
   uitkomst: AnalyseUitkomst;
 }
 
@@ -60,8 +63,10 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     const regels = doc.splitTextToSize(pdfTxt(t), 88) as string[];
     return regels.length > 1 ? regels[0]!.replace(/\s*\S{0,3}$/, "") + "…" : t;
   };
+  const combi = !!x.delen && x.delen.length > 1;
   pdfVoorblad(doc, "Label-analyse", [
-    ["Portefeuille", past(x.portefeuille)],
+    [combi ? "Analyse" : "Portefeuille", past(x.portefeuille)],
+    ...(combi ? ([["Portefeuilles", String(x.delen!.length)]] as [string, string][]) : []),
     ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
     ["Analysedatum", langeDatum(u.datum)],
     ["Adressen", String(u.aantalAdressen)],
@@ -75,7 +80,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     doc,
     "GoHome energielabels",
     "Portefeuille-analyse",
-    "Portefeuille: " + x.portefeuille,
+    (combi ? x.delen!.length + " portefeuilles: " : "Portefeuille: ") + x.portefeuille,
     "Analyse per " + langeDatum(u.datum),
   );
 
@@ -116,8 +121,9 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     tabel(lib, doc, {
       startY: y,
       body: [
-        ["Portefeuille", x.portefeuille],
-        ...(x.eigenaar ? [["Eigenaar", x.eigenaar]] : []),
+        [combi ? "Analyse" : "Portefeuille", x.portefeuille],
+        ...(combi ? [["Portefeuilles", x.delen!.join(", ")]] : []),
+        ...(x.eigenaar ? [[combi ? "Eigenaren" : "Eigenaar", x.eigenaar]] : []),
         ["Datum van de analyse", langeDatum(u.datum)],
         ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
         ["Adressen", u.aantalAdressen + " (waarvan " + u.aantalBeoordeeld + " beoordeeld)"],

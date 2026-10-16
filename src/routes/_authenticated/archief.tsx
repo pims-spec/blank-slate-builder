@@ -1,19 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import Archief from "@/components/wws/Archief";
+import { ArchiefAnalyses } from "@/components/wws/portefeuille/ArchiefAnalyses";
 import { NormenProvider } from "@/components/wws/NormenContext";
 import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
 
 export const Route = createFileRoute("/_authenticated/archief")({
   // indeling: kiezen voor het indelingsadvies (vanaf /indeling)
-  validateSearch: z.object({ indeling: z.boolean().optional() }),
+  // tab: tellingen (standaard) of portefeuille-analyses
+  validateSearch: z.object({
+    indeling: z.boolean().optional(),
+    tab: z.enum(["tellingen", "analyses"]).optional(),
+  }),
   head: () => ({
     meta: [
       { title: "Archief — GoHome WWS" },
-      { name: "description", content: "Opgeslagen WWS-puntentellingen." },
+      {
+        name: "description",
+        content: "Opgeslagen WWS-puntentellingen en portefeuille-analyses.",
+      },
     ],
   }),
   loader: ({ context }) =>
@@ -26,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/archief")({
 
 function ArchiefPage() {
   const { user } = Route.useRouteContext();
-  const { indeling } = Route.useSearch();
+  const { indeling, tab } = Route.useSearch();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
   const { data: normen } = useSuspenseQuery(normenQuery());
 
@@ -40,7 +48,20 @@ function ArchiefPage() {
       />
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
-          <Archief rechten={data} userId={user.id} voorIndeling={!!indeling} />
+          {tab === "analyses" && !indeling ? (
+            <ArchiefAnalyses
+              rechten={data}
+              userId={user.id}
+              tabs={<ArchiefTabs actief="analyses" />}
+            />
+          ) : (
+            <Archief
+              rechten={data}
+              userId={user.id}
+              voorIndeling={!!indeling}
+              tabs={<ArchiefTabs actief="tellingen" />}
+            />
+          )}
         </NormenProvider>
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">
@@ -52,6 +73,31 @@ function ArchiefPage() {
           </div>
         </main>
       )}
+    </div>
+  );
+}
+
+function ArchiefTabs({ actief }: { actief: "tellingen" | "analyses" }) {
+  const tab = (id: "tellingen" | "analyses", label: string) => (
+    <Link
+      to="/archief"
+      search={id === "tellingen" ? {} : { tab: id }}
+      role="tab"
+      aria-selected={actief === id}
+      className={
+        "rounded-full px-3 py-1 text-sm " +
+        (actief === id
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground")
+      }
+    >
+      {label}
+    </Link>
+  );
+  return (
+    <div role="tablist" aria-label="Archief" className="mt-2 flex flex-wrap gap-1">
+      {tab("tellingen", "Tellingen")}
+      {tab("analyses", "Portefeuille-analyses")}
     </div>
   );
 }

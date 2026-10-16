@@ -58,6 +58,13 @@ export const portefeuilleAdressenQuery = (id: string) =>
     queryFn: () => portefeuilleStore.adressen(id),
   });
 
+/** Alle opgeslagen portefeuille-analyses (ook gecombineerde), voor het archief */
+export const archiefAnalysesQuery = () =>
+  queryOptions({
+    queryKey: ["archief-analyses"],
+    queryFn: () => portefeuilleStore.archiefAnalyses(),
+  });
+
 export const portefeuilleAnalysesQuery = (id: string) =>
   queryOptions({
     queryKey: ["portefeuille-analyses", id],

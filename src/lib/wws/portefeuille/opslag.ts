@@ -25,6 +25,23 @@ export interface Portefeuille {
   bloxsGesynchroniseerdOp: string | null;
 }
 
+/** Een opgeslagen analyse in het archief: van één portefeuille, of gecombineerd */
+export interface ArchiefAnalyse {
+  soort: "portefeuille" | "combi";
+  id: string;
+  /** Portefeuillenaam, of de titel van de gecombineerde analyse */
+  titel: string;
+  portefeuilleIds: string[];
+  portefeuilleNamen: string[];
+  klantIds: string[];
+  analyseDatum: string;
+  vensterMaanden: number;
+  aantalAdressen: number;
+  gemaaktOp: string;
+  gemaaktDoor: string | null;
+  gemaaktDoorNaam: string | null;
+}
+
 export interface OpgeslagenAnalyse {
   id: string;
   portefeuilleId: string;
@@ -37,6 +54,11 @@ export interface OpgeslagenAnalyse {
 const PAGINA = 1000;
 /** Rijen per insert/upsert */
 const PORTIE = 500;
+
+const makerNaam = (m: unknown) => {
+  const p = m as { display_name: string | null; email: string | null } | null;
+  return p?.display_name || p?.email || null;
+};
 
 const STATUSSEN: readonly LabelStatus[] = ["gevonden", "niet_gevonden", "meerdere", "fout"];
 
@@ -336,6 +358,117 @@ export function maakPortefeuilleStore(db: Db) {
     async verwijderAnalyse(id: string): Promise<void> {
       const { data, error } = await db
         .from("portefeuille_analyses")
+        .delete()
+        .eq("id", id)
+        .select("id");
+      if (error) throw error;
+      if (!data?.length)
+        throw new Error(
+          "Alleen wie de analyse heeft opgeslagen, of een beheerder, kan hem verwijderen.",
+        );
+    },
+
+    /** Alle opgeslagen analyses voor het archief (zonder de uitkomst zelf), nieuwste eerst */
+    async archiefAnalyses(): Promise<ArchiefAnalyse[]> {
+      const uit: ArchiefAnalyse[] = [];
+      for (let van = 0; ; van += PAGINA) {
+        const { data, error } = await db
+          .from("portefeuille_analyses")
+          .select(
+            "id, portefeuille_id, analyse_datum, venster_maanden, aantal_adressen, gemaakt_op, gemaakt_door, portefeuilles(naam, klant_id), maker:profiles!portefeuille_analyses_gemaakt_door_fkey(display_name, email)",
+          )
+          .order("gemaakt_op", { ascending: false })
+          .range(van, van + PAGINA - 1);
+        if (error) throw error;
+        for (const r of data ?? []) {
+          const p = r.portefeuilles as unknown as { naam: string; klant_id: string | null } | null;
+          uit.push({
+            soort: "portefeuille",
+            id: r.id,
+            titel: p?.naam ?? "Portefeuille",
+            portefeuilleIds: [r.portefeuille_id],
+            portefeuilleNamen: p ? [p.naam] : [],
+            klantIds: p?.klant_id ? [p.klant_id] : [],
+            analyseDatum: r.analyse_datum,
+            vensterMaanden: r.venster_maanden,
+            aantalAdressen: r.aantal_adressen,
+            gemaaktOp: r.gemaakt_op,
+            gemaaktDoor: r.gemaakt_door,
+            gemaaktDoorNaam: makerNaam(r.maker),
+          });
+        }
+        if ((data?.length ?? 0) < PAGINA) break;
+      }
+      for (let van = 0; ; van += PAGINA) {
+        const { data, error } = await db
+          .from("portefeuille_combi_analyses")
+          .select(
+            "id, titel, portefeuille_ids, portefeuille_namen, klant_ids, analyse_datum, venster_maanden, aantal_adressen, gemaakt_op, gemaakt_door, maker:profiles!portefeuille_combi_analyses_gemaakt_door_fkey(display_name, email)",
+          )
+          .order("gemaakt_op", { ascending: false })
+          .range(van, van + PAGINA - 1);
+        if (error) throw error;
+        for (const r of data ?? [])
+          uit.push({
+            soort: "combi",
+            id: r.id,
+            titel: r.titel,
+            portefeuilleIds: r.portefeuille_ids,
+            portefeuilleNamen: r.portefeuille_namen,
+            klantIds: r.klant_ids,
+            analyseDatum: r.analyse_datum,
+            vensterMaanden: r.venster_maanden,
+            aantalAdressen: r.aantal_adressen,
+            gemaaktOp: r.gemaakt_op,
+            gemaaktDoor: r.gemaakt_door,
+            gemaaktDoorNaam: makerNaam(r.maker),
+          });
+        if ((data?.length ?? 0) < PAGINA) break;
+      }
+      return uit.sort((a, b) => b.gemaaktOp.localeCompare(a.gemaaktOp));
+    },
+
+    /** De uitkomst van één opgeslagen analyse (voor bekijken en PDF) */
+    async analyseUitkomst(soort: ArchiefAnalyse["soort"], id: string): Promise<AnalyseUitkomst> {
+      const { data, error } = await db
+        .from(soort === "combi" ? "portefeuille_combi_analyses" : "portefeuille_analyses")
+        .select("resultaat")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data.resultaat as unknown as AnalyseUitkomst;
+    },
+
+    /** Een gecombineerde analyse opslaan (vaste momentopname, met de namen van de portefeuilles) */
+    async slaCombiAnalyseOp(
+      titel: string,
+      delen: readonly { id: string; naam: string; klantId: string | null }[],
+      u: AnalyseUitkomst,
+    ): Promise<string> {
+      const { data, error } = await db
+        .from("portefeuille_combi_analyses")
+        .insert({
+          titel: titel.trim().slice(0, 200),
+          portefeuille_ids: delen.map((d) => d.id),
+          portefeuille_namen: delen.map((d) => d.naam),
+          klant_ids: [...new Set(delen.map((d) => d.klantId).filter((k): k is string => !!k))],
+          analyse_datum: u.datum,
+          venster_maanden: u.vensterMaanden,
+          instellingen: u.instellingen as unknown as Json,
+          ep_opgehaald_van: u.epOpgehaaldVan,
+          ep_opgehaald_tot: u.epOpgehaaldTot,
+          aantal_adressen: u.aantalAdressen,
+          resultaat: u as unknown as Json,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id;
+    },
+
+    async verwijderCombiAnalyse(id: string): Promise<void> {
+      const { data, error } = await db
+        .from("portefeuille_combi_analyses")
         .delete()
         .eq("id", id)
         .select("id");

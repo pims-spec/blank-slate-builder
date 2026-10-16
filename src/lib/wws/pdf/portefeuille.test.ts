@@ -100,6 +100,23 @@ describe("PDF portefeuille-analyse", () => {
     expect(rest).toContain("Kinkerstraat 7, 1053 ZD Amsterdam");
   });
 
+  it("gecombineerde analyse: aantal portefeuilles op het voorblad, namen in de samenvatting", async () => {
+    const u = analyseer([adres(1, "A", "2023-03-01")], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    const pdf = maakPortefeuillePdf(LIB, {
+      portefeuille: "Oost en West",
+      eigenaar: "Amstel Wonen, Rijn Vastgoed",
+      delen: ["Oost", "West"],
+      uitkomst: u,
+    });
+    const p = (await pdfTekst(pdf.blob)).map((x) => x.join(" ").replace(/\s+/g, " "));
+    expect(p[0]).toContain("Analyse Oost en West");
+    expect(p[0]).toContain("Portefeuilles 2");
+    expect(p[1]).toContain("2 portefeuilles: Oost en West");
+    expect(p[1]).toContain("Portefeuilles Oost, West");
+    expect(p[1]).toContain("Eigenaren Amstel Wonen, Rijn Vastgoed");
+    expect(pdf.bestandsnaam).toBe("Portefeuille-analyse_Oost_en_West_2026-10-15.pdf");
+  });
+
   it("peildatum: één dag of een periode", () => {
     expect(opgehaaldTekst(null, null)).toBe("nog niet opgehaald");
     expect(opgehaaldTekst("2026-10-01T08:00:00Z", "2026-10-01T09:00:00Z")).toBe("1 oktober 2026");

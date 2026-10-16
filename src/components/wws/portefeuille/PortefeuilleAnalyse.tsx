@@ -269,6 +269,7 @@ export default function PortefeuilleAnalyse({
       await portefeuilleStore.slaAnalyseOp(p.id, live);
       toast.success("Analyse opgeslagen.");
       await qc.invalidateQueries({ queryKey: ["portefeuille-analyses", p.id] });
+      void qc.invalidateQueries({ queryKey: ["archief-analyses"] });
     } catch (e) {
       toast.error("Opslaan lukte niet: " + (e instanceof Error ? e.message : ""));
     }
@@ -280,6 +281,7 @@ export default function PortefeuilleAnalyse({
       await portefeuilleStore.verwijderAnalyse(id);
       if (bekeken?.id === id) setBekeken(null);
       await qc.invalidateQueries({ queryKey: ["portefeuille-analyses", p.id] });
+      void qc.invalidateQueries({ queryKey: ["archief-analyses"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Verwijderen lukte niet.");
     }

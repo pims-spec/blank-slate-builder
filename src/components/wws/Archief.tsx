@@ -47,10 +47,12 @@ interface Props {
   userId: string;
   /** "Bestaande telling kiezen" voor het indelingsadvies (indelingNaOpenen in de bron) */
   voorIndeling?: boolean;
+  /** Tabbladen (Tellingen / Portefeuille-analyses) onder de titel */
+  tabs?: ReactNode;
 }
 
 /** Archief: zoeken, filteren, per collega groeperen, openen en verwijderen — renderArchief() */
-export default function Archief({ rechten, userId, voorIndeling = false }: Props) {
+export default function Archief({ rechten, userId, voorIndeling = false, tabs }: Props) {
   const queryClient = useQueryClient();
   const NORMEN = useNormen();
   const { data, isPending, error } = useQuery(tellingenQuery());
@@ -192,6 +194,7 @@ export default function Archief({ rechten, userId, voorIndeling = false }: Props
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Archief</h1>
+          {!voorIndeling && tabs}
           {voorIndeling && (
             <p className="mt-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
               Kies een telling om het indelingsadvies voor te openen.{" "}
