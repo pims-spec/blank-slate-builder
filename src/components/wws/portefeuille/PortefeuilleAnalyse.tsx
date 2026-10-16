@@ -388,8 +388,7 @@ export default function PortefeuilleAnalyse({
               </select>
             </label>
             {p && (
-              <div className="flex min-w-48 flex-col gap-1 text-sm">
-                <span className="text-muted-foreground">Eigenaar in GoHome</span>
+              <div className="min-w-48">
                 <EigenaarKeuze
                   klantId={p.klantId ?? ""}
                   onKies={(id) => void koppelEigenaar(p.id, id || null)}
