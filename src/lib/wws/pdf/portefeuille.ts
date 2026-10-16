@@ -4,7 +4,7 @@
 // woningen waarvan het label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen, de
 // woningen zonder geregistreerd label, de te controleren adressen (met reden) en de bronvermelding
 // van EP-Online.
-import { EFG_TOELICHTING, type AnalyseUitkomst } from "../portefeuille/analyse";
+import { EFG_TOELICHTING, efgTekst, type AnalyseUitkomst } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
 import { aantal, periode } from "../portefeuille/tekst";
 import { pdfBanner, pdfVoorblad } from "./delen";
@@ -165,7 +165,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   y += 4;
 
   kop("EFG-regels");
-  tekst(u.efg.omschrijving, 9, PDF_INK);
+  tekst(efgTekst(u), 9, PDF_INK);
   tekst(EFG_TOELICHTING, 8);
   tekst(
     aantal(u.efg.aantal, "woning", "woningen") +

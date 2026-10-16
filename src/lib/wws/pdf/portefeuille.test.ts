@@ -76,6 +76,16 @@ describe("PDF portefeuille-analyse", () => {
     }
   });
 
+  it("opgeslagen analyse met de oude EFG-tekst: PDF toont de huidige bewoording", async () => {
+    const u = analyseer([adres(1, "F", "2019-05-05")], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    u.efg.omschrijving =
+      "Woningen met label E, F of G per 1 januari 2029 (instelling in Normen; de wettelijke invulling is nog te controleren).";
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u });
+    const t = (await pdfTekst(pdf.blob)).flat().join(" ").replace(/\s+/g, " ");
+    expect(t).toContain("Woningen met label E, F of G per 1 januari 2029.");
+    expect(t).not.toContain("instelling in Normen");
+  });
+
   it("EFG met toelichting; te controleren als lijst met reden", async () => {
     const u = analyseer(
       [

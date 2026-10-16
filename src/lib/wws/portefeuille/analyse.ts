@@ -154,6 +154,13 @@ export const EFG_TOELICHTING =
   "overzicht toont welke woningen op grond van hun huidige geregistreerde label onder de " +
   "ingestelde regels vallen.";
 
+/**
+ * De EFG-omschrijving van een (ook eerder opgeslagen) uitkomst, steeds in de huidige bewoording:
+ * opnieuw opgebouwd uit de bewaarde instellingen; alleen zonder instellingen de bewaarde tekst.
+ */
+export const efgTekst = (u: Pick<AnalyseUitkomst, "efg" | "instellingen">): string =>
+  u.instellingen?.efg ? efgOmschrijving(u.instellingen.efg) : u.efg.omschrijving;
+
 const pct = (n: number, van: number) => (van ? Math.round((n / van) * 1000) / 10 : 0);
 
 export interface VerloopRegel {
