@@ -43,6 +43,13 @@
       "when": 1792068730618,
       "tag": "0005_portefeuille_energielabels",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792136343965,
+      "tag": "0006_bloxs_koppeling",
+      "breakpoints": true
     }
   ]
 }
