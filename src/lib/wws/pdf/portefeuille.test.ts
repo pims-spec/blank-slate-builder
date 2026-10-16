@@ -89,7 +89,8 @@ describe("PDF portefeuille-analyse", () => {
     expect(voorblad).toContain("Label-analyse");
     expect(voorblad).toContain("Analysedatum 15 oktober 2026");
     expect(voorblad).toContain("Adressen 1");
-    expect(voorblad).toContain("Peildatum EP-Online 14 oktober 2026");
+    expect(voorblad).toContain("Peildatum 14 oktober 2026");
+    expect(voorblad).toContain("Bron EP-Online (RVO)");
     expect(voorblad).not.toContain("Eigenaar");
     expect(voorblad).not.toContain("Pagina");
     expect(voorblad).toMatch(/Portefeuille Portefeuille met een heel lange naam .*…/);

@@ -65,7 +65,9 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
     ["Analysedatum", langeDatum(u.datum)],
     ["Adressen", String(u.aantalAdressen)],
-    ["Peildatum EP-Online", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
+    // korte labels: de kolom met labels is 32 mm breed (wws-site.html)
+    ["Peildatum", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
+    ["Bron", "EP-Online (RVO)"],
   ]);
   doc.addPage();
 
@@ -240,8 +242,10 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     y = 20;
   }
   tekst(
-    "Bron: EP-Online (RVO), opgehaald op " +
-      (u.epOpgehaaldVan ? periode(u.epOpgehaaldVan, u.epOpgehaaldTot, tijdstip) : "–") +
+    "Bron: EP-Online (RVO), " +
+      (u.epOpgehaaldVan
+        ? "opgehaald op " + periode(u.epOpgehaaldVan, u.epOpgehaaldTot, tijdstip)
+        : "nog niet opgehaald") +
       ". Indicatief overzicht; aan deze analyse kunnen geen rechten worden ontleend.",
     7.5,
   );
