@@ -8,6 +8,7 @@ import {
   LayoutPanelTop,
   LogOut,
   Plus,
+  ShieldCheck,
   SlidersHorizontal,
   UserCog,
   Users,
@@ -27,6 +28,7 @@ const ICONEN: Record<MenuIcoon, LucideIcon> = {
   analyse: Gauge,
   normen: SlidersHorizontal,
   gebruikers: UserCog,
+  beveiliging: ShieldCheck,
 };
 
 // .smitem in wws-site.html; op telefoon (≤ 720px) alleen het icoon

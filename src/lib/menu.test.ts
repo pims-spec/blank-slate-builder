@@ -20,10 +20,10 @@ describe("zijmenu: onderdelen per rol", () => {
         "Dashboard",
         "Eigenaren",
       ],
-      ["Normen", "Gebruikers"],
+      ["Normen", "Gebruikers", "Beveiliging"],
     ]);
   });
-  it("lid: geen dashboard en geen beheer", () => {
+  it("lid: geen dashboard en geen beheer (wel Beveiliging)", () => {
     expect(labels({ heeftToegang: true, magSchrijven: true })).toEqual([
       [
         "Overzicht",
@@ -33,16 +33,16 @@ describe("zijmenu: onderdelen per rol", () => {
         "Archief",
         "Eigenaren",
       ],
-      [],
+      ["Beveiliging"],
     ]);
   });
   it("kijkrol: dashboard, geen indelingsadvies", () => {
     expect(labels({ heeftToegang: true, zietAlles: true })).toEqual([
       ["Overzicht", "Puntentelling", "Portefeuille-analyse", "Archief", "Dashboard", "Eigenaren"],
-      [],
+      ["Beveiliging"],
     ]);
   });
   it("nog geen toegang: alleen Overzicht", () => {
-    expect(labels({ heeftToegang: false })).toEqual([["Overzicht"], []]);
+    expect(labels({ heeftToegang: false })).toEqual([["Overzicht"], ["Beveiliging"]]);
   });
 });

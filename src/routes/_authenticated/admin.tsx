@@ -8,11 +8,17 @@ import { CollegaUitnodigen } from "@/components/CollegaUitnodigen";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogCancel,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { allUsersQuery, myAccessQuery } from "@/lib/access";
+import { resetTweestaps } from "@/lib/tweestaps.functions";
 import { serverStatus } from "@/lib/wws/opzoeken/opzoeken.functions";
 import { ROL_LABEL, rolWijzigingen, type AppRole, type Rol } from "@/lib/rollen";
 
@@ -47,6 +53,28 @@ function Admin() {
   const { data: users } = useSuspenseQuery(allUsersQuery());
   const qc = useQueryClient();
   const [intrekken, setIntrekken] = useState<(typeof users)[number] | null>(null);
+  const [reset, setReset] = useState<(typeof users)[number] | null>(null);
+  const resetMutatie = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await resetTweestaps({ data: { userId: id } });
+      if (!r.ok)
+        throw new Error(
+          r.fout === "eigen_account"
+            ? "Je eigen tweestapsverificatie kun je niet resetten."
+            : "Resetten lukte niet. Probeer het later opnieuw.",
+        );
+      return r.verwijderd;
+    },
+    onSuccess: (n) => {
+      setReset(null);
+      toast.success(
+        n
+          ? "Tweestapsverificatie gereset. Bij de volgende keer inloggen koppelt de collega opnieuw een code-app."
+          : "Deze collega had nog geen code-app gekoppeld.",
+      );
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const zetRol = useMutation({
     mutationFn: async ({ id, huidig, doel }: { id: string; huidig: AppRole[]; doel: Rol }) => {
@@ -131,28 +159,68 @@ function Admin() {
                   </select>
                 </label>
               )}
+              {u.id !== user.id && (
+                <Button size="sm" variant="ghost" onClick={() => setReset(u)}>
+                  2FA resetten
+                </Button>
+              )}
             </li>
           ))}
         </ul>
         <ServerStatus />
       </main>
-      <AlertDialog open={intrekken !== null} onOpenChange={(open) => {
-        if (!open && !zetRol.isPending) setIntrekken(null);
-      }}>
+      <AlertDialog
+        open={reset !== null}
+        onOpenChange={(open) => {
+          if (!open && !resetMutatie.isPending) setReset(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tweestapsverificatie resetten?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle gekoppelde code-apps van {reset?.display_name || reset?.email} worden verwijderd.
+              Doe dit alleen als je zeker weet dat deze collega erom vraagt (bijv. telefoon kwijt).
+              Bij de volgende keer inloggen koppelt de collega opnieuw een code-app.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetMutatie.isPending}>Annuleren</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={resetMutatie.isPending}
+              onClick={() => reset && resetMutatie.mutate(reset.id)}
+            >
+              {resetMutatie.isPending ? "Resetten…" : "2FA resetten"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={intrekken !== null}
+        onOpenChange={(open) => {
+          if (!open && !zetRol.isPending) setIntrekken(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Toegang intrekken?</AlertDialogTitle>
             <AlertDialogDescription>
-              De toegang van {intrekken?.display_name || intrekken?.email} wordt ingetrokken.
-              Het account en bestaande tellingen blijven bewaard. Je kunt later opnieuw een rol toekennen.
+              De toegang van {intrekken?.display_name || intrekken?.email} wordt ingetrokken. Het
+              account en bestaande tellingen blijven bewaard. Je kunt later opnieuw een rol
+              toekennen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={zetRol.isPending}>Annuleren</AlertDialogCancel>
-            <Button variant="destructive" disabled={zetRol.isPending} onClick={() => {
-              if (!intrekken) return;
-              zetRol.mutate({ id: intrekken.id, huidig: intrekken.roles, doel: null });
-            }}>
+            <Button
+              variant="destructive"
+              disabled={zetRol.isPending}
+              onClick={() => {
+                if (!intrekken) return;
+                zetRol.mutate({ id: intrekken.id, huidig: intrekken.roles, doel: null });
+              }}
+            >
               {zetRol.isPending ? "Intrekken…" : "Toegang intrekken"}
             </Button>
           </AlertDialogFooter>

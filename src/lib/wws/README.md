@@ -314,6 +314,24 @@ niet de REST-API.
   (migratie 0006 is additief). Bron `'bloks'` in de database betekent Bloxs; in de code heet het
   `bloxs`.
 
+## Tweestapsverificatie (nieuw, niet in de bron)
+
+Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase
+Auth MFA).
+- **Afdwingen in de app:** de route `/_authenticated` stuurt elke sessie zonder code (`aal1`) naar
+  `/tweestaps`. Wie nog geen code-app heeft, koppelt er daar eerst één (QR-code plus bevestiging);
+  anders vul je de code in (`src/lib/tweestaps.ts`, `src/components/TweeStaps.tsx`).
+- **Beveiliging** (zijmenu, iedereen): gekoppelde code-apps bekijken, een tweede koppelen, of er
+  één verwijderen. De laatste kun je niet verwijderen.
+- **Resetten** (telefoon kwijt): op /admin "2FA resetten" per collega.
+  - `resetTweestaps` is alleen voor admins en nooit voor het eigen account.
+  - Het gebruikt de service role (op verzoek), omdat alleen de Auth-admin-API factoren van een
+    ander account kan verwijderen.
+  - Geen ids of e-mailadressen in de log.
+- **In de database (migratie 0009, volgt):** een restrictieve voorwaarde `aal2` op alle tabellen,
+  zodat ook de database zonder code niets geeft. Die migratie komt pas nadat iedereen een
+  code-app heeft gekoppeld.
+
 ## Bewuste afwijkingen van wws-site.html
 
 Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De vergelijkingstests

@@ -13,9 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as TweestapsRouteImport } from './routes/tweestaps'
 import { Route as UitnodigingRouteImport } from './routes/uitnodiging'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedArchiefRouteImport } from './routes/_authenticated/archief'
+import { Route as AuthenticatedBeveiligingRouteImport } from './routes/_authenticated/beveiliging'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEigenarenRouteImport } from './routes/_authenticated/eigenaren'
 import { Route as AuthenticatedIndelingRouteImport } from './routes/_authenticated/indeling'
@@ -45,6 +47,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TweestapsRoute = TweestapsRouteImport.update({
+  id: '/tweestaps',
+  path: '/tweestaps',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UitnodigingRoute = UitnodigingRouteImport.update({
   id: '/uitnodiging',
   path: '/uitnodiging',
@@ -60,6 +67,12 @@ const AuthenticatedArchiefRoute = AuthenticatedArchiefRouteImport.update({
   path: '/archief',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBeveiligingRoute =
+  AuthenticatedBeveiligingRouteImport.update({
+    id: '/beveiliging',
+    path: '/beveiliging',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -112,9 +125,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tweestaps': typeof TweestapsRoute
   '/uitnodiging': typeof UitnodigingRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/archief': typeof AuthenticatedArchiefRoute
+  '/beveiliging': typeof AuthenticatedBeveiligingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
   '/indeling': typeof AuthenticatedIndelingRoute
@@ -129,9 +144,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tweestaps': typeof TweestapsRoute
   '/uitnodiging': typeof UitnodigingRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/archief': typeof AuthenticatedArchiefRoute
+  '/beveiliging': typeof AuthenticatedBeveiligingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
   '/indeling': typeof AuthenticatedIndelingRoute
@@ -148,9 +165,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tweestaps': typeof TweestapsRoute
   '/uitnodiging': typeof UitnodigingRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/archief': typeof AuthenticatedArchiefRoute
+  '/_authenticated/beveiliging': typeof AuthenticatedBeveiligingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/eigenaren': typeof AuthenticatedEigenarenRoute
   '/_authenticated/indeling': typeof AuthenticatedIndelingRoute
@@ -167,9 +186,11 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/tweestaps'
     | '/uitnodiging'
     | '/admin'
     | '/archief'
+    | '/beveiliging'
     | '/dashboard'
     | '/eigenaren'
     | '/indeling'
@@ -184,9 +205,11 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/tweestaps'
     | '/uitnodiging'
     | '/admin'
     | '/archief'
+    | '/beveiliging'
     | '/dashboard'
     | '/eigenaren'
     | '/indeling'
@@ -202,9 +225,11 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/tweestaps'
     | '/uitnodiging'
     | '/_authenticated/admin'
     | '/_authenticated/archief'
+    | '/_authenticated/beveiliging'
     | '/_authenticated/dashboard'
     | '/_authenticated/eigenaren'
     | '/_authenticated/indeling'
@@ -221,6 +246,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  TweestapsRoute: typeof TweestapsRoute
   UitnodigingRoute: typeof UitnodigingRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -256,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tweestaps': {
+      id: '/tweestaps'
+      path: '/tweestaps'
+      fullPath: '/tweestaps'
+      preLoaderRoute: typeof TweestapsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/uitnodiging': {
       id: '/uitnodiging'
       path: '/uitnodiging'
@@ -275,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/archief'
       fullPath: '/archief'
       preLoaderRoute: typeof AuthenticatedArchiefRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/beveiliging': {
+      id: '/_authenticated/beveiliging'
+      path: '/beveiliging'
+      fullPath: '/beveiliging'
+      preLoaderRoute: typeof AuthenticatedBeveiligingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -346,6 +386,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedArchiefRoute: typeof AuthenticatedArchiefRoute
+  AuthenticatedBeveiligingRoute: typeof AuthenticatedBeveiligingRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEigenarenRoute: typeof AuthenticatedEigenarenRoute
   AuthenticatedIndelingRoute: typeof AuthenticatedIndelingRoute
@@ -358,6 +399,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedArchiefRoute: AuthenticatedArchiefRoute,
+  AuthenticatedBeveiligingRoute: AuthenticatedBeveiligingRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEigenarenRoute: AuthenticatedEigenarenRoute,
   AuthenticatedIndelingRoute: AuthenticatedIndelingRoute,
@@ -375,6 +417,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  TweestapsRoute: TweestapsRoute,
   UitnodigingRoute: UitnodigingRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

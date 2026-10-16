@@ -10,7 +10,8 @@ export type MenuIcoon =
   | "analyse"
   | "eigenaren"
   | "normen"
-  | "gebruikers";
+  | "gebruikers"
+  | "beveiliging";
 
 export interface MenuOnderdeel {
   to:
@@ -22,7 +23,8 @@ export interface MenuOnderdeel {
     | "/eigenaren"
     | "/portefeuille-analyse"
     | "/normen"
-    | "/admin";
+    | "/admin"
+    | "/beveiliging";
   label: string;
   icoon: MenuIcoon;
 }
@@ -34,7 +36,7 @@ export interface MenuRechten {
   magSchrijven?: boolean | undefined;
 }
 
-/** Hoofdmenu, in de volgorde van de bron; beheer (Normen, Gebruikers) onderaan bij admins */
+/** Hoofdmenu, in de volgorde van de bron; onderaan Normen en Gebruikers (admins) en Beveiliging */
 export function menuOnderdelen(r: MenuRechten): {
   hoofd: MenuOnderdeel[];
   beheer: MenuOnderdeel[];
@@ -57,5 +59,7 @@ export function menuOnderdelen(r: MenuRechten): {
         { to: "/admin", label: "Gebruikers", icoon: "gebruikers" },
       ]
     : [];
+  // tweestapsverificatie beheren: voor iedereen
+  beheer.push({ to: "/beveiliging", label: "Beveiliging", icoon: "beveiliging" });
   return { hoofd, beheer };
 }
