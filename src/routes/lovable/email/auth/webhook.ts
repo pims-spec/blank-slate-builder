@@ -9,11 +9,11 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
-const SITE_NAME = "GoHome adviezen"
+const SITE_NAME = "GoHome advice"
 const SENDER_DOMAIN = "notify.gohome.io"
 const ROOT_DOMAIN = "gohome.io"
 const FROM_DOMAIN = "notify.gohome.io"
-const SITE_URL = `https://${ROOT_DOMAIN}`
+const SITE_URL = "https://gohome-advice.lovable.app"
 
 // The SDK handler owns verification, dispatch, and retry semantics; this file
 // owns only the email decisions: subjects, templates, and per-type props.
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
                 }),
             },
             invite: {
-              subject: "You've been invited",
+              subject: 'Je bent uitgenodigd voor GoHome advice',
               render: (data) =>
                 React.createElement(InviteEmail, {
                   siteName: SITE_NAME,
