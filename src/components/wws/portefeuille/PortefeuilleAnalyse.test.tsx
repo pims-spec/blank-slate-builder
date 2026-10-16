@@ -192,7 +192,7 @@ describe("Portefeuille-analyse", () => {
     store.slaBagOp.mockResolvedValue(undefined);
     toon(["member"]);
     const kaart = await screen.findByRole("region", { name: "Verduurzamingsraming" });
-    expect(within(kaart).getByText(/Bedragen nog niet ingesteld/)).toBeInTheDocument();
+    expect(within(kaart).queryByText(/Bedragen nog niet ingesteld/)).toBeNull();
     fireEvent.click(within(kaart).getByRole("button", { name: "BAG-gegevens ophalen (1)" }));
     await waitFor(() => expect(store.slaBagOp).toHaveBeenCalled());
     expect(

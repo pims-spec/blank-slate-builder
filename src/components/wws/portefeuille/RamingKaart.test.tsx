@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { maakRaming, RAMING_STANDAARD } from "@/lib/wws/portefeuille/verduurzaming";
 import { RamingKaart } from "./RamingKaart";
 
-const N = { ...RAMING_STANDAARD, ingesteld: true, perM2Laag: 100, perM2Hoog: 150 };
+const N = {
+  ...RAMING_STANDAARD,
+  perM2Laag: 100,
+  perM2Hoog: 150,
+  factor: { tot1945: 1, "1945-1974": 1, "1975-1991": 1, vanaf1992: 1 },
+};
 const bag = (oppervlakte: number | null, bouwjaar: number | null) => ({
   status: "gevonden",
   oppervlakte,
@@ -30,10 +35,10 @@ describe("RamingKaart", () => {
   });
 
   it("zonder bedragen: melding en alleen stappen", () => {
-    const r = maakRaming(
-      [{ adres: "Damrak 1", klasse: "E", bag: bag(60, 1980) }],
-      RAMING_STANDAARD,
-    );
+    const r = maakRaming([{ adres: "Damrak 1", klasse: "E", bag: bag(60, 1980) }], {
+      ...RAMING_STANDAARD,
+      ingesteld: false,
+    });
     render(<RamingKaart raming={r} />);
     expect(screen.getByText(/Bedragen nog niet ingesteld/)).toBeInTheDocument();
     expect(screen.queryByText(/€/)).toBeNull();

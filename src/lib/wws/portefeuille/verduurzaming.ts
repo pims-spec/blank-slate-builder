@@ -33,11 +33,23 @@ export interface RamingNormen {
   aangenomen: Record<BouwjaarKlasse, string>;
 }
 
+/**
+ * Standaardinschatting (aan te passen in Normen). Basis: gemiddeld € 5.000 per labelstap per woning
+ * (Kamerstuk 29 453, nr. 450, 2017; exclusief subsidie, inclusief kleine maatregelen, zonder groot
+ * onderhoud). Bij ca. 70 m² is dat ca. € 70 per m² per stap (prijspeil 2017, de lage kant); de hoge
+ * kant rekent met de sindsdien sterk gestegen bouwkosten. De factoren per bouwjaar zijn een eigen
+ * aanname: oudere woningen (massief, slecht geïsoleerd) zijn duurder per stap.
+ */
+export const RAMING_BRON =
+  "Standaard afgeleid van gemiddeld € 5.000 per labelstap per woning (Kamerstuk 29 453, nr. 450, " +
+  "2017) bij ca. 70 m², met een hoge kant voor de gestegen bouwkosten; factoren per bouwjaar zijn " +
+  "een aanname. Pas aan naar eigen ervaringscijfers.";
+
 export const RAMING_STANDAARD: RamingNormen = {
-  ingesteld: false,
-  perM2Laag: 0,
-  perM2Hoog: 0,
-  factor: { tot1945: 1, "1945-1974": 1, "1975-1991": 1, vanaf1992: 1 },
+  ingesteld: true,
+  perM2Laag: 70,
+  perM2Hoog: 120,
+  factor: { tot1945: 1.3, "1945-1974": 1.15, "1975-1991": 1, vanaf1992: 0.9 },
   aangenomen: { tot1945: "G", "1945-1974": "G", "1975-1991": "E", vanaf1992: "C" },
 };
 
@@ -60,7 +72,7 @@ export function ramingNormen(n: Partial<RamingNormen> | null | undefined): Ramin
     if ((LABELS as readonly string[]).includes(l)) aangenomen[k] = l;
   }
   return {
-    ingesteld: n?.ingesteld === true && hoog > 0,
+    ingesteld: (n?.ingesteld ?? d.ingesteld) === true && hoog > 0,
     perM2Laag: laag,
     perM2Hoog: hoog,
     factor,

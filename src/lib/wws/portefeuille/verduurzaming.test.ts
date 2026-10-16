@@ -86,8 +86,18 @@ describe("verduurzamingsraming", () => {
     expect(r.bagNietOpgehaald).toBe(1);
   });
 
+  it("standaardinschatting: € 70–120 per m² per stap, oudere woningen duurder", () => {
+    expect(RAMING_STANDAARD).toMatchObject({ ingesteld: true, perM2Laag: 70, perM2Hoog: 120 });
+    // G, 60 m², vóór 1945 (×1,3): naar D 3 stappen = 60×70×3×1,3 = 16.380 → 16.400
+    const r = maakRaming([{ adres: "A 1", klasse: "G", bag: bag(60, 1930) }], ramingNormen(null));
+    expect(r.regels[0]!.naarD).toEqual({ laag: 16400, hoog: 28100 });
+  });
+
   it("bedragen niet ingesteld: wel stappen, geen bedragen", () => {
-    const r = maakRaming([{ adres: "A 1", klasse: "G", bag: bag(60, 1930) }], RAMING_STANDAARD);
+    const r = maakRaming([{ adres: "A 1", klasse: "G", bag: bag(60, 1930) }], {
+      ...RAMING_STANDAARD,
+      ingesteld: false,
+    });
     expect(r.ingesteld).toBe(false);
     expect(r.regels[0]).toMatchObject({ stappenD: 3, naarD: null, naarC: null });
     expect(r.totaalC).toEqual({ laag: 0, hoog: 0 });
@@ -103,7 +113,7 @@ describe("verduurzamingsraming", () => {
       aangenomen: { tot1945: "Q", "1975-1991": "F" } as never,
     });
     expect([n.perM2Laag, n.perM2Hoog, n.ingesteld]).toEqual([120, 120, true]);
-    expect(n.factor).toEqual({ tot1945: 1, "1945-1974": 1.3, "1975-1991": 1, vanaf1992: 1 });
+    expect(n.factor).toEqual({ ...RAMING_STANDAARD.factor, "1945-1974": 1.3 });
     expect(n.aangenomen["tot1945"]).toBe("G");
     expect(n.aangenomen["1975-1991"]).toBe("F");
     expect(ramingNormen({ ingesteld: true, perM2Laag: 0, perM2Hoog: 0 }).ingesteld).toBe(false);

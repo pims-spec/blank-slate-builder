@@ -31,7 +31,11 @@ import {
   type GeenLabelEfg,
   type PortefeuilleNormen,
 } from "@/lib/wws/portefeuille/analyse";
-import { BOUWJAAR_KLASSEN, BOUWJAAR_NAMEN } from "@/lib/wws/portefeuille/verduurzaming";
+import {
+  BOUWJAAR_KLASSEN,
+  BOUWJAAR_NAMEN,
+  RAMING_BRON,
+} from "@/lib/wws/portefeuille/verduurzaming";
 import { instellingenStore } from "./tellingStore";
 
 /** Kostenramingen van het verbeteradvies, als standaard voor iedereen */
@@ -432,8 +436,11 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
           <p className="mb-3 text-sm text-muted-foreground">
             Grove kostenindicatie per woning om naar label D en naar C te komen: labelstappen ×
             gebruiksoppervlakte (BAG) × bedrag per m² per stap × factor voor het bouwjaar. Met een
-            lage en een hoge prijs ontstaat een bandbreedte. Zolang hier geen bedragen staan, toont
-            de analyse alleen de labelstappen.
+            lage en een hoge prijs ontstaat een bandbreedte. Zonder bedragen toont de analyse alleen
+            de labelstappen.
+          </p>
+          <p className="mb-3 rounded-md border border-border bg-muted px-3 py-2 text-xs">
+            {RAMING_BRON}
           </p>
           <div className="grid max-w-md grid-cols-2 gap-3">
             {(
