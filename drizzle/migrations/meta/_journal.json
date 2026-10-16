@@ -78,6 +78,13 @@
       "when": 1792156250730,
       "tag": "0010_adres_uitsluiten",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792160082772,
+      "tag": "0011_portefeuille_analyses_archief",
+      "breakpoints": true
     }
   ]
 }
