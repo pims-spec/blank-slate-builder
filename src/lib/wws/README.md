@@ -459,6 +459,13 @@ in `pdf.afwijkingen.test.ts`.
   - Hoe: `indelingAIPrompt` noemt de standaardnaam van het ruimtetype, met m², in plaats van wat
     een gebruiker heeft ingetypt. Zo gaat er geen vrije tekst naar Gemini.
   - Test: de vergelijkingstest gebruikt in de bron lege namen; dan zijn beide gelijk.
+- **Extra regels voor de AI-afbeelding** (`INDELING_EXTRA_REGELS`, vóór de slotzin).
+  - Waarom: Gemini tekende een algemeen trappenhuis als slaapkamer, liet een badkamer weg en zette
+    een raam in een woningscheidende wand.
+  - Regels: alleen binnen de woning tekenen (trappenhuis, portiek, galerij, lift en buren blijven
+    ongemoeid); geen nieuwe ramen of buitendeuren, nooit een raam in een woningscheidende wand;
+    elke genoemde ruimte (ook badkamer en toilet) precies één keer met bijschrift.
+  - Test: de vergelijkingstest zet dezelfde regels in de bron-uitkomst vóór "Nogmaals:".
 - **Geen foutmelding van Google of Anthropic in beeld.**
   - De bron toonde Googles letterlijke foutmelding.
   - Nu: alleen een eigen, Nederlandse melding per foutcode.

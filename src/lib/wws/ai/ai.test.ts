@@ -13,7 +13,13 @@ import {
   zoekAfbeelding,
 } from "./dienst";
 import { anonimiseer, verwijderPatronen } from "./privacy";
-import { energieAdviesPrompt, indelingAIPrompt, platPrompt, type VariantRuimte } from "./prompts";
+import {
+  INDELING_EXTRA_REGELS,
+  energieAdviesPrompt,
+  indelingAIPrompt,
+  platPrompt,
+  type VariantRuimte,
+} from "./prompts";
 import { verwerkEnergieAdvies, verwerkPlattegrond } from "./verwerken";
 import { AfbeeldingVraag, VariantAfbeeldingVraag } from "./vragen";
 
@@ -81,8 +87,24 @@ describe("instructies gelijk aan wws-site.html", () => {
         ...ruimten.filter((r) => r.groep === "vertrekken"),
         ...ruimten.filter((r) => r.groep === "overig"),
       ];
-      expect(indelingAIPrompt(geordend)).toBe(BRON.indelingAIPrompt(v));
+      // bewuste afwijking: de extra regels staan vóór de slotzin
+      const bron = BRON.indelingAIPrompt(v).replace(
+        "Nogmaals:",
+        INDELING_EXTRA_REGELS + "Nogmaals:",
+      );
+      expect(indelingAIPrompt(geordend)).toBe(bron);
     }
+  });
+
+  it("extra regels: trappenhuis blijft buiten de woning, geen nieuwe ramen, alle ruimtes erop", () => {
+    const p = indelingAIPrompt([
+      { groep: "vertrekken", type: "badkamer", m2: 4, vast: true },
+      { groep: "vertrekken", type: "slaapkamer", m2: 10, vast: false },
+    ]);
+    expect(p).toContain("algemene trappenhuis");
+    expect(p).toContain("woningscheidende wand) krijgt nooit een raam");
+    expect(p).toContain("ook de badkamer en het toilet");
+    expect(p.indexOf("Teken alleen binnen deze woning")).toBeLessThan(p.indexOf("Nogmaals:"));
   });
 
   it("gebruikt geen vrije ruimtenamen (bewuste afwijking)", () => {

@@ -67,9 +67,19 @@ export interface VariantRuimte {
 }
 
 /**
+ * Extra regels voor de AI-afbeelding (bewuste afwijking van de bron): Gemini tekende een algemeen
+ * trappenhuis als slaapkamer, liet een badkamer weg en zette een raam in een woningscheidende wand.
+ */
+export const INDELING_EXTRA_REGELS =
+  "Teken alleen binnen deze woning. Wat buiten de woning ligt -- het algemene trappenhuis, een portiek, galerij, lift of een buurwoning -- blijft exact zoals het is en krijgt nooit een ruimtenaam of functie van deze woning (dus geen slaapkamer, berging of andere ruimte in het trappenhuis).\n\n" +
+  "Teken geen nieuwe ramen of buitendeuren. Een wand die aan een buurwoning, het trappenhuis of een andere gemeenschappelijke ruimte grenst (woningscheidende wand) krijgt nooit een raam.\n\n" +
+  "Elke hierboven genoemde ruimte (vast én nieuw), dus ook de badkamer en het toilet, moet precies één keer met bijschrift op de tekening staan; laat er geen weg.\n\n";
+
+/**
  * Instructie voor de AI-afbeelding van een indelingsvariant — indelingAIPrompt().
- * Bewuste afwijking: de bron gebruikte de vrije ruimtenamen; hier alleen de standaardnaam van
- * het ruimtetype, zodat er geen door gebruikers ingetypte tekst naar Gemini gaat.
+ * Bewuste afwijkingen: de bron gebruikte de vrije ruimtenamen; hier alleen de standaardnaam van
+ * het ruimtetype, zodat er geen door gebruikers ingetypte tekst naar Gemini gaat. En vóór de
+ * slotzin staan de extra regels (`INDELING_EXTRA_REGELS`).
  */
 export function indelingAIPrompt(ruimten: readonly VariantRuimte[]): string {
   const blokjes = ruimten
@@ -99,6 +109,7 @@ export function indelingAIPrompt(ruimten: readonly VariantRuimte[]): string {
       ". Teken hier de benodigde binnenwanden en -deuren tussen deze ruimtes, in dezelfde stijl als de rest van de afbeelding. De genoemde m² per ruimte zijn ten opzichte van elkaar: teken elke ruimte op een breedte/diepte die daadwerkelijk in verhouding is met die van de andere genoemde ruimtes (en met de vaste ruimtes en de totale woning) -- een ruimte van 2 m² moet merkbaar kleiner ogen dan een ruimte van 12 m², nooit ongeveer even groot.\n\n" +
       "Elke ruimte (vast én nieuw) krijgt precies één deur die daadwerkelijk toegang geeft, op een voor die ruimte logische plek (bijv. een badkamer-/toiletdeur vanuit de hal, niet vanuit een slaapkamer, tenzij dat al zo was bij een vaste ruimte). Teken deurbreedtes in verhouding tot de werkelijke grootte van de ruimte en vergelijkbaar met de deurbreedtes die al op de originele foto te zien zijn -- nooit een deur die te smal of te breed oogt voor de ruimte waar hij bij hoort.\n\n" +
       "Voeg nooit een extra toilet, badkamer of keuken toe die niet hierboven genoemd is: als een genoemde 'vast' ruimte al een badkamer of toilet is, mag er behalve de hierboven expliciet genoemde nieuwe ruimtes geen tweede toiletvoorziening ergens anders bijkomen.\n\n";
+  t += INDELING_EXTRA_REGELS;
   t +=
     "Nogmaals: dit moet een bewerkte versie van de ORIGINELE afbeelding blijven (zelfde stijl, kleuren en weergave), geen nieuwe schone 2D-lijntekening of 3D-weergave, en geen ander kleurenpalet.";
   return t;
