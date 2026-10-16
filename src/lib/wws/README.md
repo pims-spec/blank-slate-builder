@@ -247,6 +247,26 @@ PDF tonen dan "Kinkerstraat 49A-2, 1053 ZD Amsterdam"; zonder straat alleen post
 WWS-rapporten (`pdfVoorblad`, gedeeld met `pdfCoverPage`). Het voorblad heeft geen voettekst; de
 paginanummers lopen vanaf 2, net als bij de WWS-rapporten.
 
+**Meerdere portefeuilles.** Met "Meerdere portefeuilles" draai je één analyse over gekozen
+portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigenaar toe.
+- **Dubbele adressen:** een adres in meer portefeuilles telt één keer (de versie met het nieuwste
+  labelresultaat); adressen die niet meer in Bloxs staan tellen niet mee (`combi.ts`).
+- **Labels ophalen** blijft per portefeuille; de gecombineerde analyse toont wat nog ontbreekt.
+- **Opslaan:** in `portefeuille_combi_analyses` (migratie 0007), een vaste momentopname met de
+  namen van de portefeuilles en de eigenaren; blijft bestaan als een portefeuille later weg is.
+
+**Archief.** Tabblad "Portefeuille-analyses" (`/archief?tab=analyses`): alle opgeslagen analyses,
+enkel en gecombineerd, met zoeken, bekijken, PDF en verwijderen (maker of admin). De kijkrol kan
+bekijken en de PDF downloaden.
+
+**Eigenaar in GoHome bij Bloxs.** Bij het kiezen van een Bloxs-eigenaar stelt het venster de
+GoHome-eigenaar voor (`bloxs/eigenaarKoppeling.ts`):
+1. die van een eerdere portefeuille van dezelfde Bloxs-eigenaar;
+2. anders die met dezelfde naam;
+3. anders "+ Nieuw in GoHome", die bij het inladen wordt aangemaakt.
+
+Altijd aan te passen. De koppeling loopt via de portefeuille (`klant_id` + Bloxs-eigenaar).
+
 **Bloxs (OData-feed).** Bloxs (met x) via de OData-feed (`[klantomgeving].bloxs.io/odatafeed`),
 niet de REST-API.
 

@@ -42,6 +42,7 @@ import {
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { BloxsDialoog } from "./BloxsDialoog";
+import { CombiAnalyse } from "./CombiAnalyse";
 import { ImportDialoog } from "./ImportDialoog";
 
 type OpnieuwKeuze = "alle" | "probleem" | "oud";
@@ -79,6 +80,7 @@ export default function PortefeuilleAnalyse({
 
   const [importOpen, setImportOpen] = useState<"nieuw" | "toevoegen" | null>(null);
   const [bloxsOpen, setBloxsOpen] = useState<"nieuw" | "opnieuw" | null>(null);
+  const [modus, setModus] = useState<"een" | "combi">("een");
   const [verwijderVraag, setVerwijderVraag] = useState(false);
   const [datum, setDatum] = useState(vandaag());
   const [venster, setVenster] = useState("3");
@@ -303,312 +305,367 @@ export default function PortefeuilleAnalyse({
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-4">
-        <label className="flex min-w-56 flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Portefeuille</span>
-          <select
-            className="h-9 rounded-xl border border-input bg-background px-2"
-            value={p?.id ?? ""}
-            onChange={(e) => {
-              setGekozen(e.target.value);
-              setBekeken(null);
-              setMelding("");
-            }}
-            disabled={!portefeuilles.length || bezig}
-          >
-            {!portefeuilles.length && (
-              <option value="">{isPending ? "Laden…" : "Nog geen portefeuilles"}</option>
-            )}
-            {portefeuilles.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.naam} ({x.aantalAdressen})
-              </option>
-            ))}
-          </select>
-        </label>
-        {rechten.magSchrijven && (
-          <>
-            <Button onClick={() => setImportOpen("nieuw")} disabled={bezig}>
-              Portefeuille importeren
-            </Button>
-            {p && !uitBloxs && (
-              <Button variant="outline" onClick={() => setImportOpen("toevoegen")} disabled={bezig}>
-                Adressen toevoegen
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setBloxsOpen("nieuw")} disabled={bezig}>
-              Uit Bloxs
-            </Button>
-            {p && uitBloxs && (
-              <Button variant="outline" onClick={() => setBloxsOpen("opnieuw")} disabled={bezig}>
-                Opnieuw inladen uit Bloxs
-              </Button>
-            )}
-          </>
-        )}
-        {p && magBeheren(p.createdBy) && (
-          <Button
-            variant="ghost"
-            className="ml-auto text-destructive hover:text-destructive"
-            onClick={() => setVerwijderVraag(true)}
-            disabled={bezig}
-          >
-            Portefeuille verwijderen
-          </Button>
-        )}
-      </div>
+      {portefeuilles.length >= 2 && (
+        <div role="tablist" aria-label="Soort analyse" className="mb-4 flex flex-wrap gap-1">
+          {(
+            [
+              ["een", "Eén portefeuille"],
+              ["combi", "Meerdere portefeuilles"],
+            ] as const
+          ).map(([m, label]) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={modus === m}
+              disabled={bezig}
+              onClick={() => setModus(m)}
+              className={
+                "rounded-full px-3 py-1 text-sm " +
+                (modus === m
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground")
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {!p ? (
-        <p className="text-muted-foreground">
-          {isPending
-            ? "Laden…"
-            : rechten.magSchrijven
-              ? "Importeer een portefeuille om te beginnen."
-              : "Er zijn nog geen portefeuilles."}
-        </p>
+      {modus === "combi" && portefeuilles.length >= 2 ? (
+        <CombiAnalyse
+          rechten={rechten}
+          portefeuilles={portefeuilles}
+          klanten={klanten}
+          instellingen={instellingen}
+          onOpen={(id) => {
+            setGekozen(id);
+            setBekeken(null);
+            setModus("een");
+          }}
+        />
       ) : (
-        <div className="space-y-4">
-          {/* ---------- ophalen ---------- */}
-          <section
-            className="rounded-2xl border border-border bg-card p-4"
-            aria-label="Energielabels ophalen"
-          >
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <span>
-                <b>{adressen.length}</b> adressen ·{" "}
-                <b>{adressen.length - zonderResultaat.length}</b> opgehaald
-                {zonderResultaat.length > 0 && <> · {zonderResultaat.length} nog niet</>}
-                {aanvullen && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · straat en woonplaats aanvullen: {aanvullen.gedaan} van {aanvullen.totaal}
-                  </span>
+        <>
+          <div className="mb-4 flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-4">
+            <label className="flex min-w-56 flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">Portefeuille</span>
+              <select
+                className="h-9 rounded-xl border border-input bg-background px-2"
+                value={p?.id ?? ""}
+                onChange={(e) => {
+                  setGekozen(e.target.value);
+                  setBekeken(null);
+                  setMelding("");
+                }}
+                disabled={!portefeuilles.length || bezig}
+              >
+                {!portefeuilles.length && (
+                  <option value="">{isPending ? "Laden…" : "Nog geen portefeuilles"}</option>
                 )}
-              </span>
-              {rechten.magSchrijven && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {voortgang ? (
-                    <Button variant="outline" onClick={() => (stoppen.current = true)}>
-                      Stoppen
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        disabled={bezig || !zonderResultaat.length}
-                        onClick={() => void ophalen(zonderResultaat)}
-                      >
-                        {adressen.length > zonderResultaat.length && zonderResultaat.length
-                          ? "Hervatten"
-                          : "Ophalen"}{" "}
-                        ({zonderResultaat.length})
-                      </Button>
-                      <select
-                        aria-label="Opnieuw ophalen: welke adressen"
-                        className="h-9 max-w-full rounded-xl border border-input bg-background px-2"
-                        value={opnieuw}
-                        onChange={(e) => setOpnieuw(e.target.value as OpnieuwKeuze)}
-                      >
-                        <option value="probleem">Niet gevonden, niet eenduidig of mislukt</option>
-                        <option value="oud">Ouder dan een maand</option>
-                        <option value="alle">Alle adressen</option>
-                      </select>
-                      <Button
-                        variant="outline"
-                        disabled={bezig || !opnieuwLijst(opnieuw).length}
-                        onClick={() => void ophalen(opnieuwLijst(opnieuw))}
-                      >
-                        Opnieuw ophalen ({opnieuwLijst(opnieuw).length})
-                      </Button>
-                      {zonderStraat.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          disabled={bezig}
-                          onClick={() => p && void vulAan(p.id, zonderStraat)}
-                        >
-                          Straat en woonplaats aanvullen ({zonderStraat.length})
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            {voortgang && (
-              <div className="mt-3">
-                <div
-                  className="h-2 overflow-hidden rounded-full bg-secondary"
-                  role="progressbar"
-                  aria-label="Voortgang ophalen"
-                  aria-valuemin={0}
-                  aria-valuemax={voortgang.totaal}
-                  aria-valuenow={voortgang.gedaan}
-                >
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: (voortgang.gedaan / voortgang.totaal) * 100 + "%" }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {voortgang.gedaan} van {voortgang.totaal} klaar
-                  {voortgang.tot > voortgang.gedaan &&
-                    ` · bezig met ${voortgang.gedaan + 1}–${voortgang.tot}`}{" "}
-                  · ongeveer {instellingen.epPerSeconde} per seconde
-                </p>
-              </div>
-            )}
-            {melding && (
-              <p className="mt-2 text-sm text-orange-ink" role="alert">
-                {melding}
-              </p>
-            )}
-            {uitBloxs && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Uit Bloxs
-                {p.bloxsGesynchroniseerdOp
-                  ? " · laatst ingeladen " +
-                    new Date(p.bloxsGesynchroniseerdOp).toLocaleString("nl-NL", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })
-                  : ""}
-              </p>
-            )}
-            {vervallen.length > 0 && (
-              <details className="mt-2 text-sm">
-                <summary className="text-orange-ink">
-                  {aantal(vervallen.length, "adres", "adressen")} niet meer in Bloxs (telt niet mee
-                  in de analyse)
-                </summary>
-                <ul className="mt-1 max-h-40 overflow-y-auto text-muted-foreground">
-                  {vervallen.map((a) => (
-                    <li key={a.id}>{adresTekst(a)}</li>
-                  ))}
-                </ul>
-                {rechten.magSchrijven && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="mt-1 text-destructive hover:text-destructive"
-                    disabled={bezig}
-                    onClick={() => void verwijderVervallen()}
-                  >
-                    Deze adressen verwijderen
-                  </Button>
-                )}
-              </details>
-            )}
-          </section>
-
-          {/* ---------- analyse ---------- */}
-          <section
-            className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
-            aria-label="Analyse"
-          >
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted-foreground">Analysedatum</span>
-              <Input
-                type="date"
-                value={datum}
-                onChange={(e) => (setDatum(e.target.value), setBekeken(null))}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted-foreground">Venster (maanden)</span>
-              <Input
-                inputMode="numeric"
-                className="w-24"
-                value={venster}
-                onChange={(e) => (setVenster(e.target.value), setBekeken(null))}
-              />
+                {portefeuilles.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.naam} ({x.aantalAdressen})
+                  </option>
+                ))}
+              </select>
             </label>
             {rechten.magSchrijven && (
+              <>
+                <Button onClick={() => setImportOpen("nieuw")} disabled={bezig}>
+                  Portefeuille importeren
+                </Button>
+                {p && !uitBloxs && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setImportOpen("toevoegen")}
+                    disabled={bezig}
+                  >
+                    Adressen toevoegen
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setBloxsOpen("nieuw")} disabled={bezig}>
+                  Uit Bloxs
+                </Button>
+                {p && uitBloxs && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setBloxsOpen("opnieuw")}
+                    disabled={bezig}
+                  >
+                    Opnieuw inladen uit Bloxs
+                  </Button>
+                )}
+              </>
+            )}
+            {p && magBeheren(p.createdBy) && (
               <Button
-                variant="outline"
-                onClick={() => void slaOp()}
-                disabled={bezig || !adressen.length}
+                variant="ghost"
+                className="ml-auto text-destructive hover:text-destructive"
+                onClick={() => setVerwijderVraag(true)}
+                disabled={bezig}
               >
-                Analyse opslaan
+                Portefeuille verwijderen
               </Button>
             )}
-            <Button
-              onClick={() => void pdf(toon, "pdf")}
-              disabled={!!download.bezig || !adressen.length}
-            >
-              {download.bezig === "pdf" ? "PDF maken…" : "PDF"}
-            </Button>
-          </section>
+          </div>
 
-          {bekeken && (
-            <p
-              className="rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-sm"
-              role="status"
-            >
-              Je bekijkt een opgeslagen analyse van {nlDatum(bekeken.uitkomst.datum)}.{" "}
-              <button type="button" className="underline" onClick={() => setBekeken(null)}>
-                Terug naar de actuele analyse
-              </button>
+          {!p ? (
+            <p className="text-muted-foreground">
+              {isPending
+                ? "Laden…"
+                : rechten.magSchrijven
+                  ? "Importeer een portefeuille om te beginnen."
+                  : "Er zijn nog geen portefeuilles."}
             </p>
-          )}
-
-          {adressenQ.isPending ? (
-            <p className="text-muted-foreground">Adressen laden…</p>
           ) : (
-            <AnalyseWeergave uitkomst={toon} />
-          )}
-
-          {/* ---------- opgeslagen analyses ---------- */}
-          <section
-            className="rounded-2xl border border-border bg-card p-4"
-            aria-label="Opgeslagen analyses"
-          >
-            <h3 className="mb-2 font-semibold">Opgeslagen analyses</h3>
-            {analysesQ.data?.length ? (
-              <ul className="divide-y divide-border text-sm">
-                {analysesQ.data.map((a) => (
-                  <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                    <span className="min-w-[12rem] flex-1">
-                      Analyse per {nlDatum(a.uitkomst.datum)} · {a.uitkomst.vensterMaanden} mnd ·{" "}
+            <div className="space-y-4">
+              {/* ---------- ophalen ---------- */}
+              <section
+                className="rounded-2xl border border-border bg-card p-4"
+                aria-label="Energielabels ophalen"
+              >
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <span>
+                    <b>{adressen.length}</b> adressen ·{" "}
+                    <b>{adressen.length - zonderResultaat.length}</b> opgehaald
+                    {zonderResultaat.length > 0 && <> · {zonderResultaat.length} nog niet</>}
+                    {aanvullen && (
                       <span className="text-muted-foreground">
-                        opgeslagen{" "}
-                        {new Date(a.gemaaktOp).toLocaleString("nl-NL", {
+                        {" "}
+                        · straat en woonplaats aanvullen: {aanvullen.gedaan} van {aanvullen.totaal}
+                      </span>
+                    )}
+                  </span>
+                  {rechten.magSchrijven && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {voortgang ? (
+                        <Button variant="outline" onClick={() => (stoppen.current = true)}>
+                          Stoppen
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            disabled={bezig || !zonderResultaat.length}
+                            onClick={() => void ophalen(zonderResultaat)}
+                          >
+                            {adressen.length > zonderResultaat.length && zonderResultaat.length
+                              ? "Hervatten"
+                              : "Ophalen"}{" "}
+                            ({zonderResultaat.length})
+                          </Button>
+                          <select
+                            aria-label="Opnieuw ophalen: welke adressen"
+                            className="h-9 max-w-full rounded-xl border border-input bg-background px-2"
+                            value={opnieuw}
+                            onChange={(e) => setOpnieuw(e.target.value as OpnieuwKeuze)}
+                          >
+                            <option value="probleem">
+                              Niet gevonden, niet eenduidig of mislukt
+                            </option>
+                            <option value="oud">Ouder dan een maand</option>
+                            <option value="alle">Alle adressen</option>
+                          </select>
+                          <Button
+                            variant="outline"
+                            disabled={bezig || !opnieuwLijst(opnieuw).length}
+                            onClick={() => void ophalen(opnieuwLijst(opnieuw))}
+                          >
+                            Opnieuw ophalen ({opnieuwLijst(opnieuw).length})
+                          </Button>
+                          {zonderStraat.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              disabled={bezig}
+                              onClick={() => p && void vulAan(p.id, zonderStraat)}
+                            >
+                              Straat en woonplaats aanvullen ({zonderStraat.length})
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {voortgang && (
+                  <div className="mt-3">
+                    <div
+                      className="h-2 overflow-hidden rounded-full bg-secondary"
+                      role="progressbar"
+                      aria-label="Voortgang ophalen"
+                      aria-valuemin={0}
+                      aria-valuemax={voortgang.totaal}
+                      aria-valuenow={voortgang.gedaan}
+                    >
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: (voortgang.gedaan / voortgang.totaal) * 100 + "%" }}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {voortgang.gedaan} van {voortgang.totaal} klaar
+                      {voortgang.tot > voortgang.gedaan &&
+                        ` · bezig met ${voortgang.gedaan + 1}–${voortgang.tot}`}{" "}
+                      · ongeveer {instellingen.epPerSeconde} per seconde
+                    </p>
+                  </div>
+                )}
+                {melding && (
+                  <p className="mt-2 text-sm text-orange-ink" role="alert">
+                    {melding}
+                  </p>
+                )}
+                {uitBloxs && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Uit Bloxs
+                    {p.bloxsGesynchroniseerdOp
+                      ? " · laatst ingeladen " +
+                        new Date(p.bloxsGesynchroniseerdOp).toLocaleString("nl-NL", {
                           dateStyle: "medium",
                           timeStyle: "short",
-                        })}
-                      </span>
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setBekeken({ id: a.id, uitkomst: a.uitkomst })}
-                    >
-                      Bekijken
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => void pdf(a.uitkomst, a.id)}
-                      disabled={!!download.bezig}
-                    >
-                      PDF
-                    </Button>
-                    {magBeheren(a.gemaaktDoor) && (
+                        })
+                      : ""}
+                  </p>
+                )}
+                {vervallen.length > 0 && (
+                  <details className="mt-2 text-sm">
+                    <summary className="text-orange-ink">
+                      {aantal(vervallen.length, "adres", "adressen")} niet meer in Bloxs (telt niet
+                      mee in de analyse)
+                    </summary>
+                    <ul className="mt-1 max-h-40 overflow-y-auto text-muted-foreground">
+                      {vervallen.map((a) => (
+                        <li key={a.id}>{adresTekst(a)}</li>
+                      ))}
+                    </ul>
+                    {rechten.magSchrijven && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => void verwijderAnalyse(a.id)}
+                        className="mt-1 text-destructive hover:text-destructive"
+                        disabled={bezig}
+                        onClick={() => void verwijderVervallen()}
                       >
-                        Verwijderen
+                        Deze adressen verwijderen
                       </Button>
                     )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nog geen opgeslagen analyses.</p>
-            )}
-          </section>
-        </div>
+                  </details>
+                )}
+              </section>
+
+              {/* ---------- analyse ---------- */}
+              <section
+                className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
+                aria-label="Analyse"
+              >
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-muted-foreground">Analysedatum</span>
+                  <Input
+                    type="date"
+                    value={datum}
+                    onChange={(e) => (setDatum(e.target.value), setBekeken(null))}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-muted-foreground">Venster (maanden)</span>
+                  <Input
+                    inputMode="numeric"
+                    className="w-24"
+                    value={venster}
+                    onChange={(e) => (setVenster(e.target.value), setBekeken(null))}
+                  />
+                </label>
+                {rechten.magSchrijven && (
+                  <Button
+                    variant="outline"
+                    onClick={() => void slaOp()}
+                    disabled={bezig || !adressen.length}
+                  >
+                    Analyse opslaan
+                  </Button>
+                )}
+                <Button
+                  onClick={() => void pdf(toon, "pdf")}
+                  disabled={!!download.bezig || !adressen.length}
+                >
+                  {download.bezig === "pdf" ? "PDF maken…" : "PDF"}
+                </Button>
+              </section>
+
+              {bekeken && (
+                <p
+                  className="rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-sm"
+                  role="status"
+                >
+                  Je bekijkt een opgeslagen analyse van {nlDatum(bekeken.uitkomst.datum)}.{" "}
+                  <button type="button" className="underline" onClick={() => setBekeken(null)}>
+                    Terug naar de actuele analyse
+                  </button>
+                </p>
+              )}
+
+              {adressenQ.isPending ? (
+                <p className="text-muted-foreground">Adressen laden…</p>
+              ) : (
+                <AnalyseWeergave uitkomst={toon} />
+              )}
+
+              {/* ---------- opgeslagen analyses ---------- */}
+              <section
+                className="rounded-2xl border border-border bg-card p-4"
+                aria-label="Opgeslagen analyses"
+              >
+                <h3 className="mb-2 font-semibold">Opgeslagen analyses</h3>
+                {analysesQ.data?.length ? (
+                  <ul className="divide-y divide-border text-sm">
+                    {analysesQ.data.map((a) => (
+                      <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                        <span className="min-w-[12rem] flex-1">
+                          Analyse per {nlDatum(a.uitkomst.datum)} · {a.uitkomst.vensterMaanden} mnd
+                          ·{" "}
+                          <span className="text-muted-foreground">
+                            opgeslagen{" "}
+                            {new Date(a.gemaaktOp).toLocaleString("nl-NL", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </span>
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setBekeken({ id: a.id, uitkomst: a.uitkomst })}
+                        >
+                          Bekijken
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void pdf(a.uitkomst, a.id)}
+                          disabled={!!download.bezig}
+                        >
+                          PDF
+                        </Button>
+                        {magBeheren(a.gemaaktDoor) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => void verwijderAnalyse(a.id)}
+                          >
+                            Verwijderen
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nog geen opgeslagen analyses.</p>
+                )}
+              </section>
+            </div>
+          )}
+        </>
       )}
 
       <BloxsDialoog
