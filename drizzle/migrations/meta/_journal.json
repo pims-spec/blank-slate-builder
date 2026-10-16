@@ -71,6 +71,13 @@
       "when": 1792154907232,
       "tag": "0009_tweestaps_verplicht",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792156250730,
+      "tag": "0010_adres_uitsluiten",
+      "breakpoints": true
     }
   ]
 }
