@@ -9,7 +9,14 @@ import { zoekAdresBijPdok, zoekEnergielabelsBijEpOnline } from "../opzoeken/dien
 import { vereisSchrijfrol } from "../rollenMiddleware";
 import { epVraagVoor, schoonNaam } from "./adres";
 import { leesPortefeuilleNormen } from "./normenDb";
-import { resultaatUitEp, wachtMs, type OpgeslagenResultaat, type StopFout } from "./ophalen";
+import {
+  bagToevoegingOk,
+  ongeldigAdres,
+  resultaatUitEp,
+  wachtMs,
+  type OpgeslagenResultaat,
+  type StopFout,
+} from "./ophalen";
 
 export const MAX_PER_PORTIE = 10;
 
@@ -45,7 +52,8 @@ export const haalLabelsOp = createServerFn({ method: "POST" })
 
 /**
  * Een portie adressen na elkaar opvragen, met `wacht` ms vóór elke aanvraag (ook de eerste, zodat
- * de limiet ook tussen porties geldt). Stopt bij een fout van de dienst of de sleutel.
+ * de limiet ook tussen porties geldt). Stopt bij een fout van de dienst of de sleutel. Een adres met
+ * een toevoeging die de BAG niet kent (bijv. "GARAGE") telt als mislukt, zonder aanvraag.
  */
 export async function haalPortie(
   fetchFn: typeof fetch,
@@ -56,6 +64,10 @@ export async function haalPortie(
 ): Promise<PortieAntwoord> {
   const resultaten: PortieAntwoord["resultaten"] = [];
   for (const a of adressen) {
+    if (!bagToevoegingOk(a.toevoeging)) {
+      resultaten.push({ id: a.id, resultaat: ongeldigAdres(new Date().toISOString()) });
+      continue;
+    }
     await slaapFn(wacht);
     const r = await zoekEnergielabelsBijEpOnline(fetchFn, sleutel, epVraagVoor(a));
     const m = resultaatUitEp(r, new Date().toISOString());

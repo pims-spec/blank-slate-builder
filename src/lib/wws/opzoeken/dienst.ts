@@ -140,7 +140,10 @@ export async function zoekEnergielabelsBijEpOnline(
         ? "dienst_onbereikbaar"
         : r.status === 401 || r.status === 403
           ? "sleutel_ongeldig"
-          : foutVoorStatus(r.status);
+          : // 400: EP-Online weigert dit adres (bijv. een vreemde toevoeging); de dienst zelf werkt
+            r.status === 400
+            ? "ongeldige_invoer"
+            : foutVoorStatus(r.status);
     logFout("EP-Online", fout, r.status || undefined);
     return { ok: false, fout };
   }

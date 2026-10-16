@@ -61,6 +61,23 @@ describe("EP-Online in porties", () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
+  it("toevoeging die de BAG niet kent (GARAGE): mislukt zonder aanvraag; 400 stopt niet", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockReturnValueOnce(antwoord(400, null))
+      .mockReturnValueOnce(antwoord(200, [{ Energieklasse: "A", Registratiedatum: "2023-01-01" }]));
+    const r = await haalPortie(
+      fetchFn as unknown as typeof fetch,
+      "s",
+      0,
+      [{ ...adres(1), toevoeging: "GARAGE" }, adres(2), adres(3)],
+      async () => {},
+    );
+    expect(r.stop).toBeUndefined();
+    expect(r.resultaten.map((x) => x.resultaat.status)).toEqual(["fout", "fout", "gevonden"]);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
   it("zonder sleutel: meteen stoppen, geen aanvragen", async () => {
     const fetchFn = vi.fn();
     const r = await haalPortie(

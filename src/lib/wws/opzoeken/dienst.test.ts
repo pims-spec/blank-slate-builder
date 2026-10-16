@@ -152,6 +152,7 @@ describe("EP-Online", () => {
     const cases: [number, string][] = [
       [401, "sleutel_ongeldig"],
       [403, "sleutel_ongeldig"],
+      [400, "ongeldige_invoer"],
       [404, "niet_gevonden"],
       [429, "te_veel_verzoeken"],
       [500, "dienst_onbereikbaar"],

@@ -26,6 +26,15 @@ const leeg = (status: LabelResultaat["status"], nu: string): OpgeslagenResultaat
   gebouwtype: null,
 });
 
+/** Resultaat voor een adres dat EP-Online niet kan zoeken (zonder aanvraag): "mislukt" */
+export const ongeldigAdres = (nu: string) => leeg("fout", nu);
+
+/**
+ * Een huisnummertoevoeging zoals de BAG die kent: hooguit 4 letters of cijfers. Iets als "GARAGE"
+ * (uit Bloxs) is geen adres in de BAG; daarvoor geen aanvraag bij EP-Online.
+ */
+export const bagToevoegingOk = (t: string) => t === "" || /^[A-Za-z0-9]{1,4}$/.test(t);
+
 const datum = (v: unknown) => epToIsoDate(v) || null;
 
 function getal(v: unknown): number | null {
@@ -75,6 +84,8 @@ export function stopMelding(f: StopFout | "geen_verbinding"): string {
       return "De EP-Online-sleutel is niet ingesteld op de server (EP_ONLINE_API_KEY).";
     case "sleutel_ongeldig":
       return "EP-Online accepteert de sleutel niet. Controleer EP_ONLINE_API_KEY.";
+    case "geen_verbinding":
+      return "Het ophalen is gestopt: de server gaf geen antwoord of opslaan lukte niet. Probeer het opnieuw (Hervatten).";
     default:
       return "EP-Online is nu niet bereikbaar. Het ophalen is gestopt; probeer het later opnieuw (Hervatten).";
   }
