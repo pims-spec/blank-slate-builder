@@ -40,6 +40,7 @@ import {
   portefeuillesQuery,
 } from "../tellingStore";
 import { useDownload } from "../useDownload";
+import EigenaarKeuze from "../EigenaarKeuze";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { BloxsDialoog } from "./BloxsDialoog";
 import { CombiAnalyse } from "./CombiAnalyse";
@@ -113,6 +114,19 @@ export default function PortefeuilleAnalyse({
   // PDOK alleen voor geïmporteerde portefeuilles; bij Bloxs komen straat en woonplaats uit Bloxs
   const zonderStraat = uitBloxs ? [] : adressen.filter((a) => !a.straat);
   const bezig = voortgang !== null || aanvullen !== null;
+
+  /** Een (andere) GoHome-eigenaar aan de portefeuille koppelen; ook zichtbaar in het archief */
+  async function koppelEigenaar(portefeuilleId: string, klantId: string | null) {
+    try {
+      await portefeuilleStore.bewerk(portefeuilleId, { klantId });
+      toast.success(klantId ? "Eigenaar gekoppeld." : "Eigenaar losgekoppeld.");
+    } catch {
+      toast.error("Eigenaar koppelen lukte niet.");
+    } finally {
+      await qc.invalidateQueries({ queryKey: ["portefeuilles"] });
+      await qc.invalidateQueries({ queryKey: ["archief-analyses"] });
+    }
+  }
 
   function vernieuw() {
     if (!p) return;
@@ -373,6 +387,17 @@ export default function PortefeuilleAnalyse({
                 ))}
               </select>
             </label>
+            {p && (
+              <div className="flex min-w-48 flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Eigenaar in GoHome</span>
+                <EigenaarKeuze
+                  klantId={p.klantId ?? ""}
+                  onKies={(id) => void koppelEigenaar(p.id, id || null)}
+                  magToevoegen={rechten.magSchrijven}
+                  alleenLezen={!rechten.magSchrijven || bezig}
+                />
+              </div>
+            )}
             {rechten.magSchrijven && (
               <>
                 <Button onClick={() => setImportOpen("nieuw")} disabled={bezig}>

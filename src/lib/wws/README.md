@@ -274,6 +274,10 @@ GoHome-eigenaar voor (`bloxs/eigenaarKoppeling.ts`):
 
 Altijd aan te passen. De koppeling loopt via de portefeuille (`klant_id` + Bloxs-eigenaar).
 
+Ook bij een bestaande portefeuille (ingelezen of uit Bloxs) is de GoHome-eigenaar te kiezen of te
+wijzigen, naast de portefeuillekeuze. Het archief toont die eigenaar bij de losse analyses; een
+gecombineerde analyse bewaart de eigenaren van het moment van opslaan.
+
 **Bloxs (OData-feed).** Bloxs (met x) via de OData-feed (`[klantomgeving].bloxs.io/odatafeed`),
 niet de REST-API.
 

@@ -109,15 +109,18 @@ export function maakPortefeuilleStore(db: Db) {
       return data.id;
     },
 
+    /** Naam of eigenaar wijzigen; RLS: maker, collega met wie gedeeld is, of beheerder */
     async bewerk(id: string, w: { naam?: string; klantId?: string | null }): Promise<void> {
-      const { error } = await db
+      const { data, error } = await db
         .from("portefeuilles")
         .update({
           ...(w.naam !== undefined ? { naam: w.naam.trim().slice(0, 200) } : {}),
           ...(w.klantId !== undefined ? { klant_id: w.klantId } : {}),
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("Geen rechten om deze portefeuille te wijzigen.");
     },
 
     /** Verwijdert ook de adressen, labels en analyses (cascade); alleen maker of admin */

@@ -15,6 +15,7 @@ const store = vi.hoisted(() => ({
   voegAdressenToe: vi.fn(),
   verwijder: vi.fn(),
   verwijderAnalyse: vi.fn(),
+  bewerk: vi.fn(),
 }));
 vi.mock("../tellingStore", () => ({
   portefeuilleStore: store,
@@ -27,7 +28,10 @@ vi.mock("../tellingStore", () => ({
     queryKey: ["portefeuille-analyses", id],
     queryFn: () => store.analyses(id),
   }),
-  klantenQuery: () => ({ queryKey: ["klanten"], queryFn: async () => [] }),
+  klantenQuery: () => ({
+    queryKey: ["klanten"],
+    queryFn: async () => [{ id: "k1", naam: "Amstel Wonen", pve: [] }],
+  }),
 }));
 const haalLabelsOp = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/wws/portefeuille/portefeuille.functions", () => ({
@@ -146,6 +150,15 @@ describe("Portefeuille-analyse", () => {
     ])
       expect(screen.queryByRole("button", { name: naam })).toBeNull();
     expect(screen.getByRole("button", { name: "PDF" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Eigenaar: geen" })).toBeDisabled();
+  });
+
+  it("eigenaar in GoHome koppelen aan een bestaande portefeuille", async () => {
+    store.bewerk.mockResolvedValue(undefined);
+    toon(["member"]);
+    fireEvent.click(await screen.findByRole("button", { name: "Eigenaar: geen" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Amstel Wonen" }));
+    await waitFor(() => expect(store.bewerk).toHaveBeenCalledWith("p1", { klantId: "k1" }));
   });
 
   it("verwijderen alleen voor de maker of een admin", async () => {
