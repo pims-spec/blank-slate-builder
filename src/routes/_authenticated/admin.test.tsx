@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ remove: vi.fn(), users: vi.fn() }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({
-    ...options, useRouteContext: () => ({ user: { id: "self" } }),
+    options, useRouteContext: () => ({ user: { id: "self" } }),
   }),
   redirect: vi.fn(),
 }));
@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 async function toon() {
-  const Component = Route.component;
+  const Component = Route.options.component;
   if (!Component) throw new Error("Component ontbreekt");
   render(<QueryClientProvider client={new QueryClient()}><Component /></QueryClientProvider>);
   await screen.findByRole("combobox");
