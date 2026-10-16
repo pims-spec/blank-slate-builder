@@ -44,11 +44,11 @@ export function menuOnderdelen(r: MenuRechten): {
     hoofd.push({ to: "/wws", label: "Puntentelling", icoon: "telling" });
     if (r.magSchrijven)
       hoofd.push({ to: "/indeling", label: "Indelingsadvies", icoon: "indeling" });
+    // portefeuille-analyse: bekijken voor iedereen met een rol (ook de kijkrol)
+    hoofd.push({ to: "/portefeuille-analyse", label: "Portefeuille-analyse", icoon: "analyse" });
     hoofd.push({ to: "/archief", label: "Archief", icoon: "archief" });
     if (r.zietAlles || r.isAdmin)
       hoofd.push({ to: "/portefeuille", label: "Dashboard", icoon: "dashboard" });
-    // portefeuille-analyse: bekijken voor iedereen met een rol (ook de kijkrol)
-    hoofd.push({ to: "/portefeuille-analyse", label: "Portefeuille-analyse", icoon: "analyse" });
     hoofd.push({ to: "/eigenaren", label: "Eigenaren", icoon: "eigenaren" });
   }
   const beheer: MenuOnderdeel[] = r.isAdmin
