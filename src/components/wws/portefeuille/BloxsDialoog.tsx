@@ -18,7 +18,7 @@ import {
 import { bloxsFoutTekst, type BloxsFout } from "@/lib/wws/bloxs/fouten";
 import type { BloxsId } from "@/lib/wws/bloxs/odata";
 import type { BloxsAdres, BloxsObject, Cursor, Eigenaar, Soort } from "@/lib/wws/bloxs/sync";
-import { MAX_ADRESSEN } from "@/lib/wws/bloxs/sync";
+import { adressenInPorties } from "@/lib/wws/bloxs/porties";
 import {
   adresIds,
   complexen,
@@ -197,17 +197,19 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
     }
     try {
       const ids = adresIds(gekozen);
-      const adressen: BloxsAdres[] = [];
-      for (let i = 0; i < ids.length; i += MAX_ADRESSEN) {
-        if (stoppen.current) return mislukt("gestopt");
-        setVoortgang(
-          "Adressen ophalen… " + Math.min(i + MAX_ADRESSEN, ids.length) + " van " + ids.length,
-        );
-        const r = await bloxsAdressen({ data: { ids: ids.slice(i, i + MAX_ADRESSEN) } });
-        tel(r.aanvragen);
-        if (!r.ok) return mislukt(r.fout, statusVan(r));
-        adressen.push(...r.data);
-      }
+      // kleine porties; bij een 400 (filter te ingewikkeld) halveert adressenInPorties de portie
+      const r0 = await adressenInPorties(
+        ids,
+        async (deel) => bloxsAdressen({ data: { ids: deel } }),
+        {
+          gestopt: () => stoppen.current,
+          voortgang: (klaar, totaal) =>
+            setVoortgang("Adressen ophalen… " + klaar + " van " + totaal),
+        },
+      );
+      tel(r0.aanvragen);
+      if (!r0.ok) return mislukt(r0.fout, r0.status);
+      const adressen: BloxsAdres[] = r0.data;
       const plan = maakSyncPlan(gekozen, adressen);
       setVoortgang("Opslaan…");
       const id = bestaand

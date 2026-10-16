@@ -35,9 +35,10 @@ export interface Omgeving {
 }
 
 /** Elke uitkomst vermeldt hoeveel aanvragen er naar Bloxs gingen */
-export type Stap<T> = ({ ok: true; data: T } | { ok: false; fout: BloxsFout }) & {
-  aanvragen: number;
-};
+export type Stap<T> = (
+  | { ok: true; data: T }
+  | { ok: false; fout: BloxsFout; /** HTTP-status (alleen het getal) */ status?: number }
+) & { aanvragen: number };
 
 async function pagina<E extends Entiteit>(
   o: Omgeving,
