@@ -147,7 +147,11 @@ describe("analyse van een portefeuille", () => {
     expect(u.aantalAdressen).toBe(9);
     expect(u.aantalBeoordeeld).toBe(6);
     expect(u.perKlasse.find((k) => k.klasse === "C")!.aantal).toBe(1);
-    expect(u.perKlasse.at(-1)).toEqual({ klasse: "geen label", aantal: 1 });
+    expect(u.perKlasse.at(-1)).toEqual({
+      klasse: "geen label",
+      aantal: 1,
+      adressen: [{ adres: "1053 ZD 6", klasse: null, registratiedatum: null, verloopdatum: null }],
+    });
     expect(u.perKlasse.reduce((s, k) => s + k.aantal, 0)).toBe(6);
     expect(Object.fromEntries(u.risico.map((r) => [r.categorie, r.aantal]))).toEqual({
       geen_label: 1,
@@ -171,6 +175,23 @@ describe("analyse van een portefeuille", () => {
       nietOpgehaald: ["1053 ZD 9"],
     });
     expect(u.epOpgehaaldVan).toBe("2026-10-14T09:00:00Z");
+  });
+
+  it("doorklik: per klasse en per risicocategorie de adressen; samen de beoordeelde", () => {
+    const u = analyseer(adressen(), D, 3, N);
+    expect(u.perKlasse.find((k) => k.klasse === "C")!.adressen).toEqual([
+      {
+        adres: "1053 ZD 2",
+        klasse: "C",
+        registratiedatum: "2016-11-20",
+        verloopdatum: "2026-11-20",
+      },
+    ]);
+    expect(u.risico.find((r) => r.categorie === "verlopen")!.adressen!.map((a) => a.adres)).toEqual(
+      ["1053 ZD 3", "1053 ZD 4"],
+    );
+    for (const r of u.risico) expect(r.adressen).toHaveLength(r.aantal);
+    for (const k of u.perKlasse) expect(k.adressen).toHaveLength(k.aantal);
   });
 
   it("EFG: klassen en 'geen label' volgens de instellingen", () => {

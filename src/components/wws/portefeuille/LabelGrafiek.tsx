@@ -4,10 +4,17 @@ import type { AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
 /**
  * Staafdiagram: aantal woningen per labelklasse (A++++ t/m G) en "geen label". Eén reeks, dus
  * één kleur (paars); "geen label" in grijs. Aantallen staan boven de staven; bij aanwijzen een
- * tooltip met aantal en percentage. Op telefoonbreedte liggende staven (anders worden de
+ * tooltip met aantal en percentage; klikken toont de adressen. Op telefoonbreedte liggende staven (anders worden de
  * labels onleesbaar klein). Voor schermlezers staat er een tabel onder.
  */
-export function LabelGrafiek({ uitkomst }: { uitkomst: AnalyseUitkomst }) {
+export function LabelGrafiek({
+  uitkomst,
+  onKies,
+}: {
+  uitkomst: AnalyseUitkomst;
+  /** Klik op een staaf: de adressen van die klasse tonen */
+  onKies?: (klasse: string) => void;
+}) {
   const data = uitkomst.perKlasse;
   const totaal = data.reduce((s, d) => s + d.aantal, 0);
   const max = Math.max(1, ...data.map((d) => d.aantal));
@@ -27,21 +34,33 @@ export function LabelGrafiek({ uitkomst }: { uitkomst: AnalyseUitkomst }) {
         {data.map((d) => {
           const geen = d.klasse === "geen label";
           return (
-            <li key={d.klasse} className="flex items-center gap-2 text-xs">
-              <span className="w-12 shrink-0 text-muted-foreground">
-                {geen ? "geen" : d.klasse}
-              </span>
-              <span className="h-3 flex-1">
-                {d.aantal > 0 && (
-                  <span
-                    className={
-                      "block h-full rounded-r " + (geen ? "bg-muted-foreground/45" : "bg-primary")
-                    }
-                    style={{ width: (d.aantal / max) * 100 + "%" }}
-                  />
-                )}
-              </span>
-              <span className="w-8 shrink-0 text-right tabular-nums">{d.aantal}</span>
+            <li key={d.klasse}>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded text-left text-xs hover:bg-secondary"
+                onClick={() => onKies?.(d.klasse)}
+                aria-label={
+                  (geen ? "Geen label" : "Label " + d.klasse) +
+                  ": " +
+                  d.aantal +
+                  " woningen, adressen tonen"
+                }
+              >
+                <span className="w-12 shrink-0 text-muted-foreground">
+                  {geen ? "geen" : d.klasse}
+                </span>
+                <span className="h-3 flex-1">
+                  {d.aantal > 0 && (
+                    <span
+                      className={
+                        "block h-full rounded-r " + (geen ? "bg-muted-foreground/45" : "bg-primary")
+                      }
+                      style={{ width: (d.aantal / max) * 100 + "%" }}
+                    />
+                  )}
+                </span>
+                <span className="w-8 shrink-0 text-right tabular-nums">{d.aantal}</span>
+              </button>
             </li>
           );
         })}
@@ -73,7 +92,23 @@ export function LabelGrafiek({ uitkomst }: { uitkomst: AnalyseUitkomst }) {
                 key={d.klasse}
                 onMouseEnter={() => setActief(i)}
                 onFocus={() => setActief(i)}
-                tabIndex={-1}
+                onBlur={() => setActief(null)}
+                onClick={() => onKies?.(d.klasse)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onKies?.(d.klasse);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={
+                  (geen ? "Geen label" : "Label " + d.klasse) +
+                  ": " +
+                  d.aantal +
+                  " woningen, adressen tonen"
+                }
+                className="cursor-pointer outline-none"
               >
                 {/* groot raakvlak voor aanwijzen */}
                 <rect x={i * stap} y={0} width={stap} height={H - onder} fill="transparent" />

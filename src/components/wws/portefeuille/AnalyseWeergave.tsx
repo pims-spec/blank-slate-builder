@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
 import { nlDatum } from "@/lib/wws/portefeuille/datum";
 import { aantal, periode } from "@/lib/wws/portefeuille/tekst";
+import { AdresLijstDialoog, type Doorklik } from "./AdresLijstDialoog";
 import { LabelGrafiek } from "./LabelGrafiek";
 
 const pctTekst = (p: number) => p.toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%";
@@ -22,8 +23,19 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
   const c = u.teControleren;
   const aantalControle =
     c.nietGevonden.length + c.meerdere.length + c.fout.length + c.nietOpgehaald.length;
+  const [doorklik, setDoorklik] = useState<Doorklik | null>(null);
+  const kiesKlasse = (klasse: string) => {
+    const k = u.perKlasse.find((x) => x.klasse === klasse);
+    if (k)
+      setDoorklik({
+        titel: klasse === "geen label" ? "Geen label" : "Label " + klasse,
+        aantal: k.aantal,
+        adressen: k.adressen,
+      });
+  };
   return (
     <div className="space-y-4">
+      <AdresLijstDialoog d={doorklik} onSluit={() => setDoorklik(null)} />
       <p className="text-sm text-muted-foreground">
         Analyse per {nlDatum(u.datum)} · {u.aantalAdressen} adressen, waarvan {u.aantalBeoordeeld}{" "}
         beoordeeld · EP-Online opgehaald{" "}
@@ -32,7 +44,8 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Kaart titel="Woningen per labelklasse">
-          <LabelGrafiek uitkomst={u} />
+          <LabelGrafiek uitkomst={u} onKies={kiesKlasse} />
+          <p className="mt-1 text-xs text-muted-foreground">Klik op een staaf voor de adressen.</p>
         </Kaart>
         <Kaart titel="Risicoprofiel">
           <table className="w-full text-sm">
@@ -46,7 +59,17 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
             <tbody>
               {u.risico.map((r) => (
                 <tr key={r.categorie} className="border-t border-border">
-                  <td className="py-1.5">{r.naam}</td>
+                  <td className="py-1.5">
+                    <button
+                      type="button"
+                      className="text-left underline-offset-2 hover:underline"
+                      onClick={() =>
+                        setDoorklik({ titel: r.naam, aantal: r.aantal, adressen: r.adressen })
+                      }
+                    >
+                      {r.naam}
+                    </button>
+                  </td>
                   <td className="py-1.5 pl-3 text-right tabular-nums">{r.aantal}</td>
                   <td className="py-1.5 pl-3 text-right whitespace-nowrap tabular-nums">
                     {pctTekst(r.pct)}
@@ -56,8 +79,9 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
             </tbody>
           </table>
           <p className="mt-2 text-xs text-muted-foreground">
-            Elke woning telt in één categorie (van boven naar beneden). Verouderd: geldig, maar
-            geregistreerd vóór {nlDatum(u.instellingen.verouderdVoor)} (oud label of energie-index).
+            Elke woning telt in één categorie (van boven naar beneden); klik op een categorie voor
+            de adressen. Verouderd: geldig, maar geregistreerd vóór{" "}
+            {nlDatum(u.instellingen.verouderdVoor)} (oud label of energie-index).
           </p>
         </Kaart>
       </div>

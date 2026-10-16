@@ -168,14 +168,28 @@ export interface EfgRegel {
   registratiedatum: string | null;
 }
 
+/** Een adres in een doorklik-lijst (staaf of risicocategorie) */
+export interface AdresRegel {
+  adres: string;
+  klasse: string | null;
+  registratiedatum: string | null;
+  verloopdatum: string | null;
+}
+
 export interface AnalyseUitkomst {
   datum: string;
   vensterMaanden: number;
   aantalAdressen: number;
   aantalBeoordeeld: number;
-  /** A++++ … G, daarna "geen label" */
-  perKlasse: { klasse: string; aantal: number }[];
-  risico: { categorie: Categorie; naam: string; aantal: number; pct: number }[];
+  /** A++++ … G, daarna "geen label"; `adressen` ontbreekt bij analyses van vóór de doorklik */
+  perKlasse: { klasse: string; aantal: number; adressen?: AdresRegel[] }[];
+  risico: {
+    categorie: Categorie;
+    naam: string;
+    aantal: number;
+    pct: number;
+    adressen?: AdresRegel[];
+  }[];
   /** Verloopt of verliep binnen ±N maanden rond de analysedatum, op verloopdatum */
   verloopLijst: VerloopRegel[];
   efg: {
@@ -227,6 +241,11 @@ export function analyseer(
   const van = plusMaanden(datum, -maanden),
     tot = plusMaanden(datum, maanden);
 
+  const perKlasseAdressen = new Map<string, AdresRegel[]>();
+  const perCategorieAdressen = new Map<Categorie, AdresRegel[]>();
+  const voegToe = <K>(m: Map<K, AdresRegel[]>, k: K, regel: AdresRegel) =>
+    m.set(k, [...(m.get(k) ?? []), regel]);
+
   for (const a of beoordeeld) {
     const r = a.resultaat!;
     const k = klasseVan(r);
@@ -236,6 +255,14 @@ export function analyseer(
     catTelling.set(c, catTelling.get(c)! + 1);
 
     const vd = k ? verloopdatum(r) : null;
+    const regel: AdresRegel = {
+      adres: adresTekst(a),
+      klasse: k,
+      registratiedatum: k && isIsoDatum(r.registratiedatum) ? r.registratiedatum : null,
+      verloopdatum: vd,
+    };
+    voegToe(perKlasseAdressen, k ?? "geen label", regel);
+    voegToe(perCategorieAdressen, c, regel);
     if (k && vd && vd >= van && vd <= tot)
       verloopLijst.push({
         adres: adresTekst(a),
@@ -258,6 +285,8 @@ export function analyseer(
   efgWoningen.sort((x, y) => sorteer(x.adres, y.adres));
 
   const lijst = (f: (a: AnalyseAdres) => boolean) => uniek.filter(f).map(adresTekst).sort(sorteer);
+  const gesorteerd = (r: AdresRegel[] | undefined) =>
+    [...(r ?? [])].sort((x, y) => sorteer(x.adres, y.adres));
   const opgehaald = uniek
     .map((a) => a.resultaat?.opgehaaldOp)
     .filter((x): x is string => !!x)
@@ -269,14 +298,23 @@ export function analyseer(
     aantalAdressen: uniek.length,
     aantalBeoordeeld: n,
     perKlasse: [
-      ...LABELS.map((l) => ({ klasse: l, aantal: klasseTelling.get(l)! })),
-      { klasse: "geen label", aantal: geenLabel },
+      ...LABELS.map((l) => ({
+        klasse: l,
+        aantal: klasseTelling.get(l)!,
+        adressen: gesorteerd(perKlasseAdressen.get(l)),
+      })),
+      {
+        klasse: "geen label",
+        aantal: geenLabel,
+        adressen: gesorteerd(perKlasseAdressen.get("geen label")),
+      },
     ],
     risico: VOLGORDE.map((c) => ({
       categorie: c,
       naam: c === "verloopt" ? "Label verloopt binnen " + maanden + " maanden" : CATEGORIE_NAMEN[c],
       aantal: catTelling.get(c)!,
       pct: pct(catTelling.get(c)!, n),
+      adressen: gesorteerd(perCategorieAdressen.get(c)),
     })),
     verloopLijst,
     efg: {

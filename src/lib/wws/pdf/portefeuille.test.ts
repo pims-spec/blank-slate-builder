@@ -64,6 +64,8 @@ describe("PDF portefeuille-analyse", () => {
       "1053 ZD 2",
       "Woningen onder de EFG-regels (1)",
       "1053 ZD 3",
+      "Woningen zonder geregistreerd label (1)",
+      "1053 ZD 4",
       "Bron: EP-Online (RVO), opgehaald op 14 oktober 2026",
     ];
     let vanaf = 0;

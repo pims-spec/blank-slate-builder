@@ -1,7 +1,8 @@
 // PDF van de portefeuille-analyse, in de huisstijl van de andere rapporten (Inter, GoHome-kop
-// en -voettekst): voorblad "Label-analyse" (zoals de voorpagina van de WWS-rapporten), samenvatting, staafdiagram, risicoprofiel, EFG-overzicht, de lijst met
-// woningen waarvan het label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen
-// en de bronvermelding van EP-Online.
+// en -voettekst): voorblad "Label-analyse" (zoals de voorpagina van de WWS-rapporten),
+// samenvatting, staafdiagram, risicoprofiel, EFG-overzicht, de lijst met woningen waarvan het
+// label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen, de woningen zonder
+// geregistreerd label en de bronvermelding van EP-Online.
 import type { AnalyseUitkomst } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
 import { aantal, periode } from "../portefeuille/tekst";
@@ -216,6 +217,24 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
           w.klasse ?? "geen label",
           nlDatum(w.registratiedatum),
         ]),
+        ...stijl,
+      }) + 8;
+  else {
+    tekst("Geen woningen.");
+    y += 4;
+  }
+
+  // woningen zonder geregistreerd label (ook "niet gevonden" bij EP-Online); oudere opgeslagen
+  // analyses hebben die lijst niet, dan alleen de niet gevonden adressen
+  const geen = u.risico.find((r) => r.categorie === "geen_label");
+  const zonderLabel = geen?.adressen?.map((a) => a.adres) ?? u.teControleren.nietGevonden;
+  kop("Woningen zonder geregistreerd label (" + (geen?.aantal ?? zonderLabel.length) + ")");
+  if (zonderLabel.length)
+    y =
+      tabel(lib, doc, {
+        startY: y,
+        head: [["Adres"]],
+        body: zonderLabel.map((a) => [a]),
         ...stijl,
       }) + 8;
   else {
