@@ -46,4 +46,23 @@ describe("import van adressen (Excel/CSV)", () => {
     ).toBe("geen_kop");
     expect(leesImport([["postcode", "huisnummer"]]).fout).toBe("leeg");
   });
+
+  it("optioneel straat en woonplaats (ook als 'plaats')", () => {
+    const u = leesImport([
+      ["Postcode", "Huisnummer", "Straatnaam", "Plaats"],
+      ["1053 ZD", "49", " Kinkerstraat ", "Amsterdam"],
+      ["1053 ZD", "50", "", ""],
+    ]);
+    expect(u.adressen).toEqual([
+      {
+        postcode: "1053ZD",
+        huisnummer: 49,
+        huisletter: "",
+        toevoeging: "",
+        straat: "Kinkerstraat",
+        woonplaats: "Amsterdam",
+      },
+      { postcode: "1053ZD", huisnummer: 50, huisletter: "", toevoeging: "" },
+    ]);
+  });
 });

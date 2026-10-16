@@ -23,7 +23,11 @@ import {
 import { nlDatum, plusMaanden, vandaag } from "@/lib/wws/portefeuille/datum";
 import type { ImportUitkomst } from "@/lib/wws/portefeuille/importeren";
 import { stopMelding } from "@/lib/wws/portefeuille/ophalen";
-import { MAX_PER_PORTIE, haalLabelsOp } from "@/lib/wws/portefeuille/portefeuille.functions";
+import {
+  MAX_PER_PORTIE,
+  haalLabelsOp,
+  vulAdressenAanBijPdok,
+} from "@/lib/wws/portefeuille/portefeuille.functions";
 import { maakPortefeuillePdf } from "@/lib/wws/pdf/portefeuille";
 import { useNormen } from "../NormenContext";
 import {
@@ -73,6 +77,7 @@ export default function PortefeuilleAnalyse({
   const [bekeken, setBekeken] = useState<{ id: string; uitkomst: AnalyseUitkomst } | null>(null);
   const [opnieuw, setOpnieuw] = useState<OpnieuwKeuze>("probleem");
   const [voortgang, setVoortgang] = useState<Voortgang | null>(null);
+  const [aanvullen, setAanvullen] = useState<{ gedaan: number; totaal: number } | null>(null);
   const [melding, setMelding] = useState("");
   const stoppen = useRef(false);
 
@@ -93,12 +98,54 @@ export default function PortefeuilleAnalyse({
     rechten.magSchrijven && (createdBy === userId || rechten.isAdmin);
   const eigenaarNaam = p?.klantId ? (klanten.find((k) => k.id === p.klantId)?.naam ?? null) : null;
   const zonderResultaat = adressen.filter((a) => !a.resultaat);
-  const bezig = voortgang !== null;
+  const zonderStraat = adressen.filter((a) => !a.straat);
+  const bezig = voortgang !== null || aanvullen !== null;
 
   function vernieuw() {
     if (!p) return;
     void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", p.id] });
     void qc.invalidateQueries({ queryKey: ["portefeuilles"] });
+  }
+
+  /**
+   * Straat en woonplaats aanvullen via PDOK voor adressen zonder straat (in porties van 10). Niet
+   * gevonden adressen houden alleen postcode en huisnummer; het aanvullen is niet nodig voor de
+   * analyse, dus een storing bij PDOK geeft alleen een melding.
+   */
+  async function vulAan(portefeuilleId: string, lijst: readonly AnalyseAdres[]) {
+    if (!lijst.length) return;
+    setAanvullen({ gedaan: 0, totaal: lijst.length });
+    let gedaan = 0;
+    try {
+      for (let i = 0; i < lijst.length; i += MAX_PER_PORTIE) {
+        const portie = lijst.slice(i, i + MAX_PER_PORTIE);
+        const r = await vulAdressenAanBijPdok({
+          data: {
+            adressen: portie.map((a) => ({
+              id: a.id,
+              postcode: a.postcode,
+              huisnummer: a.huisnummer,
+            })),
+          },
+        });
+        await portefeuilleStore.vulAdressenAan(r.aangevuld);
+        gedaan += r.aangevuld.length + r.nietGevonden.length;
+        setAanvullen({ gedaan, totaal: lijst.length });
+        if (r.stop) {
+          toast.error(
+            r.stop === "te_veel_verzoeken"
+              ? "PDOK geeft aan dat er te veel verzoeken zijn. Straat en woonplaats aanvullen is gestopt; probeer het later opnieuw."
+              : "PDOK is nu niet bereikbaar. Straat en woonplaats aanvullen is gestopt; probeer het later opnieuw.",
+          );
+          break;
+        }
+      }
+    } catch {
+      toast.error("Straat en woonplaats aanvullen lukte niet. Probeer het later opnieuw.");
+    } finally {
+      setAanvullen(null);
+      void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", portefeuilleId] });
+    }
   }
 
   /** In porties van 10 ophalen bij EP-Online, opslaan, en de voortgang bijhouden */
@@ -167,6 +214,12 @@ export default function PortefeuilleAnalyse({
     setBekeken(null);
     await qc.invalidateQueries({ queryKey: ["portefeuilles"] });
     await qc.invalidateQueries({ queryKey: ["portefeuille-adressen", id] });
+    // straat en woonplaats die niet in het bestand stonden meteen aanvullen via PDOK
+    const alle = await qc.fetchQuery(portefeuilleAdressenQuery(id));
+    void vulAan(
+      id,
+      alle.filter((a) => !a.straat),
+    );
   }
 
   async function verwijderPortefeuille() {
@@ -255,9 +308,9 @@ export default function PortefeuilleAnalyse({
             <Button
               variant="ghost"
               disabled
-              title="De koppeling met Bloks volgt zodra de documentatie er is"
+              title="De koppeling met Bloxs (OData-feed) is in voorbereiding"
             >
-              Uit Bloks (volgt)
+              Uit Bloxs (volgt)
             </Button>
           </>
         )}
@@ -293,17 +346,23 @@ export default function PortefeuilleAnalyse({
                 <b>{adressen.length}</b> adressen ·{" "}
                 <b>{adressen.length - zonderResultaat.length}</b> opgehaald
                 {zonderResultaat.length > 0 && <> · {zonderResultaat.length} nog niet</>}
+                {aanvullen && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · straat en woonplaats aanvullen: {aanvullen.gedaan} van {aanvullen.totaal}
+                  </span>
+                )}
               </span>
               {rechten.magSchrijven && (
                 <div className="flex flex-wrap items-center gap-2">
-                  {bezig ? (
+                  {voortgang ? (
                     <Button variant="outline" onClick={() => (stoppen.current = true)}>
                       Stoppen
                     </Button>
                   ) : (
                     <>
                       <Button
-                        disabled={!zonderResultaat.length}
+                        disabled={bezig || !zonderResultaat.length}
                         onClick={() => void ophalen(zonderResultaat)}
                       >
                         {adressen.length > zonderResultaat.length && zonderResultaat.length
@@ -323,11 +382,20 @@ export default function PortefeuilleAnalyse({
                       </select>
                       <Button
                         variant="outline"
-                        disabled={!opnieuwLijst(opnieuw).length}
+                        disabled={bezig || !opnieuwLijst(opnieuw).length}
                         onClick={() => void ophalen(opnieuwLijst(opnieuw))}
                       >
                         Opnieuw ophalen ({opnieuwLijst(opnieuw).length})
                       </Button>
+                      {zonderStraat.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          disabled={bezig}
+                          onClick={() => p && void vulAan(p.id, zonderStraat)}
+                        >
+                          Straat en woonplaats aanvullen ({zonderStraat.length})
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>

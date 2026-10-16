@@ -37,7 +37,8 @@ export function ImportDialoog(p: Props) {
           <DialogTitle>{p.bestaand ? "Adressen toevoegen" : "Portefeuille importeren"}</DialogTitle>
           <DialogDescription>
             Een Excel- of CSV-bestand met de kolommen postcode, huisnummer en toevoeging (eventueel
-            huisletter). Alleen deze gegevens worden opgeslagen.
+            huisletter, straat en woonplaats). Alleen deze gegevens worden opgeslagen. Ontbreken
+            straat en woonplaats, dan worden ze aangevuld via PDOK.
           </DialogDescription>
         </DialogHeader>
         {p.open && <Inhoud {...p} />}

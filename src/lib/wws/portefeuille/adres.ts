@@ -9,12 +9,27 @@ export interface PortefeuilleAdres {
   huisletter: string;
   /** Letters/cijfers of leeg: "2", "BIS", "H" */
   toevoeging: string;
+  /** Voor lijsten en PDF; uit de import, anders aangevuld via PDOK (of Bloxs) */
+  straat?: string | null;
+  woonplaats?: string | null;
+}
+
+/** Straat- of plaatsnaam opschonen: geen stuurtekens, enkele spaties, begrensd; leeg → null */
+export function schoonNaam(x: unknown, max: number): string | null {
+  const t = String(x ?? "")
+    // stuurtekens (onder spatie, en DEL) worden een spatie
+    .replace(/\p{Cc}/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max)
+    .trim();
+  return t || null;
 }
 
 export type AdresFout = "postcode" | "huisnummer" | "toevoeging";
 
 /**
- * Een adres uit een import (of later Bloks) naar de vaste vorm. Een huisnummer als "12A" of
+ * Een adres uit een import (of uit Bloxs) naar de vaste vorm. Een huisnummer als "12A" of
  * "12-2" wordt gesplitst; een toevoeging van één letter is een huisletter.
  */
 export function normaliseerAdres(ruw: {
@@ -59,17 +74,12 @@ export function normaliseerAdres(ruw: {
 export const adresSleutel = (a: PortefeuilleAdres) =>
   [a.postcode, a.huisnummer, a.huisletter, a.toevoeging].join("|");
 
-/** "1053 ZD 49A-2" */
+/** "1053 ZD 49A-2", of met straat en woonplaats: "Kinkerstraat 49A-2, 1053 ZD Amsterdam" */
 export function adresTekst(a: PortefeuilleAdres): string {
-  return (
-    a.postcode.slice(0, 4) +
-    " " +
-    a.postcode.slice(4) +
-    " " +
-    a.huisnummer +
-    a.huisletter +
-    (a.toevoeging ? "-" + a.toevoeging : "")
-  );
+  const pc = a.postcode.slice(0, 4) + " " + a.postcode.slice(4);
+  const nr = a.huisnummer + a.huisletter + (a.toevoeging ? "-" + a.toevoeging : "");
+  if (!a.straat) return pc + " " + nr;
+  return a.straat + " " + nr + ", " + pc + (a.woonplaats ? " " + a.woonplaats : "");
 }
 
 /** De vraag aan EP-Online (zelfde velden als de bestaande opzoekfunctie) */

@@ -1,7 +1,13 @@
-// Import van adressen uit Excel of CSV (terugvaloptie naast Bloks). Kolommen op naam:
-// postcode, huisnummer, toevoeging (en eventueel huisletter). De rijen komen als lijst van
+// Import van adressen uit Excel of CSV (naast Bloxs). Kolommen op naam: postcode, huisnummer,
+// toevoeging (en eventueel huisletter, straat en woonplaats). De rijen komen als lijst van
 // lijsten (SheetJS sheet_to_json met header: 1); de eerste rij met "postcode" is de kop.
-import { adresSleutel, normaliseerAdres, type AdresFout, type PortefeuilleAdres } from "./adres";
+import {
+  adresSleutel,
+  normaliseerAdres,
+  schoonNaam,
+  type AdresFout,
+  type PortefeuilleAdres,
+} from "./adres";
 
 /** Maximaal aantal adressen per import */
 export const MAX_IMPORT = 5000;
@@ -39,6 +45,8 @@ function kolommen(kop: readonly unknown[]) {
     huisnummer,
     toevoeging: zoek("toevoeging", "huisnummertoevoeging", "toev"),
     huisletter: zoek("huisletter", "letter"),
+    straat: zoek("straat", "straatnaam", "openbareruimte"),
+    woonplaats: zoek("woonplaats", "plaats", "plaatsnaam", "stad"),
   };
 }
 
@@ -72,7 +80,13 @@ export function leesImport(rijen: readonly (readonly unknown[])[]): ImportUitkom
       continue;
     }
     gezien.add(s);
-    uit.adressen.push(a.adres);
+    const straat = k.straat >= 0 ? schoonNaam(r[k.straat], 200) : null;
+    const woonplaats = k.woonplaats >= 0 ? schoonNaam(r[k.woonplaats], 100) : null;
+    uit.adressen.push({
+      ...a.adres,
+      ...(straat ? { straat } : {}),
+      ...(woonplaats ? { woonplaats } : {}),
+    });
   }
   if (!uit.adressen.length && !uit.ongeldig.length && !uit.dubbel.length) uit.fout = "leeg";
   return uit;

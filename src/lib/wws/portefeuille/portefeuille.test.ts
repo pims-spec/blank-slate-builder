@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adresSleutel, adresTekst, epVraagVoor, normaliseerAdres } from "./adres";
+import { adresSleutel, adresTekst, epVraagVoor, normaliseerAdres, schoonNaam } from "./adres";
 import {
   PORTEFEUILLE_STANDAARD,
   analyseer,
@@ -86,6 +86,13 @@ describe("adressen", () => {
     const a = adres("49a", null, "2");
     expect(adresTekst(a)).toBe("1053 ZD 49A-2");
     expect(adresSleutel(a)).toBe("1053ZD|49|A|2");
+    expect(adresTekst({ ...a, straat: "Kinkerstraat", woonplaats: "Amsterdam" })).toBe(
+      "Kinkerstraat 49A-2, 1053 ZD Amsterdam",
+    );
+    expect(adresTekst({ ...a, straat: "Kinkerstraat", woonplaats: null })).toBe(
+      "Kinkerstraat 49A-2, 1053 ZD",
+    );
+    expect(adresTekst({ ...a, straat: null, woonplaats: "Amsterdam" })).toBe("1053 ZD 49A-2");
     expect(epVraagVoor(a)).toEqual({
       postcode: "1053ZD",
       huisnummer: "49",
@@ -211,5 +218,14 @@ describe("instellingen en omschrijving", () => {
     ).toBe(
       "Woningen met label G per 1 juli 2030 (instelling in Normen; de wettelijke invulling is nog te controleren). Woningen zonder geregistreerd label tellen mee.",
     );
+  });
+});
+
+describe("schoonNaam", () => {
+  it("stuurtekens en dubbele spaties weg, begrensd, leeg wordt null", () => {
+    expect(schoonNaam("  Burg.\tde\u0000Vlugtlaan  ", 200)).toBe("Burg. de Vlugtlaan");
+    expect(schoonNaam("Abcdef", 3)).toBe("Abc");
+    expect(schoonNaam("   ", 10)).toBeNull();
+    expect(schoonNaam(null, 10)).toBeNull();
   });
 });

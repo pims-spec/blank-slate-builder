@@ -13,7 +13,8 @@ export interface Portefeuille {
   id: string;
   naam: string;
   klantId: string | null;
-  bron: "import" | "bloks";
+  /** In de database "bloks" (oude spelling, zie migratie 0006); in de code "bloxs" */
+  bron: "import" | "bloxs";
   createdBy: string | null;
   createdAt: string;
   aantalAdressen: number;
@@ -46,7 +47,7 @@ export function maakPortefeuilleStore(db: Db) {
         id: r.id,
         naam: r.naam,
         klantId: r.klant_id,
-        bron: r.bron === "bloks" ? "bloks" : "import",
+        bron: r.bron === "bloks" ? "bloxs" : "import",
         createdBy: r.created_by,
         createdAt: r.created_at,
         aantalAdressen:
@@ -92,7 +93,7 @@ export function maakPortefeuilleStore(db: Db) {
         const { data, error } = await db
           .from("portefeuille_adressen")
           .select(
-            "id, postcode, huisnummer, huisletter, toevoeging, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
+            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
           )
           .eq("portefeuille_id", portefeuilleId)
           .order("postcode")
@@ -110,6 +111,8 @@ export function maakPortefeuilleStore(db: Db) {
             huisnummer: r.huisnummer,
             huisletter: r.huisletter,
             toevoeging: r.toevoeging,
+            straat: r.straat,
+            woonplaats: r.woonplaats,
             resultaat:
               l && status && STATUSSEN.includes(status)
                 ? ({
@@ -148,6 +151,19 @@ export function maakPortefeuilleStore(db: Db) {
         nieuw += data?.length ?? 0;
       }
       return nieuw;
+    },
+
+    /** Straat en woonplaats invullen (uit PDOK of Bloxs) */
+    async vulAdressenAan(
+      rijen: readonly { id: string; straat: string; woonplaats: string | null }[],
+    ): Promise<void> {
+      for (const r of rijen) {
+        const { error } = await db
+          .from("portefeuille_adressen")
+          .update({ straat: r.straat, woonplaats: r.woonplaats })
+          .eq("id", r.id);
+        if (error) throw error;
+      }
     },
 
     async verwijderAdres(id: string): Promise<void> {

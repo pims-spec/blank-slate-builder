@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { PortieSchema, haalPortie } from "./portefeuille.functions";
+import { PortieSchema, haalPortie, vulAanPortie } from "./portefeuille.functions";
 
 const adres = (i: number) => ({
   id: "00000000-0000-4000-8000-00000000000" + i,
@@ -83,5 +83,57 @@ describe("EP-Online in porties", () => {
       PortieSchema.safeParse({ adressen: [{ ...adres(1), postcode: "1053 zd" }] }).success,
     ).toBe(false);
     expect(PortieSchema.safeParse({ adressen: [adres(1)] }).success).toBe(true);
+  });
+});
+
+describe("straat en woonplaats via PDOK", () => {
+  const pdok = (straat: string, plaats: string) =>
+    antwoord(200, { response: { docs: [{ straatnaam: straat, woonplaatsnaam: plaats }] } });
+
+  it("één vraag per postcode + huisnummer, voor alle letters en toevoegingen", async () => {
+    const fetchFn = vi.fn(() => pdok("  Kinker\u0000straat ", "Amsterdam"));
+    const slaap = vi.fn(async () => {});
+    const a = (i: number, nr: number) => ({
+      id: "00000000-0000-4000-8000-00000000000" + i,
+      postcode: "1053ZD",
+      huisnummer: nr,
+    });
+    const r = await vulAanPortie(
+      fetchFn as unknown as typeof fetch,
+      250,
+      [a(1, 49), a(2, 49), a(3, 50)],
+      slaap,
+    );
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(slaap.mock.calls).toEqual([[250], [250]]);
+    expect(r.aangevuld).toEqual([
+      { id: a(1, 49).id, straat: "Kinker straat", woonplaats: "Amsterdam" },
+      { id: a(2, 49).id, straat: "Kinker straat", woonplaats: "Amsterdam" },
+      { id: a(3, 50).id, straat: "Kinker straat", woonplaats: "Amsterdam" },
+    ]);
+    expect(r.stop).toBeUndefined();
+  });
+
+  it("niet gevonden telt per adres; te veel verzoeken stopt", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchFn = vi
+      .fn()
+      .mockReturnValueOnce(antwoord(200, { response: { docs: [] } }))
+      .mockReturnValueOnce(antwoord(429, null));
+    const a = (i: number) => ({
+      id: "00000000-0000-4000-8000-00000000000" + i,
+      postcode: "1053ZD",
+      huisnummer: i,
+    });
+    const r = await vulAanPortie(
+      fetchFn as unknown as typeof fetch,
+      0,
+      [a(1), a(2), a(3)],
+      async () => {},
+    );
+    expect(r.nietGevonden).toEqual([a(1).id]);
+    expect(r.aangevuld).toEqual([]);
+    expect(r.stop).toBe("te_veel_verzoeken");
+    expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 });
