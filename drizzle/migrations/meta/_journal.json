@@ -57,6 +57,13 @@
       "when": 1792142787956,
       "tag": "0007_portefeuille_combi_analyses",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792151981798,
+      "tag": "0008_portefeuilles_delen",
+      "breakpoints": true
     }
   ]
 }

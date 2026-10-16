@@ -373,6 +373,49 @@ export type Database = {
           },
         ]
       }
+      portefeuille_shares: {
+        Row: {
+          created_at: string
+          gedeeld_door: string | null
+          portefeuille_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gedeeld_door?: string | null
+          portefeuille_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gedeeld_door?: string | null
+          portefeuille_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portefeuille_shares_gedeeld_door_fkey"
+            columns: ["gedeeld_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portefeuille_shares_portefeuille_id_fkey"
+            columns: ["portefeuille_id"]
+            isOneToOne: false
+            referencedRelation: "portefeuilles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portefeuille_shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portefeuilles: {
         Row: {
           bloks_id: string | null
@@ -606,8 +649,13 @@ export type Database = {
       heeft_een_rol: { Args: { _user_id: string }; Returns: boolean }
       heeft_schrijfrol: { Args: { _user_id: string }; Returns: boolean }
       is_gedeeld_met_mij: { Args: { _telling_id: string }; Returns: boolean }
+      mag_portefeuille_bewerken: { Args: { _p: string }; Returns: boolean }
+      mag_portefeuille_delen: { Args: { _p: string }; Returns: boolean }
+      mag_portefeuille_zien: { Args: { _p: string }; Returns: boolean }
+      mag_portefeuilles_zien: { Args: { _ids: string[] }; Returns: boolean }
       mag_telling_bewerken: { Args: { _telling_id: string }; Returns: boolean }
       mag_telling_zien: { Args: { _telling_id: string }; Returns: boolean }
+      portefeuille_gedeeld_met_mij: { Args: { _p: string }; Returns: boolean }
       telling_id_uit_pad: { Args: { _naam: string }; Returns: string }
     }
     Enums: {
