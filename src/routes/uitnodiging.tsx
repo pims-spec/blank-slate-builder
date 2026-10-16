@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Woordmerk } from "@/components/Woordmerk";
+import { wachtwoordFout } from "@/lib/wachtwoord";
 
 export const Route = createFileRoute("/uitnodiging")({
   head: () => ({ meta: [
@@ -39,7 +40,7 @@ function Uitnodiging() {
     setError("");
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) { setError("Het wachtwoord kon niet worden ingesteld. Probeer opnieuw."); return; }
+      if (updateError) { setError(wachtwoordFout(updateError)); return; }
       await navigate({ to: "/dashboard", replace: true });
     } catch { setError("Activeren is niet gelukt. Probeer opnieuw."); }
     finally { setBusy(false); }
