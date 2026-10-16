@@ -363,89 +363,126 @@ export default function PortefeuilleAnalyse({
         />
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-4">
-            <label className="flex min-w-56 flex-col gap-1 text-sm">
-              <span className="text-muted-foreground">Portefeuille</span>
-              <select
-                className="h-9 rounded-xl border border-input bg-background px-2"
-                value={p?.id ?? ""}
-                onChange={(e) => {
-                  setGekozen(e.target.value);
-                  setBekeken(null);
-                  setMelding("");
-                }}
-                disabled={!portefeuilles.length || bezig}
-              >
-                {!portefeuilles.length && (
-                  <option value="">{isPending ? "Laden…" : "Nog geen portefeuilles"}</option>
+          <section
+            className="mb-4 rounded-2xl border border-border bg-card p-4"
+            aria-label="Portefeuille kiezen en beheren"
+          >
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Portefeuille</span>
+                <select
+                  className="h-9 w-full rounded-xl border border-input bg-background px-2"
+                  value={p?.id ?? ""}
+                  onChange={(e) => {
+                    setGekozen(e.target.value);
+                    setBekeken(null);
+                    setMelding("");
+                  }}
+                  disabled={!portefeuilles.length || bezig}
+                >
+                  {!portefeuilles.length && (
+                    <option value="">{isPending ? "Laden…" : "Nog geen portefeuilles"}</option>
+                  )}
+                  {portefeuilles.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.naam} ({x.aantalAdressen})
+                      {x.createdBy && x.createdBy !== userId ? " · van een collega" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {p && (
+                <div className="min-w-0 [&_button]:w-full">
+                  <EigenaarKeuze
+                    klantId={p.klantId ?? ""}
+                    onKies={(id) => void koppelEigenaar(p.id, id || null)}
+                    magToevoegen={rechten.magSchrijven}
+                    alleenLezen={!rechten.magSchrijven || bezig}
+                  />
+                </div>
+              )}
+            </div>
+
+            {(rechten.magSchrijven || (p && magBeheren(p.createdBy))) && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border pt-4">
+                {p && (
+                  <div className="flex flex-wrap items-center gap-2" aria-label="Deze portefeuille">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Deze portefeuille
+                    </span>
+                    {rechten.magSchrijven && !uitBloxs && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setImportOpen("toevoegen")}
+                        disabled={bezig}
+                      >
+                        Adressen toevoegen
+                      </Button>
+                    )}
+                    {rechten.magSchrijven && uitBloxs && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setBloxsOpen("opnieuw")}
+                        disabled={bezig}
+                      >
+                        Opnieuw inladen uit Bloxs
+                      </Button>
+                    )}
+                    {magBeheren(p.createdBy) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDelenOpen(true)}
+                        disabled={bezig}
+                      >
+                        Delen
+                      </Button>
+                    )}
+                    {magBeheren(p.createdBy) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        aria-label="Portefeuille verwijderen"
+                        onClick={() => setVerwijderVraag(true)}
+                        disabled={bezig}
+                      >
+                        Verwijderen
+                      </Button>
+                    )}
+                  </div>
                 )}
-                {portefeuilles.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.naam} ({x.aantalAdressen})
-                    {x.createdBy && x.createdBy !== userId ? " · van een collega" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {p && (
-              <div className="min-w-48">
-                <EigenaarKeuze
-                  klantId={p.klantId ?? ""}
-                  onKies={(id) => void koppelEigenaar(p.id, id || null)}
-                  magToevoegen={rechten.magSchrijven}
-                  alleenLezen={!rechten.magSchrijven || bezig}
-                />
+                {rechten.magSchrijven && (
+                  <div
+                    className="flex flex-wrap items-center gap-2 sm:ml-auto"
+                    aria-label="Nieuwe portefeuille"
+                  >
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Nieuwe portefeuille
+                    </span>
+                    <Button
+                      size="sm"
+                      aria-label="Portefeuille importeren"
+                      onClick={() => setImportOpen("nieuw")}
+                      disabled={bezig}
+                    >
+                      Importeren
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setBloxsOpen("nieuw")}
+                      disabled={bezig}
+                    >
+                      Uit Bloxs
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
-            {rechten.magSchrijven && (
-              <>
-                <Button onClick={() => setImportOpen("nieuw")} disabled={bezig}>
-                  Portefeuille importeren
-                </Button>
-                {p && !uitBloxs && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setImportOpen("toevoegen")}
-                    disabled={bezig}
-                  >
-                    Adressen toevoegen
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setBloxsOpen("nieuw")} disabled={bezig}>
-                  Uit Bloxs
-                </Button>
-                {p && uitBloxs && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setBloxsOpen("opnieuw")}
-                    disabled={bezig}
-                  >
-                    Opnieuw inladen uit Bloxs
-                  </Button>
-                )}
-              </>
-            )}
-            {p && magBeheren(p.createdBy) && (
-              <Button
-                variant="outline"
-                className="ml-auto"
-                onClick={() => setDelenOpen(true)}
-                disabled={bezig}
-              >
-                Delen
-              </Button>
-            )}
-            {p && magBeheren(p.createdBy) && (
-              <Button
-                variant="ghost"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setVerwijderVraag(true)}
-                disabled={bezig}
-              >
-                Portefeuille verwijderen
-              </Button>
-            )}
-          </div>
+          </section>
 
           {!p ? (
             <p className="text-muted-foreground">
