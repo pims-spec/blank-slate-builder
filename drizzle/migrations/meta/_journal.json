@@ -50,6 +50,13 @@
       "when": 1792136343965,
       "tag": "0006_bloxs_koppeling",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792142787956,
+      "tag": "0007_portefeuille_combi_analyses",
+      "breakpoints": true
     }
   ]
 }

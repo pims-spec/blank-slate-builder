@@ -314,6 +314,65 @@ export type Database = {
           },
         ]
       }
+      portefeuille_combi_analyses: {
+        Row: {
+          aantal_adressen: number
+          analyse_datum: string
+          ep_opgehaald_tot: string | null
+          ep_opgehaald_van: string | null
+          gemaakt_door: string | null
+          gemaakt_op: string
+          id: string
+          instellingen: Json
+          klant_ids: string[]
+          portefeuille_ids: string[]
+          portefeuille_namen: string[]
+          resultaat: Json
+          titel: string
+          venster_maanden: number
+        }
+        Insert: {
+          aantal_adressen: number
+          analyse_datum: string
+          ep_opgehaald_tot?: string | null
+          ep_opgehaald_van?: string | null
+          gemaakt_door?: string | null
+          gemaakt_op?: string
+          id?: string
+          instellingen: Json
+          klant_ids?: string[]
+          portefeuille_ids: string[]
+          portefeuille_namen: string[]
+          resultaat: Json
+          titel: string
+          venster_maanden?: number
+        }
+        Update: {
+          aantal_adressen?: number
+          analyse_datum?: string
+          ep_opgehaald_tot?: string | null
+          ep_opgehaald_van?: string | null
+          gemaakt_door?: string | null
+          gemaakt_op?: string
+          id?: string
+          instellingen?: Json
+          klant_ids?: string[]
+          portefeuille_ids?: string[]
+          portefeuille_namen?: string[]
+          resultaat?: Json
+          titel?: string
+          venster_maanden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portefeuille_combi_analyses_gemaakt_door_fkey"
+            columns: ["gemaakt_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portefeuilles: {
         Row: {
           bloks_id: string | null
