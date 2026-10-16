@@ -11,13 +11,13 @@ describe("zijmenu: onderdelen per rol", () => {
     expect(
       labels({ isAdmin: true, heeftToegang: true, zietAlles: true, magSchrijven: true }),
     ).toEqual([
-      ["Overzicht", "Puntentelling", "Archief", "Dashboard", "Indelingsadvies", "Eigenaren"],
+      ["Overzicht", "Puntentelling", "Indelingsadvies", "Archief", "Dashboard", "Eigenaren"],
       ["Normen", "Gebruikers"],
     ]);
   });
   it("lid: geen dashboard en geen beheer", () => {
     expect(labels({ heeftToegang: true, magSchrijven: true })).toEqual([
-      ["Overzicht", "Puntentelling", "Archief", "Indelingsadvies", "Eigenaren"],
+      ["Overzicht", "Puntentelling", "Indelingsadvies", "Archief", "Eigenaren"],
       [],
     ]);
   });

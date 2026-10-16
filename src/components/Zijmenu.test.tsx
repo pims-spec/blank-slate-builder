@@ -32,7 +32,7 @@ describe("Zijmenu", () => {
       </QueryClientProvider>,
     );
     const nav = screen.getByRole("navigation", { name: "Hoofdmenu" });
-    expect(within(nav).getByRole("link", { name: /GoHome WWS/ })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: /GoHome advice/ })).toHaveAttribute(
       "href",
       "/dashboard",
     );

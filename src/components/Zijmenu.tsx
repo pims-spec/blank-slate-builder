@@ -74,7 +74,7 @@ export function Zijmenu(r: MenuRechten) {
       <Link
         to="/dashboard"
         className="mb-1.5 border-b border-border px-2 pt-1 pb-4 max-[720px]:px-0 max-[720px]:text-center"
-        aria-label="GoHome WWS, naar het overzicht"
+        aria-label="GoHome advice, naar het overzicht"
       >
         <span className="max-[720px]:hidden">
           <Woordmerk className="text-base" />
