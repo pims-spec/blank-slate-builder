@@ -5,7 +5,7 @@
 // Het antwoord van een externe dienst is onbetrouwbare data: alleen wat door zod komt, gaat terug.
 // Foutteksten van de dienst zelf worden nooit doorgegeven of gelogd — alleen een eigen foutcode.
 import * as z from "zod";
-import { leesEpAntwoord, type EpLabel } from "./eponline";
+import { leesEpAntwoordAlle, type EpLabel } from "./eponline";
 import {
   HuisnummerSchema,
   leesPdokAntwoord,
@@ -104,6 +104,22 @@ export async function zoekEnergielabelBijEpOnline(
   sleutel: string | undefined,
   vraag: EpVraag,
 ): Promise<Opzoeking<EpLabel>> {
+  const r = await zoekEnergielabelsBijEpOnline(fetchFn, sleutel, vraag);
+  if (!r.ok) return r;
+  const label = r.data[0];
+  if (!label) return { ok: false, fout: "niet_gevonden" };
+  return { ok: true, data: label };
+}
+
+/**
+ * Alle geldige labels die EP-Online voor een adres teruggeeft (meestal één; meer dan één
+ * betekent dat het adres niet eenduidig is, bijv. zonder huisletter of toevoeging).
+ */
+export async function zoekEnergielabelsBijEpOnline(
+  fetchFn: typeof fetch,
+  sleutel: string | undefined,
+  vraag: EpVraag,
+): Promise<Opzoeking<EpLabel[]>> {
   if (!sleutel) {
     logFout("EP-Online", "sleutel_ontbreekt");
     return { ok: false, fout: "sleutel_ontbreekt" };
@@ -128,9 +144,9 @@ export async function zoekEnergielabelBijEpOnline(
     logFout("EP-Online", fout, r.status || undefined);
     return { ok: false, fout };
   }
-  const label = leesEpAntwoord(r.json);
-  if (!label) return { ok: false, fout: "niet_gevonden" };
-  return { ok: true, data: label };
+  const labels = leesEpAntwoordAlle(r.json);
+  if (!labels.length) return { ok: false, fout: "niet_gevonden" };
+  return { ok: true, data: labels };
 }
 
 /** Nederlandse melding per foutcode — de teksten uit wws-site.html, zonder "Netlify" */

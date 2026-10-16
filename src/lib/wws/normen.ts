@@ -246,12 +246,19 @@ export interface NormenShape {
    * leest deze waarden, met 30/10 als ze ontbreken.
    */
   aiLimiet?: { lezen: number; afbeelding: number };
+  /**
+   * Portefeuille-analyse (niet in de bron): limiet EP-Online per seconde, grens "verouderd" en
+   * de EFG-regels. Ontbrekende waarden: PORTEFEUILLE_STANDAARD (portefeuille/analyse.ts).
+   */
+  portefeuille?: Partial<PortefeuilleNormen>;
 }
 
 export type Normen = NormenShape;
 
 /** Standaard daglimiet AI-gebruik (zelfde als in de database-functie) */
 export const AI_LIMIET_STANDAARD = { lezen: 30, afbeelding: 10 } as const;
+
+import type { PortefeuilleNormen } from "./portefeuille/analyse";
 
 const clone = <T>(o: T): T => JSON.parse(JSON.stringify(o));
 

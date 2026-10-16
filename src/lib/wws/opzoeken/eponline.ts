@@ -58,13 +58,19 @@ export type EpLabel = z.infer<typeof EpLabelSchema>;
  * eerste geldige label terug, met alleen de bekende velden, of null.
  */
 export function leesEpAntwoord(json: unknown): EpLabel | null {
+  return leesEpAntwoordAlle(json)[0] ?? null;
+}
+
+/** Alle geldige labels in het antwoord (voor de portefeuille: meerdere = niet eenduidig) */
+export function leesEpAntwoordAlle(json: unknown): EpLabel[] {
   const lijst = z.array(z.unknown()).max(50).safeParse(json);
-  if (!lijst.success) return null;
+  if (!lijst.success) return [];
+  const uit: EpLabel[] = [];
   for (const item of lijst.data) {
     const r = EpLabelSchema.safeParse(item);
-    if (r.success) return r.data;
+    if (r.success) uit.push(r.data);
   }
-  return null;
+  return uit;
 }
 
 // ---------- van label naar telling ----------
