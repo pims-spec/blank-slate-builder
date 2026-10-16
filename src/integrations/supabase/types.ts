@@ -327,6 +327,65 @@ export type Database = {
           },
         ]
       }
+      portefeuille_analyses_archief: {
+        Row: {
+          aantal_adressen: number
+          analyse_datum: string
+          ep_opgehaald_tot: string | null
+          ep_opgehaald_van: string | null
+          gearchiveerd_op: string
+          gemaakt_door: string | null
+          gemaakt_op: string
+          id: string
+          instellingen: Json
+          klant_id: string | null
+          portefeuille_id: string
+          portefeuille_naam: string
+          resultaat: Json
+          venster_maanden: number
+        }
+        Insert: {
+          aantal_adressen: number
+          analyse_datum: string
+          ep_opgehaald_tot?: string | null
+          ep_opgehaald_van?: string | null
+          gearchiveerd_op?: string
+          gemaakt_door?: string | null
+          gemaakt_op: string
+          id: string
+          instellingen: Json
+          klant_id?: string | null
+          portefeuille_id: string
+          portefeuille_naam: string
+          resultaat: Json
+          venster_maanden: number
+        }
+        Update: {
+          aantal_adressen?: number
+          analyse_datum?: string
+          ep_opgehaald_tot?: string | null
+          ep_opgehaald_van?: string | null
+          gearchiveerd_op?: string
+          gemaakt_door?: string | null
+          gemaakt_op?: string
+          id?: string
+          instellingen?: Json
+          klant_id?: string | null
+          portefeuille_id?: string
+          portefeuille_naam?: string
+          resultaat?: Json
+          venster_maanden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portefeuille_analyses_archief_gemaakt_door_fkey"
+            columns: ["gemaakt_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portefeuille_combi_analyses: {
         Row: {
           aantal_adressen: number
