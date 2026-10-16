@@ -29,12 +29,17 @@ function TweestapsPagina() {
   const verder = () => void navigate({ to: veiligPad(terug), replace: true });
 
   useEffect(() => {
-    void supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data, error }) => {
-      if (error || !data) return setFout(true);
-      const s = tweestapsStap(data);
+    void (async () => {
+      const [aal, factoren] = await Promise.all([
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        // vers van de server (een oudere sessie kent een elders gekoppelde code-app nog niet)
+        supabase.auth.mfa.listFactors(),
+      ]);
+      if (aal.error || !aal.data || factoren.error) return setFout(true);
+      const s = tweestapsStap(aal.data, factoren.data?.totp.length ?? 0);
       if (s === "ok") void navigate({ to: veiligPad(terug), replace: true });
       else setStap(s);
-    });
+    })();
   }, [navigate, terug]);
 
   return (

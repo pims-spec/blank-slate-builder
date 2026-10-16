@@ -7,6 +7,9 @@ describe("tweestapsverificatie", () => {
     expect(tweestapsStap({ currentLevel: "aal1", nextLevel: "aal2" })).toBe("code");
     expect(tweestapsStap({ currentLevel: "aal1", nextLevel: "aal1" })).toBe("instellen");
     expect(tweestapsStap({ currentLevel: null, nextLevel: null })).toBe("instellen");
+    // de server weet van een elders gekoppelde code-app; de oude sessie nog niet
+    expect(tweestapsStap({ currentLevel: "aal1", nextLevel: "aal1" }, 1)).toBe("code");
+    expect(tweestapsStap({ currentLevel: "aal1", nextLevel: "aal2" }, 0)).toBe("instellen");
   });
 
   it("terugkeeradres alleen binnen de app", () => {

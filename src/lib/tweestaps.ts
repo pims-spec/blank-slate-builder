@@ -4,13 +4,18 @@
 
 export type TweestapsStap = "ok" | "instellen" | "code";
 
-export function tweestapsStap(aal: {
-  currentLevel: string | null;
-  nextLevel: string | null;
-}): TweestapsStap {
+export function tweestapsStap(
+  aal: { currentLevel: string | null; nextLevel: string | null },
+  /**
+   * Aantal geverifieerde code-apps volgens de server (listFactors). Gaat voor nextLevel: een
+   * oudere sessie weet nog niet van een code-app die in een andere browser is gekoppeld.
+   */
+  geverifieerd?: number,
+): TweestapsStap {
   if (aal.currentLevel === "aal2") return "ok";
+  const heeftCodeApp = geverifieerd !== undefined ? geverifieerd > 0 : aal.nextLevel === "aal2";
   // er is een geverifieerde code-app: code invoeren; anders eerst een code-app koppelen
-  return aal.nextLevel === "aal2" ? "code" : "instellen";
+  return heeftCodeApp ? "code" : "instellen";
 }
 
 /** Alleen een pad binnen de app als terugkeeradres ("/archief?tab=…"), nooit een andere site */
