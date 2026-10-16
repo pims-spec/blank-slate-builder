@@ -78,4 +78,35 @@ describe("Normen: portefeuille-analyse", () => {
       raming: RAMING_STANDAARD,
     });
   });
+
+  it("verduurzamingsraming: bedragen, factor en aangenomen label worden opgeslagen", async () => {
+    instellingenStore.slaNormenOp.mockResolvedValue(undefined);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NormenBeheer normen={structuredClone(N)} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("€ per m² per labelstap (laag)"), {
+      target: { value: "60" },
+    });
+    fireEvent.change(screen.getByLabelText("€ per m² per labelstap (hoog)"), {
+      target: { value: "90" },
+    });
+    fireEvent.change(screen.getByLabelText("Factor Vóór 1945"), { target: { value: "1.4" } });
+    fireEvent.change(screen.getByLabelText("Aangenomen label 1975 – 1991"), {
+      target: { value: "F" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalled());
+    const n = instellingenStore.slaNormenOp.mock.calls.at(-1)![0] as Normen;
+    expect(n.portefeuille?.raming).toEqual({
+      ...RAMING_STANDAARD,
+      ingesteld: true,
+      perM2Laag: 60,
+      perM2Hoog: 90,
+      factor: { ...RAMING_STANDAARD.factor, tot1945: 1.4 },
+      aangenomen: { ...RAMING_STANDAARD.aangenomen, "1975-1991": "F" },
+    });
+  });
 });

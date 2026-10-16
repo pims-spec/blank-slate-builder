@@ -31,6 +31,7 @@ import {
   type GeenLabelEfg,
   type PortefeuilleNormen,
 } from "@/lib/wws/portefeuille/analyse";
+import { BOUWJAAR_KLASSEN, BOUWJAAR_NAMEN } from "@/lib/wws/portefeuille/verduurzaming";
 import { instellingenStore } from "./tellingStore";
 
 /** Kostenramingen van het verbeteradvies, als standaard voor iedereen */
@@ -425,6 +426,98 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
           >
             Omschrijving in de analyse: {efgOmschrijving(portefeuilleNormen(pf).efg)}
           </p>
+        </Sectie>
+
+        <Sectie titel="Verduurzamingsraming">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Grove kostenindicatie per woning om naar label D en naar C te komen: labelstappen ×
+            gebruiksoppervlakte (BAG) × bedrag per m² per stap × factor voor het bouwjaar. Met een
+            lage en een hoge prijs ontstaat een bandbreedte. Zolang hier geen bedragen staan, toont
+            de analyse alleen de labelstappen.
+          </p>
+          <div className="grid max-w-md grid-cols-2 gap-3">
+            {(
+              [
+                ["perM2Laag", "€ per m² per labelstap (laag)"],
+                ["perM2Hoog", "€ per m² per labelstap (hoog)"],
+              ] as const
+            ).map(([k, label]) => (
+              <label key={k} className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">{label}</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={pf.raming[k] || ""}
+                  placeholder="0"
+                  onChange={(e) =>
+                    setPf({
+                      ...pf,
+                      raming: { ...pf.raming, [k]: Number(e.target.value), ingesteld: true },
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <table className="mt-4 text-sm" aria-label="Per bouwjaar">
+            <thead className="text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="py-1 pr-4 font-medium">Bouwjaar</th>
+                <th className="py-1 pr-4 font-medium">Factor op de kosten</th>
+                <th className="py-1 font-medium">Aangenomen label zonder registratie</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BOUWJAAR_KLASSEN.map((k) => (
+                <tr key={k}>
+                  <td className="py-1 pr-4">{BOUWJAAR_NAMEN[k]}</td>
+                  <td className="py-1 pr-4">
+                    <Input
+                      type="number"
+                      min={0.1}
+                      max={10}
+                      step="0.05"
+                      className="w-24"
+                      aria-label={"Factor " + BOUWJAAR_NAMEN[k]}
+                      value={pf.raming.factor[k]}
+                      onChange={(e) =>
+                        setPf({
+                          ...pf,
+                          raming: {
+                            ...pf.raming,
+                            factor: { ...pf.raming.factor, [k]: Number(e.target.value) },
+                          },
+                        })
+                      }
+                    />
+                  </td>
+                  <td className="py-1">
+                    <select
+                      className="h-9 rounded-xl border border-input bg-background px-2 text-sm"
+                      aria-label={"Aangenomen label " + BOUWJAAR_NAMEN[k]}
+                      value={pf.raming.aangenomen[k]}
+                      onChange={(e) =>
+                        setPf({
+                          ...pf,
+                          raming: {
+                            ...pf.raming,
+                            aangenomen: { ...pf.raming.aangenomen, [k]: e.target.value },
+                          },
+                        })
+                      }
+                    >
+                      {LABELS.map((l) => (
+                        <option key={l} value={l}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Sectie>
 
         <p className="text-xs text-muted-foreground">
