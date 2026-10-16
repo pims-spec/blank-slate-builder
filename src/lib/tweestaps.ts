@@ -39,3 +39,8 @@ export function schoneCode(invoer: string): string | null {
   const c = invoer.replace(/[\s-]/g, "");
   return /^\d{6}$/.test(c) ? c : null;
 }
+
+/** Heeft het (door Supabase gecontroleerde) token het niveau van tweestapsverificatie (aal2)? */
+export function heeftTweestaps(claims: { aal?: unknown } | null | undefined): boolean {
+  return claims?.aal === "aal2";
+}

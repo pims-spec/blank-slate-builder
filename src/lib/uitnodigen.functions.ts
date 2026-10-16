@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { vereisTweestaps } from "@/lib/wws/rollenMiddleware";
 
 export const nodigCollegaUit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([vereisTweestaps])
   .inputValidator((input: unknown) => z.object({
     email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
     rol: z.enum(["member", "viewer", "admin"]),

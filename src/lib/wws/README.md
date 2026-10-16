@@ -332,9 +332,12 @@ Auth MFA).
   - Het gebruikt de service role (op verzoek), omdat alleen de Auth-admin-API factoren van een
     ander account kan verwijderen.
   - Geen ids of e-mailadressen in de log.
-- **In de database (migratie 0009, volgt):** een restrictieve voorwaarde `aal2` op alle tabellen,
-  zodat ook de database zonder code niets geeft. Die migratie komt pas nadat iedereen een
-  code-app heeft gekoppeld.
+- **Server functions:** `vereisTweestaps` (`src/lib/wws/rollenMiddleware.ts`) weigert een token
+  zonder `aal2`; `vereisSchrijfrol`, `vereisAdmin` en het uitnodigen van een collega bouwen erop.
+- **In de database (migratie 0009):** een restrictieve voorwaarde `aal2` op alle tabellen en op de
+  bucket `plattegronden`, zodat ook de database zonder code niets geeft. Security-definer-functies
+  vallen buiten RLS: `ai_gebruik_boeken` telt dan alleen het eigen AI-gebruik op (de AI zelf loopt
+  via een server function met `aal2`).
 
 ## Bewuste afwijkingen van wws-site.html
 

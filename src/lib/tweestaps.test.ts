@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { schoneCode, tweestapsStap, veiligPad } from "./tweestaps";
+import { heeftTweestaps, schoneCode, tweestapsStap, veiligPad } from "./tweestaps";
 
 describe("tweestapsverificatie", () => {
   it("stap uit het sessieniveau", () => {
@@ -25,5 +25,12 @@ describe("tweestapsverificatie", () => {
     expect(schoneCode("123 456")).toBe("123456");
     expect(schoneCode("12345")).toBeNull();
     expect(schoneCode("12345a")).toBeNull();
+  });
+
+  it("server functions: alleen een token met aal2", () => {
+    expect(heeftTweestaps({ aal: "aal2" })).toBe(true);
+    expect(heeftTweestaps({ aal: "aal1" })).toBe(false);
+    expect(heeftTweestaps({})).toBe(false);
+    expect(heeftTweestaps(null)).toBe(false);
   });
 });
