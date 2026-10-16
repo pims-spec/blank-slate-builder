@@ -85,6 +85,13 @@
       "when": 1792160082772,
       "tag": "0011_portefeuille_analyses_archief",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792160919689,
+      "tag": "0012_bag_gegevens_adressen",
+      "breakpoints": true
     }
   ]
 }
