@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -468,13 +469,13 @@ export default function PortefeuilleAnalyse({
                     {magBeheren(p.createdBy) && (
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         className="text-destructive hover:text-destructive"
-                        aria-label="Portefeuille verwijderen"
                         onClick={() => setVerwijderVraag(true)}
                         disabled={bezig}
                       >
-                        Verwijderen
+                        <Trash2 className="size-4" aria-hidden />
+                        Portefeuille verwijderen
                       </Button>
                     )}
                   </div>
