@@ -15,9 +15,9 @@ describe("zijmenu: onderdelen per rol", () => {
         "Overzicht",
         "Puntentelling",
         "Indelingsadvies",
+        "Portefeuille-analyse",
         "Archief",
         "Dashboard",
-        "Portefeuille-analyse",
         "Eigenaren",
       ],
       ["Normen", "Gebruikers"],
@@ -29,8 +29,8 @@ describe("zijmenu: onderdelen per rol", () => {
         "Overzicht",
         "Puntentelling",
         "Indelingsadvies",
-        "Archief",
         "Portefeuille-analyse",
+        "Archief",
         "Eigenaren",
       ],
       [],
@@ -38,7 +38,7 @@ describe("zijmenu: onderdelen per rol", () => {
   });
   it("kijkrol: dashboard, geen indelingsadvies", () => {
     expect(labels({ heeftToegang: true, zietAlles: true })).toEqual([
-      ["Overzicht", "Puntentelling", "Archief", "Dashboard", "Portefeuille-analyse", "Eigenaren"],
+      ["Overzicht", "Puntentelling", "Portefeuille-analyse", "Archief", "Dashboard", "Eigenaren"],
       [],
     ]);
   });
