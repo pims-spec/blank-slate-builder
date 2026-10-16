@@ -1,9 +1,10 @@
 // PDF van de portefeuille-analyse, in de huisstijl van de andere rapporten (Inter, GoHome-kop
 // en -voettekst): voorblad "Label-analyse" (zoals de voorpagina van de WWS-rapporten),
-// samenvatting, staafdiagram, risicoprofiel, EFG-overzicht, de lijst met woningen waarvan het
-// label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen, de woningen zonder
-// geregistreerd label en de bronvermelding van EP-Online.
-import type { AnalyseUitkomst } from "../portefeuille/analyse";
+// samenvatting, staafdiagram, risicoprofiel, EFG-overzicht met korte toelichting, de lijst met
+// woningen waarvan het label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen, de
+// woningen zonder geregistreerd label, de te controleren adressen (met reden) en de bronvermelding
+// van EP-Online.
+import { EFG_TOELICHTING, type AnalyseUitkomst } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
 import { aantal, periode } from "../portefeuille/tekst";
 import { pdfBanner, pdfVoorblad } from "./delen";
@@ -165,6 +166,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
 
   kop("EFG-regels");
   tekst(u.efg.omschrijving, 9, PDF_INK);
+  tekst(EFG_TOELICHTING, 8);
   tekst(
     aantal(u.efg.aantal, "woning", "woningen") +
       " (" +
@@ -259,7 +261,20 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         ". Niet gevonden telt in het risicoprofiel als ‘geen geregistreerd label’; de overige tellen niet mee.",
       8.5,
     );
-    y += 2;
+    y =
+      tabel(lib, doc, {
+        startY: y,
+        head: [["Adres", "Reden"]],
+        body: (
+          [
+            [c.nietGevonden, "Niet gevonden bij EP-Online"],
+            [c.meerdere, "Niet eenduidig (meerdere labels)"],
+            [c.fout, "Ophalen mislukt"],
+            [c.nietOpgehaald, "Nog niet opgehaald"],
+          ] as const
+        ).flatMap(([lijst, reden]) => lijst.map((a) => [a, reden])),
+        ...stijl,
+      }) + 8;
   }
 
   if (y > 270) {

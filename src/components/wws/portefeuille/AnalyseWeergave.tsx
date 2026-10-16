@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
+import { EFG_TOELICHTING, type AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
 import { nlDatum } from "@/lib/wws/portefeuille/datum";
 import { aantal, periode } from "@/lib/wws/portefeuille/tekst";
 import { AdresLijstDialoog, type Doorklik } from "./AdresLijstDialoog";
@@ -98,6 +98,7 @@ export function AnalyseWeergave({
 
       <Kaart titel="EFG-regels">
         <p className="text-sm">{u.efg.omschrijving}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{EFG_TOELICHTING}</p>
         <p className="mt-2 text-2xl font-bold tabular-nums">
           {u.efg.aantal}{" "}
           <span className="text-base font-medium text-muted-foreground">

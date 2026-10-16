@@ -76,6 +76,40 @@ describe("PDF portefeuille-analyse", () => {
     }
   });
 
+  it("EFG met toelichting; te controleren als lijst met reden", async () => {
+    const u = analyseer(
+      [
+        adres(1, "A", "2023-03-01"),
+        adres(4, null, null, "niet_gevonden"),
+        adres(5, null, null, "meerdere"),
+        adres(6, null, null, "fout"),
+        { ...adres(7, null, null), resultaat: null },
+      ],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u });
+    const t = (await pdfTekst(pdf.blob)).flat().join(" ").replace(/\s+/g, " ");
+    const volgorde = [
+      "EFG-regels",
+      "Achtergrond: het kabinet wil",
+      "Te controleren (4)",
+      "Adres Reden",
+      "1053 ZD 4 Niet gevonden bij EP-Online",
+      "1053 ZD 5 Niet eenduidig (meerdere labels)",
+      "1053 ZD 6 Ophalen mislukt",
+      "1053 ZD 7 Nog niet opgehaald",
+      "Bron: EP-Online",
+    ];
+    let vanaf = 0;
+    for (const stuk of volgorde) {
+      const i = t.indexOf(stuk, vanaf);
+      expect(i, stuk).toBeGreaterThanOrEqual(0);
+      vanaf = i + 1;
+    }
+  });
+
   it("voorblad 'Label-analyse' zonder voettekst; daarna de analyse met paginanummers", async () => {
     const met = (hn: number): AnalyseAdres => ({
       ...adres(hn, "E", "2020-02-02"),
