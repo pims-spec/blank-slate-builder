@@ -144,14 +144,7 @@ export function efgOmschrijving(efg: PortefeuilleNormen["efg"]): string {
       : efg.geenLabel === "apart"
         ? " Woningen zonder geregistreerd label staan apart vermeld."
         : "";
-  return (
-    "Woningen met label " +
-    klassen +
-    " per " +
-    langeDatum(efg.ingangsdatum) +
-    " (instelling in Normen; de wettelijke invulling is nog te controleren)." +
-    geen
-  );
+  return "Woningen met label " + klassen + " per " + langeDatum(efg.ingangsdatum) + "." + geen;
 }
 
 /** Korte achtergrond bij de EFG-regels (vaste tekst; de klassen en datum staan in de omschrijving) */

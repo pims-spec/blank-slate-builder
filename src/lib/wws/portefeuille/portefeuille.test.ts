@@ -256,12 +256,12 @@ describe("instellingen en omschrijving", () => {
   });
   it("neutrale omschrijving uit de instellingen", () => {
     expect(efgOmschrijving(N.efg)).toBe(
-      "Woningen met label E, F of G per 1 januari 2029 (instelling in Normen; de wettelijke invulling is nog te controleren). Woningen zonder geregistreerd label staan apart vermeld.",
+      "Woningen met label E, F of G per 1 januari 2029. Woningen zonder geregistreerd label staan apart vermeld.",
     );
     expect(
       efgOmschrijving({ ingangsdatum: "2030-07-01", klassen: ["G"], geenLabel: "meetellen" }),
     ).toBe(
-      "Woningen met label G per 1 juli 2030 (instelling in Normen; de wettelijke invulling is nog te controleren). Woningen zonder geregistreerd label tellen mee.",
+      "Woningen met label G per 1 juli 2030. Woningen zonder geregistreerd label tellen mee.",
     );
   });
 });
