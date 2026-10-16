@@ -58,14 +58,6 @@ function Dashboard() {
                 <p className="mt-6 max-w-lg text-muted-foreground">
                   Deze tool helpt je met het optimaliseren van een woning.
                 </p>
-                <div className="mt-8 flex flex-wrap gap-2">
-                  <Button asChild>
-                    <Link to="/wws">Puntentelling openen</Link>
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link to="/indeling">Indelingsadvies</Link>
-                  </Button>
-                </div>
               </>
             )}
             {controle?.nodig && (
