@@ -156,12 +156,10 @@ export function efgOmschrijving(efg: PortefeuilleNormen["efg"]): string {
 
 /** Korte achtergrond bij de EFG-regels (vaste tekst; de klassen en datum staan in de omschrijving) */
 export const EFG_TOELICHTING =
-  "Achtergrond: het kabinet wil dat huurwoningen met een slecht energielabel (E, F of G) vanaf de " +
-  "ingangsdatum niet meer verhuurd mogen worden, tenzij ze eerst verduurzaamd zijn. De wetgeving " +
-  "daarvoor is nog niet definitief. Daarnaast leveren deze labels in het woningwaarderingsstelsel " +
-  "minder punten op. Dit overzicht toont welke woningen op grond van hun huidige geregistreerde " +
-  "label onder de ingestelde regels vallen; een nieuw label na verduurzaming haalt een woning " +
-  "uit de lijst.";
+  "Het kabinet wil dat huurwoningen met energielabel E, F of G vanaf de ingangsdatum niet meer " +
+  "verhuurd mogen worden zonder verduurzaming; deze wetgeving is nog niet definitief. Dit " +
+  "overzicht toont welke woningen op grond van hun huidige geregistreerde label onder de " +
+  "ingestelde regels vallen.";
 
 const pct = (n: number, van: number) => (van ? Math.round((n / van) * 1000) / 10 : 0);
 

@@ -93,7 +93,7 @@ describe("PDF portefeuille-analyse", () => {
     const t = (await pdfTekst(pdf.blob)).flat().join(" ").replace(/\s+/g, " ");
     const volgorde = [
       "EFG-regels",
-      "Achtergrond: het kabinet wil",
+      "Het kabinet wil dat huurwoningen",
       "Te controleren (4)",
       "Adres Reden",
       "1053 ZD 4 Niet gevonden bij EP-Online",
