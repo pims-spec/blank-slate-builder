@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import type { Klant } from "@/lib/wws/opslag";
 import { adresTekst } from "@/lib/wws/portefeuille/adres";
 import { MAX_IMPORT, leesImport, type ImportUitkomst } from "@/lib/wws/portefeuille/importeren";
+import { aantal } from "@/lib/wws/portefeuille/tekst";
 import { laadXlsx } from "@/lib/wws/pdf/laden";
 
 interface Props {
@@ -126,16 +127,31 @@ function Inhoud({ klanten, bestaand, onImporteer, onOpenChange }: Props) {
                 .
               </p>
               {u.dubbel.length > 0 && (
-                <p className="mt-1">{u.dubbel.length} dubbele rijen worden overgeslagen.</p>
+                <p className="mt-1">
+                  {aantal(u.dubbel.length, "dubbele rij wordt", "dubbele rijen worden")}{" "}
+                  overgeslagen.
+                </p>
               )}
               {u.teVeel > 0 && (
                 <p className="mt-1 text-destructive">
-                  {u.teVeel} rijen boven het maximum worden overgeslagen.
+                  {aantal(
+                    u.teVeel,
+                    "rij boven het maximum wordt",
+                    "rijen boven het maximum worden",
+                  )}{" "}
+                  overgeslagen.
                 </p>
               )}
               {u.ongeldig.length > 0 && (
                 <details className="mt-1">
-                  <summary>{u.ongeldig.length} rijen zijn ongeldig en worden overgeslagen</summary>
+                  <summary>
+                    {aantal(
+                      u.ongeldig.length,
+                      "rij is ongeldig en wordt",
+                      "rijen zijn ongeldig en worden",
+                    )}{" "}
+                    overgeslagen
+                  </summary>
                   <ul className="mt-1 max-h-32 overflow-y-auto text-muted-foreground">
                     {u.ongeldig.map((o) => (
                       <li key={o.rij}>

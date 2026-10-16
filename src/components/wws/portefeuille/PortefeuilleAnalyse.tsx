@@ -41,6 +41,8 @@ type OpnieuwKeuze = "alle" | "probleem" | "oud";
 
 interface Voortgang {
   gedaan: number;
+  /** Tot en met dit adres loopt de huidige portie */
+  tot: number;
   totaal: number;
 }
 
@@ -105,7 +107,7 @@ export default function PortefeuilleAnalyse({
     stoppen.current = false;
     setMelding("");
     setBekeken(null);
-    setVoortgang({ gedaan: 0, totaal: lijst.length });
+    setVoortgang({ gedaan: 0, tot: 0, totaal: lijst.length });
     let gedaan = 0;
     try {
       for (let i = 0; i < lijst.length; i += MAX_PER_PORTIE) {
@@ -122,10 +124,11 @@ export default function PortefeuilleAnalyse({
           huisletter: a.huisletter,
           toevoeging: a.toevoeging,
         }));
+        setVoortgang({ gedaan, tot: gedaan + portie.length, totaal: lijst.length });
         const r = await haalLabelsOp({ data: { adressen: portie } });
         await portefeuilleStore.slaResultatenOp(p.id, userId, r.resultaten);
         gedaan += r.resultaten.length;
-        setVoortgang({ gedaan, totaal: lijst.length });
+        setVoortgang({ gedaan, tot: gedaan, totaal: lijst.length });
         if (r.stop) {
           setMelding(stopMelding(r.stop));
           break;
@@ -310,7 +313,7 @@ export default function PortefeuilleAnalyse({
                       </Button>
                       <select
                         aria-label="Opnieuw ophalen: welke adressen"
-                        className="h-9 rounded-xl border border-input bg-background px-2"
+                        className="h-9 max-w-full rounded-xl border border-input bg-background px-2"
                         value={opnieuw}
                         onChange={(e) => setOpnieuw(e.target.value as OpnieuwKeuze)}
                       >
@@ -346,8 +349,10 @@ export default function PortefeuilleAnalyse({
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {voortgang.gedaan} van {voortgang.totaal} · ongeveer {instellingen.epPerSeconde}{" "}
-                  per seconde
+                  {voortgang.gedaan} van {voortgang.totaal} klaar
+                  {voortgang.tot > voortgang.gedaan &&
+                    ` · bezig met ${voortgang.gedaan + 1}–${voortgang.tot}`}{" "}
+                  · ongeveer {instellingen.epPerSeconde} per seconde
                 </p>
               </div>
             )}

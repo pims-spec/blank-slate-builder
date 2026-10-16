@@ -4,7 +4,8 @@ import type { AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
 /**
  * Staafdiagram: aantal woningen per labelklasse (A++++ t/m G) en "geen label". Eén reeks, dus
  * één kleur (paars); "geen label" in grijs. Aantallen staan boven de staven; bij aanwijzen een
- * tooltip met aantal en percentage. Voor schermlezers staat er een tabel onder.
+ * tooltip met aantal en percentage. Op telefoonbreedte liggende staven (anders worden de
+ * labels onleesbaar klein). Voor schermlezers staat er een tabel onder.
  */
 export function LabelGrafiek({ uitkomst }: { uitkomst: AnalyseUitkomst }) {
   const data = uitkomst.perKlasse;
@@ -22,7 +23,30 @@ export function LabelGrafiek({ uitkomst }: { uitkomst: AnalyseUitkomst }) {
 
   return (
     <figure className="m-0">
-      <div className="relative">
+      <ul className="space-y-1 sm:hidden" aria-hidden="true">
+        {data.map((d) => {
+          const geen = d.klasse === "geen label";
+          return (
+            <li key={d.klasse} className="flex items-center gap-2 text-xs">
+              <span className="w-12 shrink-0 text-muted-foreground">
+                {geen ? "geen" : d.klasse}
+              </span>
+              <span className="h-3 flex-1">
+                {d.aantal > 0 && (
+                  <span
+                    className={
+                      "block h-full rounded-r " + (geen ? "bg-muted-foreground/45" : "bg-primary")
+                    }
+                    style={{ width: (d.aantal / max) * 100 + "%" }}
+                  />
+                )}
+              </span>
+              <span className="w-8 shrink-0 text-right tabular-nums">{d.aantal}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="relative hidden sm:block">
         <svg
           viewBox={`0 0 ${B} ${H}`}
           className="h-auto w-full"

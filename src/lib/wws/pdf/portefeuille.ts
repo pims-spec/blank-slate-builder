@@ -4,6 +4,7 @@
 // en de bronvermelding van EP-Online.
 import type { AnalyseUitkomst } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
+import { aantal, periode } from "../portefeuille/tekst";
 import { pdfBanner } from "./delen";
 import {
   PDF_ALT,
@@ -39,9 +40,7 @@ const dag = (iso: string | null) =>
 /** "1 oktober 2026" of "1 t/m 15 oktober 2026" */
 export function opgehaaldTekst(van: string | null, tot: string | null): string {
   if (!van) return "nog niet opgehaald";
-  const a = dag(van),
-    b = dag(tot);
-  return a === b ? a : a + " t/m " + b;
+  return periode(van, tot, dag);
 }
 
 export function maakPortefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
@@ -104,7 +103,10 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
         ["Adressen", u.aantalAdressen + " (waarvan " + u.aantalBeoordeeld + " beoordeeld)"],
         ["Venster verloopdatum", "± " + u.vensterMaanden + " maanden rond de analysedatum"],
-        ["Onder de EFG-regels", u.efg.aantal + " woningen (" + pct(u.efg.pct) + ")"],
+        [
+          "Onder de EFG-regels",
+          aantal(u.efg.aantal, "woning", "woningen") + " (" + pct(u.efg.pct) + ")",
+        ],
       ],
       theme: "plain",
       styles: { fontSize: 9.5, textColor: PDF_INK, cellPadding: 1.6 },
@@ -138,12 +140,14 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   kop("EFG-regels");
   tekst(u.efg.omschrijving, 9, PDF_INK);
   tekst(
-    u.efg.aantal +
-      " woningen (" +
+    aantal(u.efg.aantal, "woning", "woningen") +
+      " (" +
       pct(u.efg.pct) +
       " van de beoordeelde woningen)" +
       (u.efg.geenLabelApart !== null
-        ? "; daarnaast " + u.efg.geenLabelApart + " woningen zonder geregistreerd label."
+        ? "; daarnaast " +
+          aantal(u.efg.geenLabelApart, "woning", "woningen") +
+          " zonder geregistreerd label."
         : "."),
     9,
     PDF_INK,
@@ -220,10 +224,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   }
   tekst(
     "Bron: EP-Online (RVO), opgehaald op " +
-      (u.epOpgehaaldVan
-        ? tijdstip(u.epOpgehaaldVan) +
-          (u.epOpgehaaldTot !== u.epOpgehaaldVan ? " t/m " + tijdstip(u.epOpgehaaldTot) : "")
-        : "–") +
+      (u.epOpgehaaldVan ? periode(u.epOpgehaaldVan, u.epOpgehaaldTot, tijdstip) : "–") +
       ". Indicatief overzicht; aan deze analyse kunnen geen rechten worden ontleend.",
     7.5,
   );

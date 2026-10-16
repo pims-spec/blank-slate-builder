@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
 import { nlDatum } from "@/lib/wws/portefeuille/datum";
+import { aantal, periode } from "@/lib/wws/portefeuille/tekst";
 import { LabelGrafiek } from "./LabelGrafiek";
 
 const pctTekst = (p: number) => p.toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%";
@@ -26,7 +27,7 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
       <p className="text-sm text-muted-foreground">
         Analyse per {nlDatum(u.datum)} · {u.aantalAdressen} adressen, waarvan {u.aantalBeoordeeld}{" "}
         beoordeeld · EP-Online opgehaald{" "}
-        {u.epOpgehaaldVan ? tijd(u.epOpgehaaldVan) + " t/m " + tijd(u.epOpgehaaldTot) : "nog niet"}
+        {u.epOpgehaaldVan ? periode(u.epOpgehaaldVan, u.epOpgehaaldTot, tijd) : "nog niet"}
       </p>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -38,16 +39,18 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
             <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="py-1 text-left font-medium">Categorie</th>
-                <th className="py-1 text-right font-medium">Aantal</th>
-                <th className="py-1 text-right font-medium">%</th>
+                <th className="py-1 pl-3 text-right font-medium">Aantal</th>
+                <th className="py-1 pl-3 text-right font-medium">%</th>
               </tr>
             </thead>
             <tbody>
               {u.risico.map((r) => (
                 <tr key={r.categorie} className="border-t border-border">
                   <td className="py-1.5">{r.naam}</td>
-                  <td className="py-1.5 text-right tabular-nums">{r.aantal}</td>
-                  <td className="py-1.5 text-right tabular-nums">{pctTekst(r.pct)}</td>
+                  <td className="py-1.5 pl-3 text-right tabular-nums">{r.aantal}</td>
+                  <td className="py-1.5 pl-3 text-right whitespace-nowrap tabular-nums">
+                    {pctTekst(r.pct)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -64,12 +67,13 @@ export function AnalyseWeergave({ uitkomst: u }: { uitkomst: AnalyseUitkomst }) 
         <p className="mt-2 text-2xl font-bold tabular-nums">
           {u.efg.aantal}{" "}
           <span className="text-base font-medium text-muted-foreground">
-            woningen · {pctTekst(u.efg.pct)} van de portefeuille
+            {u.efg.aantal === 1 ? "woning" : "woningen"} · {pctTekst(u.efg.pct)} van de portefeuille
           </span>
         </p>
         {u.efg.geenLabelApart !== null && (
           <p className="text-sm text-muted-foreground">
-            Daarnaast {u.efg.geenLabelApart} woningen zonder geregistreerd label.
+            Daarnaast {aantal(u.efg.geenLabelApart, "woning", "woningen")} zonder geregistreerd
+            label.
           </p>
         )}
       </Kaart>
