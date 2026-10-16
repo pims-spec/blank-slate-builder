@@ -34,12 +34,12 @@ export function menuOnderdelen(r: MenuRechten): {
   if (r.heeftToegang !== false) {
     hoofd.push(
       { to: "/wws", label: "Puntentelling", icoon: "telling" },
-      { to: "/archief", label: "Archief", icoon: "archief" },
     );
-    if (r.zietAlles || r.isAdmin)
-      hoofd.push({ to: "/portefeuille", label: "Dashboard", icoon: "dashboard" });
     if (r.magSchrijven)
       hoofd.push({ to: "/indeling", label: "Indelingsadvies", icoon: "indeling" });
+    hoofd.push({ to: "/archief", label: "Archief", icoon: "archief" });
+    if (r.zietAlles || r.isAdmin)
+      hoofd.push({ to: "/portefeuille", label: "Dashboard", icoon: "dashboard" });
     hoofd.push({ to: "/eigenaren", label: "Eigenaren", icoon: "eigenaren" });
   }
   const beheer: MenuOnderdeel[] = r.isAdmin
