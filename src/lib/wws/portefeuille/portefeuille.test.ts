@@ -11,6 +11,7 @@ import {
   type LabelResultaat,
 } from "./analyse";
 import { isIsoDatum, plusJaren, plusMaanden } from "./datum";
+import { RAMING_STANDAARD } from "./verduurzaming";
 
 const D = "2026-10-15";
 const N = PORTEFEUILLE_STANDAARD;
@@ -252,6 +253,7 @@ describe("instellingen en omschrijving", () => {
       bloxsPerSeconde: 1,
       verouderdVoor: "2021-01-01",
       efg: { ingangsdatum: "2030-01-01", klassen: ["E", "G"], geenLabel: "apart" },
+      raming: RAMING_STANDAARD,
     });
   });
   it("neutrale omschrijving uit de instellingen", () => {

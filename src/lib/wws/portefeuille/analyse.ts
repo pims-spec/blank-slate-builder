@@ -14,6 +14,13 @@
 import { LABELS } from "../basis";
 import { adresSleutel, adresTekst, type PortefeuilleAdres } from "./adres";
 import type { BagStatus } from "./bag";
+import {
+  RAMING_STANDAARD,
+  maakRaming,
+  ramingNormen,
+  type Raming,
+  type RamingNormen,
+} from "./verduurzaming";
 import { isIsoDatum, langeDatum, plusJaren, plusMaanden } from "./datum";
 
 export type LabelStatus = "gevonden" | "niet_gevonden" | "meerdere" | "fout";
@@ -52,6 +59,8 @@ export interface PortefeuilleNormen {
     klassen: string[];
     geenLabel: GeenLabelEfg;
   };
+  /** Verduurzamingsraming: bedragen en factoren (zie verduurzaming.ts) */
+  raming: RamingNormen;
 }
 
 /** Standaardinstellingen; in Normen aan te passen (normen.portefeuille) */
@@ -60,6 +69,7 @@ export const PORTEFEUILLE_STANDAARD: PortefeuilleNormen = {
   bloxsPerSeconde: 1,
   verouderdVoor: "2021-01-01",
   efg: { ingangsdatum: "2029-01-01", klassen: ["E", "F", "G"], geenLabel: "apart" },
+  raming: RAMING_STANDAARD,
 };
 
 /** Opgeslagen instellingen (mogelijk onvolledig of ongeldig) aangevuld met de standaard */
@@ -81,6 +91,7 @@ export function portefeuilleNormen(n: Partial<PortefeuilleNormen> | null | undef
         ? efg.geenLabel!
         : d.efg.geenLabel,
     },
+    raming: ramingNormen(n?.raming),
   } satisfies PortefeuilleNormen;
 }
 
@@ -222,6 +233,8 @@ export interface AnalyseUitkomst {
   epOpgehaaldVan: string | null;
   epOpgehaaldTot: string | null;
   instellingen: { verouderdVoor: string; efg: PortefeuilleNormen["efg"] };
+  /** Verduurzamingsraming (ontbreekt bij analyses van vóór deze functie) */
+  raming?: Raming;
 }
 
 /** De analyse van een portefeuille op `datum`, met een venster van `maanden` (standaard 3) */
@@ -344,6 +357,18 @@ export function analyseer(
       fout: lijst((a) => a.resultaat?.status === "fout"),
       nietOpgehaald: lijst((a) => !a.resultaat),
     },
+    raming: (() => {
+      const r = maakRaming(
+        beoordeeld.map((a) => ({
+          adres: adresTekst(a),
+          klasse: klasseVan(a.resultaat),
+          bag: a.bag,
+        })),
+        normen.raming ?? RAMING_STANDAARD,
+      );
+      r.regels.sort((x, y) => sorteer(x.adres, y.adres));
+      return r;
+    })(),
     epOpgehaaldVan: opgehaald[0] ?? null,
     epOpgehaaldTot: opgehaald[opgehaald.length - 1] ?? null,
     instellingen: { verouderdVoor: normen.verouderdVoor, efg: normen.efg },

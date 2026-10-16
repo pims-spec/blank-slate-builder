@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import NormenBeheer from "./NormenBeheer";
+import { RAMING_STANDAARD } from "@/lib/wws/portefeuille/verduurzaming";
 
 const instellingenStore = vi.hoisted(() => ({ slaNormenOp: vi.fn() }));
 vi.mock("./tellingStore", () => ({ instellingenStore }));
@@ -74,6 +75,7 @@ describe("Normen: portefeuille-analyse", () => {
       bloxsPerSeconde: 0.5,
       verouderdVoor: "2021-01-01",
       efg: { ingangsdatum: "2030-01-01", klassen: ["D", "E", "F", "G"], geenLabel: "meetellen" },
+      raming: RAMING_STANDAARD,
     });
   });
 });
