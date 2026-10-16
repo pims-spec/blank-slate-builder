@@ -43,6 +43,7 @@ import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { BloxsDialoog } from "./BloxsDialoog";
 import { CombiAnalyse } from "./CombiAnalyse";
+import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
 import { ImportDialoog } from "./ImportDialoog";
 
 type OpnieuwKeuze = "alle" | "probleem" | "oud";
@@ -82,6 +83,7 @@ export default function PortefeuilleAnalyse({
   const [bloxsOpen, setBloxsOpen] = useState<"nieuw" | "opnieuw" | null>(null);
   const [modus, setModus] = useState<"een" | "combi">("een");
   const [verwijderVraag, setVerwijderVraag] = useState(false);
+  const [delenOpen, setDelenOpen] = useState(false);
   const [datum, setDatum] = useState(vandaag());
   const [venster, setVenster] = useState("3");
   const [bekeken, setBekeken] = useState<{ id: string; uitkomst: AnalyseUitkomst } | null>(null);
@@ -366,6 +368,7 @@ export default function PortefeuilleAnalyse({
                 {portefeuilles.map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.naam} ({x.aantalAdressen})
+                    {x.createdBy && x.createdBy !== userId ? " · van een collega" : ""}
                   </option>
                 ))}
               </select>
@@ -400,8 +403,18 @@ export default function PortefeuilleAnalyse({
             )}
             {p && magBeheren(p.createdBy) && (
               <Button
+                variant="outline"
+                className="ml-auto"
+                onClick={() => setDelenOpen(true)}
+                disabled={bezig}
+              >
+                Delen
+              </Button>
+            )}
+            {p && magBeheren(p.createdBy) && (
+              <Button
                 variant="ghost"
-                className="ml-auto text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive"
                 onClick={() => setVerwijderVraag(true)}
                 disabled={bezig}
               >
@@ -668,6 +681,15 @@ export default function PortefeuilleAnalyse({
         </>
       )}
 
+      {p && (
+        <PortefeuilleDelenDialoog
+          open={delenOpen}
+          onOpenChange={setDelenOpen}
+          portefeuilles={[p]}
+          userId={userId}
+          isAdmin={rechten.isAdmin}
+        />
+      )}
       <BloxsDialoog
         open={bloxsOpen !== null}
         onOpenChange={(o) => !o && setBloxsOpen(null)}

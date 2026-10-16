@@ -63,4 +63,20 @@ describe("delen: store", () => {
     );
     expect((await maakDelenStore(db).collegas(true)).map((c) => c.id)).toEqual(["u2"]);
   });
+
+  it("portefeuilles: gedeeld met, delen en intrekken op portefeuille_shares", async () => {
+    const a = nepDb(() => ({ data: [{ user_id: "u2" }] }));
+    expect(await maakDelenStore(a.db).portefeuilleGedeeldMet("p1")).toEqual(["u2"]);
+    expect(a.log[0]?.tabel).toBe("portefeuille_shares");
+    expect(stap(a.log[0], "eq")).toEqual(["portefeuille_id", "p1"]);
+    const b = nepDb();
+    await maakDelenStore(b.db).deelPortefeuille("p1", "u2");
+    expect(stap(b.log[0], "insert")).toEqual([{ portefeuille_id: "p1", user_id: "u2" }]);
+    const c = nepDb();
+    await maakDelenStore(c.db).ontdeelPortefeuille("p1", "u2");
+    expect(c.log[0]!.stappen.filter(([x]) => x === "eq").map(([, y]) => y)).toEqual([
+      ["portefeuille_id", "p1"],
+      ["user_id", "u2"],
+    ]);
+  });
 });

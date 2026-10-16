@@ -234,9 +234,16 @@ de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat gee
 - **Totaalbestand:** het maandelijkse totaalbestand kan later; het is te groot om in een server
   function te verwerken.
 
-**Rechten.** Lezen voor iedereen met een rol, ook de kijkrol: bekijken en de PDF downloaden.
-Ophalen, importeren en analyses opslaan kan alleen met een schrijfrol. Een portefeuille of een
-analyse verwijderen kan alleen de maker of een admin.
+**Rechten (migratie 0008).**
+- **Zien:** een portefeuille en de analyses ervan zie je als maker, als hij met je gedeeld is, als
+  beheerder of met de kijkrol. Een gecombineerde analyse zie je als je alle portefeuilles ervan mag
+  zien (of als maker, beheerder of kijkrol).
+- **Bijwerken:** labels ophalen, adressen toevoegen, opnieuw inladen uit Bloxs en analyses opslaan
+  doen de maker, de collega's met wie hij gedeeld is, en beheerders (met een schrijfrol).
+- **Delen en verwijderen:** alleen de maker of een beheerder. Delen kan op de pagina zelf en in
+  Archief → Portefeuille-analyses (deelt de onderliggende portefeuille(s)).
+- **In de database:** extra RESTRICTIVE policies bovenop de bestaande, met
+  `mag_portefeuille_zien/_bewerken/_delen`. De bestaande policies zijn niet gewijzigd.
 
 **Straat en woonplaats.** Optioneel uit de import (kolommen `straat`/`straatnaam` en
 `woonplaats`/`plaats`); anders direct na de import aangevuld via PDOK. Dat gaat met een schrijfrol,

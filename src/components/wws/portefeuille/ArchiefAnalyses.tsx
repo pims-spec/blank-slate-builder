@@ -21,9 +21,15 @@ import { eigenaarNamen, zoekAnalyses } from "@/lib/wws/portefeuille/archief";
 import { nlDatum } from "@/lib/wws/portefeuille/datum";
 import type { ArchiefAnalyse } from "@/lib/wws/portefeuille/opslag";
 import { maakPortefeuillePdf } from "@/lib/wws/pdf/portefeuille";
-import { archiefAnalysesQuery, klantenQuery, portefeuilleStore } from "../tellingStore";
+import {
+  archiefAnalysesQuery,
+  klantenQuery,
+  portefeuilleStore,
+  portefeuillesQuery,
+} from "../tellingStore";
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
+import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
 
 const opgeslagen = (iso: string) =>
   new Date(iso).toLocaleString("nl-NL", { dateStyle: "medium", timeStyle: "short" });
@@ -42,6 +48,15 @@ export function ArchiefAnalyses({
   const download = useDownload();
   const { data = [], isPending, error } = useQuery(archiefAnalysesQuery());
   const { data: klanten = [] } = useQuery(klantenQuery());
+  const { data: portefeuilles = [] } = useQuery(portefeuillesQuery());
+  const [delen, setDelen] = useState<ArchiefAnalyse | null>(null);
+  /** De portefeuilles onder een analyse die jij mag delen (maker of beheerder) */
+  const deelbaar = (a: ArchiefAnalyse) =>
+    rechten.magSchrijven
+      ? portefeuilles.filter(
+          (p) => a.portefeuilleIds.includes(p.id) && (p.createdBy === userId || rechten.isAdmin),
+        )
+      : [];
   const klantNamen = useMemo(() => new Map(klanten.map((k) => [k.id, k.naam])), [klanten]);
   const [zoek, setZoek] = useState("");
   const [bekijk, setBekijk] = useState<{ a: ArchiefAnalyse; u: AnalyseUitkomst } | null>(null);
@@ -165,6 +180,11 @@ export function ArchiefAnalyses({
                       >
                         {download.bezig === "pdf-" + a.id ? "PDF maken…" : "PDF"}
                       </Button>
+                      {deelbaar(a).length > 0 && (
+                        <Button size="sm" variant="outline" onClick={() => setDelen(a)}>
+                          Delen
+                        </Button>
+                      )}
                       {magVerwijderen(a) && (
                         <Button
                           size="sm"
@@ -214,6 +234,14 @@ export function ArchiefAnalyses({
           )}
         </DialogContent>
       </Dialog>
+
+      <PortefeuilleDelenDialoog
+        open={!!delen}
+        onOpenChange={(o) => !o && setDelen(null)}
+        portefeuilles={delen ? deelbaar(delen) : []}
+        userId={userId}
+        isAdmin={rechten.isAdmin}
+      />
 
       <AlertDialog open={!!weg} onOpenChange={(o) => !o && setWeg(null)}>
         <AlertDialogContent>

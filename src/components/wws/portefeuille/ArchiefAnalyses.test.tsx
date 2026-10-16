@@ -22,6 +22,22 @@ vi.mock("../tellingStore", () => ({
     queryKey: ["klanten"],
     queryFn: async () => [{ id: "k1", naam: "Amstel Wonen", pve: [] }],
   }),
+  portefeuillesQuery: () => ({
+    queryKey: ["portefeuilles"],
+    queryFn: async () => [
+      { id: "p1", naam: "Oost", createdBy: "u1" },
+      { id: "p2", naam: "West", createdBy: "u2" },
+    ],
+  }),
+  delenStore: {
+    collegas: async () => [
+      { id: "u2", naam: "Bas", email: "bas@x.nl" },
+      { id: "u3", naam: "Cor", email: "cor@x.nl" },
+    ],
+    portefeuilleGedeeldMet: async () => [],
+    deelPortefeuille: async () => {},
+    ontdeelPortefeuille: async () => {},
+  },
 }));
 const bewaar = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/wws/pdf/laden", async (orig) => ({
@@ -117,5 +133,23 @@ describe("Archief: portefeuille-analyses", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Verwijderen", hidden: false }));
     await waitFor(() => expect(store.verwijderCombiAnalyse).toHaveBeenCalledWith("c1"));
     expect(store.verwijderAnalyse).not.toHaveBeenCalled();
+  });
+
+  it("delen: alleen portefeuilles die jij maakte; bij gecombineerd alleen die", async () => {
+    toon(["member"], "u1");
+    await screen.findByRole("table", { name: "Portefeuille-analyses" });
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Delen" })).toHaveLength(2));
+    fireEvent.click(screen.getAllByRole("button", { name: "Delen" })[1]!);
+    const d = await screen.findByRole("dialog");
+    expect(within(d).getByText("Portefeuille delen")).toBeInTheDocument();
+    // gecombineerd Oost + West, maar u1 maakte alleen Oost: geen keuzelijst
+    expect(within(d).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(await within(d).findByText("Bas")).toBeInTheDocument();
+  });
+
+  it("kijkrol: geen delen", async () => {
+    toon(["viewer"], "u1");
+    await screen.findByRole("table", { name: "Portefeuille-analyses" });
+    expect(screen.queryByRole("button", { name: "Delen" })).not.toBeInTheDocument();
   });
 });

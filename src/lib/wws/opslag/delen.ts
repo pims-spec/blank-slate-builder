@@ -82,6 +82,34 @@ export function maakDelenStore(db: Db) {
         .eq("user_id", userId);
       if (error) throw error;
     },
+
+    // ---------- portefeuilles (portefeuille_shares): gedeelde collega's kunnen bekijken én
+    // bijwerken; delen en intrekken alleen door de maker of een beheerder (RLS) ----------
+
+    async portefeuilleGedeeldMet(portefeuilleId: string): Promise<string[]> {
+      const { data, error } = await db
+        .from("portefeuille_shares")
+        .select("user_id")
+        .eq("portefeuille_id", portefeuilleId);
+      if (error) throw error;
+      return (data ?? []).map((r) => r.user_id);
+    },
+
+    async deelPortefeuille(portefeuilleId: string, userId: string): Promise<void> {
+      const { error } = await db
+        .from("portefeuille_shares")
+        .insert({ portefeuille_id: portefeuilleId, user_id: userId });
+      if (error) throw error;
+    },
+
+    async ontdeelPortefeuille(portefeuilleId: string, userId: string): Promise<void> {
+      const { error } = await db
+        .from("portefeuille_shares")
+        .delete()
+        .eq("portefeuille_id", portefeuilleId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
   };
 }
 
