@@ -26,8 +26,16 @@ export interface Portefeuille {
 }
 
 /** Een opgeslagen analyse in het archief: van één portefeuille, of gecombineerd */
+/** Waar een opgeslagen analyse van elke soort staat */
+const ANALYSE_TABEL = {
+  portefeuille: "portefeuille_analyses",
+  combi: "portefeuille_combi_analyses",
+  verwijderd: "portefeuille_analyses_archief",
+} as const;
+
 export interface ArchiefAnalyse {
-  soort: "portefeuille" | "combi";
+  /** "verwijderd": bewaard uit een portefeuille die later is verwijderd (migratie 0011) */
+  soort: "portefeuille" | "combi" | "verwijderd";
   id: string;
   /** Portefeuillenaam, of de titel van de gecombineerde analyse */
   titel: string;
@@ -446,13 +454,40 @@ export function maakPortefeuilleStore(db: Db) {
           });
         if ((data?.length ?? 0) < PAGINA) break;
       }
+      // analyses van verwijderde portefeuilles (bewaard door een trigger)
+      for (let van = 0; ; van += PAGINA) {
+        const { data, error } = await db
+          .from("portefeuille_analyses_archief")
+          .select(
+            "id, portefeuille_id, portefeuille_naam, klant_id, analyse_datum, venster_maanden, aantal_adressen, gemaakt_op, gemaakt_door, maker:profiles!portefeuille_analyses_archief_gemaakt_door_fkey(display_name, email)",
+          )
+          .order("gemaakt_op", { ascending: false })
+          .range(van, van + PAGINA - 1);
+        if (error) throw error;
+        for (const r of data ?? [])
+          uit.push({
+            soort: "verwijderd",
+            id: r.id,
+            titel: r.portefeuille_naam,
+            portefeuilleIds: [r.portefeuille_id],
+            portefeuilleNamen: [r.portefeuille_naam],
+            klantIds: r.klant_id ? [r.klant_id] : [],
+            analyseDatum: r.analyse_datum,
+            vensterMaanden: r.venster_maanden,
+            aantalAdressen: r.aantal_adressen,
+            gemaaktOp: r.gemaakt_op,
+            gemaaktDoor: r.gemaakt_door,
+            gemaaktDoorNaam: makerNaam(r.maker),
+          });
+        if ((data?.length ?? 0) < PAGINA) break;
+      }
       return uit.sort((a, b) => b.gemaaktOp.localeCompare(a.gemaaktOp));
     },
 
     /** De uitkomst van één opgeslagen analyse (voor bekijken en PDF) */
     async analyseUitkomst(soort: ArchiefAnalyse["soort"], id: string): Promise<AnalyseUitkomst> {
       const { data, error } = await db
-        .from(soort === "combi" ? "portefeuille_combi_analyses" : "portefeuille_analyses")
+        .from(ANALYSE_TABEL[soort])
         .select("resultaat")
         .eq("id", id)
         .single();
@@ -490,6 +525,20 @@ export function maakPortefeuilleStore(db: Db) {
     async verwijderCombiAnalyse(id: string): Promise<void> {
       const { data, error } = await db
         .from("portefeuille_combi_analyses")
+        .delete()
+        .eq("id", id)
+        .select("id");
+      if (error) throw error;
+      if (!data?.length)
+        throw new Error(
+          "Alleen wie de analyse heeft opgeslagen, of een beheerder, kan hem verwijderen.",
+        );
+    },
+
+    /** Een bewaarde analyse van een verwijderde portefeuille verwijderen (maker of admin) */
+    async verwijderBewaardeAnalyse(id: string): Promise<void> {
+      const { data, error } = await db
+        .from("portefeuille_analyses_archief")
         .delete()
         .eq("id", id)
         .select("id");

@@ -11,6 +11,7 @@ const store = vi.hoisted(() => ({
   analyseUitkomst: vi.fn(),
   verwijderAnalyse: vi.fn(),
   verwijderCombiAnalyse: vi.fn(),
+  verwijderBewaardeAnalyse: vi.fn(),
 }));
 vi.mock("../tellingStore", () => ({
   portefeuilleStore: store,
@@ -145,6 +146,24 @@ describe("Archief: portefeuille-analyses", () => {
     // gecombineerd Oost + West, maar u1 maakte alleen Oost: geen keuzelijst
     expect(within(d).queryByRole("combobox")).not.toBeInTheDocument();
     expect(await within(d).findByText("Bas")).toBeInTheDocument();
+  });
+
+  it("analyse van een verwijderde portefeuille: label, bekijken, geen delen, verwijderen", async () => {
+    store.archiefAnalyses.mockResolvedValue([
+      rij({ soort: "verwijderd", id: "v1", titel: "Oud", portefeuilleIds: ["weg"] }),
+    ]);
+    store.verwijderBewaardeAnalyse.mockResolvedValue(undefined);
+    toon(["member"], "u1");
+    const tabel = await screen.findByRole("table", { name: "Portefeuille-analyses" });
+    expect(within(tabel).getByText("Portefeuille verwijderd")).toBeInTheDocument();
+    expect(within(tabel).getByText("Amstel Wonen")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delen" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Bekijken" }));
+    await waitFor(() => expect(store.analyseUitkomst).toHaveBeenCalledWith("verwijderd", "v1"));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Verwijderen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Verwijderen", hidden: false }));
+    await waitFor(() => expect(store.verwijderBewaardeAnalyse).toHaveBeenCalledWith("v1"));
   });
 
   it("kijkrol: geen delen", async () => {

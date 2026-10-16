@@ -300,6 +300,8 @@ export default function PortefeuilleAnalyse({
       setGekozen(null);
       setBekeken(null);
       await qc.invalidateQueries({ queryKey: ["portefeuilles"] });
+      // de analyses staan nu als "portefeuille verwijderd" in het archief
+      void qc.invalidateQueries({ queryKey: ["archief-analyses"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Verwijderen lukte niet.");
     }
@@ -825,8 +827,9 @@ export default function PortefeuilleAnalyse({
           <AlertDialogHeader>
             <AlertDialogTitle>Portefeuille verwijderen?</AlertDialogTitle>
             <AlertDialogDescription>
-              ‘{p?.naam}’ wordt definitief verwijderd, met alle {p?.aantalAdressen} adressen,
-              opgehaalde labels en opgeslagen analyses. Dit kan niet ongedaan worden gemaakt.
+              ‘{p?.naam}’ wordt definitief verwijderd, met alle {p?.aantalAdressen} adressen en
+              opgehaalde labels. Dit kan niet ongedaan worden gemaakt. Opgeslagen analyses blijven
+              in het archief staan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -96,6 +96,7 @@ export function ArchiefAnalyses({
   async function verwijder(a: ArchiefAnalyse) {
     try {
       if (a.soort === "combi") await portefeuilleStore.verwijderCombiAnalyse(a.id);
+      else if (a.soort === "verwijderd") await portefeuilleStore.verwijderBewaardeAnalyse(a.id);
       else await portefeuilleStore.verwijderAnalyse(a.id);
       toast.success("Analyse verwijderd.");
     } catch (e) {
@@ -150,6 +151,11 @@ export function ArchiefAnalyses({
                   <td className="px-3 py-2">
                     <span className="font-medium">{a.titel}</span>{" "}
                     {a.soort === "combi" && <Badge variant="secondary">Gecombineerd</Badge>}
+                    {a.soort === "verwijderd" && (
+                      <Badge variant="outline" title="De portefeuille zelf is verwijderd">
+                        Portefeuille verwijderd
+                      </Badge>
+                    )}
                     {a.soort === "combi" && (
                       <div className="text-xs text-muted-foreground">
                         {a.portefeuilleNamen.join(", ")}

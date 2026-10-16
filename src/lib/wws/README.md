@@ -266,6 +266,13 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
 enkel en gecombineerd, met zoeken, bekijken, PDF en verwijderen (maker of admin). De kijkrol kan
 bekijken en de PDF downloaden.
 
+**Analyses bewaren bij verwijderen (migratie 0011).** Een opgeslagen analyse hing aan zijn
+portefeuille en verdween mee bij verwijderen. Nu kopieert een trigger (`before delete` op
+`portefeuilles`) de analyses eerst naar `portefeuille_analyses_archief`, met de naam en eigenaar
+van dat moment. Het archief toont ze met "Portefeuille verwijderd" (soort `verwijderd`): bekijken
+en PDF; verwijderen door de maker of een admin; zien door de maker, admins en de kijkrol. Eerder
+verwijderde analyses zijn niet terug te halen.
+
 **Adres uit de analyse halen (migratie 0010).** Bij "Te controleren" staat per adres een kruisje
 (alleen in de actuele analyse, met schrijfrechten). Het adres krijgt `uitgesloten_op`/
 `uitgesloten_door`, blijft in de portefeuille (ook na opnieuw inladen uit Bloxs: de sync raakt die
