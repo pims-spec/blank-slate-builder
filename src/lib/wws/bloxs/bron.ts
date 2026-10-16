@@ -10,7 +10,14 @@ export type { BloxsFout } from "./fouten";
 
 export type BloxsUitkomst<T> =
   | { ok: true; data: T }
-  | { ok: false; fout: BloxsFout; /** HTTP-status (alleen het getal) */ status?: number };
+  | {
+      ok: false;
+      fout: BloxsFout;
+      /** HTTP-status (alleen het getal) */
+      status?: number;
+      /** Bij 401: de namen van de gevraagde inlogmethoden ("Basic", "Bearer"), niets anders */
+      methoden?: string[];
+    };
 
 export interface BloxsConfig {
   basis: string;
@@ -53,6 +60,22 @@ export function bloxsSecretsAanwezig(env: Record<string, string | undefined>) {
   };
 }
 
+/**
+ * Alleen de namen van de inlogmethoden uit WWW-Authenticate ("Basic realm=…, Bearer" →
+ * ["Basic", "Bearer"]); realm en andere parameters worden weggelaten.
+ */
+export function inlogMethoden(kop: string | null): string[] {
+  if (!kop) return [];
+  const namen = new Set<string>();
+  for (const deel of kop.slice(0, 1000).split(",")) {
+    // "realm=…" na een komma is een parameter van de vorige methode, geen methode
+    if (/^\s*[A-Za-z0-9-]+\s*=/.test(deel)) continue;
+    const m = /^\s*([A-Za-z][A-Za-z0-9-]{0,30})(?=\s|$)/.exec(deel);
+    if (m) namen.add(m[1]!);
+  }
+  return [...namen].slice(0, 5);
+}
+
 export function foutVoorStatus(status: number): BloxsFout {
   if (status === 401 || status === 403) return "geweigerd";
   if (status === 404) return "niet_gevonden";
@@ -89,6 +112,7 @@ export async function haalBloxsUrl(
   accept: string,
   wat: string,
   maxTekens: number,
+  zonderInlog = false,
 ): Promise<BloxsUitkomst<string>> {
   if (url !== cfg.basis && !url.startsWith(cfg.basis + "/")) {
     logFout(wat, "onverwacht_antwoord");
@@ -98,7 +122,9 @@ export async function haalBloxsUrl(
   try {
     res = await fetchFn(url, {
       method: "GET",
-      headers: { Authorization: cfg.authorization, Accept: accept },
+      headers: zonderInlog
+        ? { Accept: accept }
+        : { Authorization: cfg.authorization, Accept: accept },
       redirect: "manual",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -111,7 +137,8 @@ export async function haalBloxsUrl(
     const fout =
       res.status >= 300 && res.status < 400 ? "onverwacht_antwoord" : foutVoorStatus(res.status);
     logFout(wat, fout, res.status);
-    return { ok: false, fout, status: res.status };
+    const methoden = res.status === 401 ? inlogMethoden(res.headers.get("www-authenticate")) : [];
+    return { ok: false, fout, status: res.status, ...(methoden.length ? { methoden } : {}) };
   }
   const lengte = Number(res.headers.get("content-length") ?? "0");
   if (lengte > maxTekens * 4) {

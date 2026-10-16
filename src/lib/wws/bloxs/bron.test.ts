@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { bloxsConfig, bloxsSecretsAanwezig, bloxsStructuur, testBloxs } from "./bron";
+import {
+  bloxsConfig,
+  bloxsSecretsAanwezig,
+  bloxsStructuur,
+  inlogMethoden,
+  testBloxs,
+} from "./bron";
 
 const ENV = {
   BLOXS_ODATA_URL: "https://klant.bloxs.io/odatafeed/",
@@ -119,5 +125,17 @@ describe("aanroepen", () => {
       ok: false,
       fout: "onverwacht_antwoord",
     });
+  });
+});
+
+describe("inlogMethoden", () => {
+  it("alleen de namen, zonder realm of andere parameters", () => {
+    expect(inlogMethoden('Basic realm="omgeving x", charset="UTF-8"')).toEqual(["Basic"]);
+    expect(inlogMethoden('Bearer error="invalid_token", Basic realm="a"')).toEqual([
+      "Bearer",
+      "Basic",
+    ]);
+    expect(inlogMethoden("Negotiate, NTLM")).toEqual(["Negotiate", "NTLM"]);
+    expect(inlogMethoden(null)).toEqual([]);
   });
 });

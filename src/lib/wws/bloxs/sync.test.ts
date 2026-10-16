@@ -324,23 +324,48 @@ describe("syncPlan", () => {
 });
 
 describe("testToegang (diagnose)", () => {
-  it("per entiteit één vraag met $top=0; status bij weigering", async () => {
+  it("eerst $metadata zonder inlog, dan per entiteit één vraag met $top=0; status en methode", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    const headers: (string | null)[] = [];
     const { o, urls } = omgeving((u) =>
-      u.pathname.endsWith("/owners") ? json({}, 403) : json({ value: [] }),
+      u.pathname.endsWith("/$metadata")
+        ? new Response("<edmx/>", { status: 200 })
+        : u.pathname.endsWith("/owners")
+          ? new Response("geheim", {
+              status: 401,
+              headers: { "WWW-Authenticate": 'Basic realm="klant-omgeving", Bearer' },
+            })
+          : json({ value: [] }),
     );
+    const f = o.fetchFn as unknown as ReturnType<typeof vi.fn>;
     const r = await testToegang(o);
+    for (const c of f.mock.calls)
+      headers.push(
+        (c[1] as RequestInit & { headers: Record<string, string> }).headers["Authorization"] ??
+          null,
+      );
     expect(urls.map((u) => [u.pathname.split("/").pop(), u.searchParams.get("$top")])).toEqual([
+      ["$metadata", null],
       ["owners", "0"],
       ["Units", "0"],
       ["Buildings", "0"],
       ["Addresses", "0"],
     ]);
+    expect(headers[0]).toBeNull();
+    expect(headers.slice(1).every((h) => h?.startsWith("Basic "))).toBe(true);
     expect(r).toEqual([
-      { entiteit: "owners", ok: false, fout: "geweigerd", status: 403 },
+      { entiteit: "$metadata zonder inloggegevens", ok: true },
+      {
+        entiteit: "owners",
+        ok: false,
+        fout: "geweigerd",
+        status: 401,
+        methoden: ["Basic", "Bearer"],
+      },
       { entiteit: "Units", ok: true },
       { entiteit: "Buildings", ok: true },
       { entiteit: "Addresses", ok: true },
     ]);
+    expect(JSON.stringify(r)).not.toContain("klant-omgeving");
   });
 });

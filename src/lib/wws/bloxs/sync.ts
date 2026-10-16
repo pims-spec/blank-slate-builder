@@ -309,10 +309,39 @@ export async function haalAdressen(
  * Diagnose voor beheerders: per entiteit uit de allowlist één vraag met $top=0 (geen rijen), om te
  * zien of het account er toegang toe heeft. Geeft alleen ok of de foutcode met de HTTP-status.
  */
-export async function testToegang(
-  o: Omgeving,
-): Promise<{ entiteit: Entiteit; ok: boolean; fout?: BloxsFout; status?: number }[]> {
-  const uit: { entiteit: Entiteit; ok: boolean; fout?: BloxsFout; status?: number }[] = [];
+export interface ToegangRegel {
+  entiteit: string;
+  ok: boolean;
+  fout?: BloxsFout;
+  status?: number;
+  methoden?: string[];
+}
+
+export async function testToegang(o: Omgeving): Promise<ToegangRegel[]> {
+  const uit: ToegangRegel[] = [];
+  // is $metadata ook zonder inloggegevens op te vragen? (dan zegt een geslaagde verbindingstest
+  // niets over gebruiker en wachtwoord)
+  await o.slaap(o.wacht);
+  const open = await haalBloxsUrl(
+    o.fetchFn,
+    o.cfg,
+    o.cfg.basis + "/$metadata",
+    "application/xml",
+    "metadata zonder inlog",
+    MAX_PAGINA_TEKENS,
+    true,
+  );
+  uit.push(
+    open.ok
+      ? { entiteit: "$metadata zonder inloggegevens", ok: true }
+      : {
+          entiteit: "$metadata zonder inloggegevens",
+          ok: false,
+          fout: open.fout,
+          ...(open.status ? { status: open.status } : {}),
+          ...(open.methoden ? { methoden: open.methoden } : {}),
+        },
+  );
   for (const entiteit of Object.keys(ALLOWLIST) as Entiteit[]) {
     await o.slaap(o.wacht);
     const url = vraagUrl(o.cfg.basis, {
@@ -322,7 +351,13 @@ export async function testToegang(
     });
     const r = await haalBloxsUrl(o.fetchFn, o.cfg, url, ACCEPT, "toegang " + entiteit, 100_000);
     if (!r.ok) {
-      uit.push({ entiteit, ok: false, fout: r.fout, ...(r.status ? { status: r.status } : {}) });
+      uit.push({
+        entiteit,
+        ok: false,
+        fout: r.fout,
+        ...(r.status ? { status: r.status } : {}),
+        ...(r.methoden ? { methoden: r.methoden } : {}),
+      });
       continue;
     }
     const p = leesPagina(

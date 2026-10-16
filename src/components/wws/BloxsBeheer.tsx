@@ -19,7 +19,8 @@ export function BloxsBeheer() {
   const [fout, setFout] = useState<BloxsFout | null>(null);
   const [bezig, setBezig] = useState<"test" | "structuur" | "toegang" | null>(null);
   const [toegang, setToegang] = useState<
-    { entiteit: string; ok: boolean; fout?: BloxsFout; status?: number }[] | null
+    | { entiteit: string; ok: boolean; fout?: BloxsFout; status?: number; methoden?: string[] }[]
+    | null
   >(null);
   const [zoek, setZoek] = useState("");
 
@@ -105,11 +106,16 @@ export function BloxsBeheer() {
             <li key={t.entiteit}>
               <code>{t.entiteit}</code>:{" "}
               {t.ok ? (
-                "toegang"
+                t.entiteit.startsWith("$metadata") ? (
+                  "ja, openbaar (zegt niets over de inloggegevens)"
+                ) : (
+                  "toegang"
+                )
               ) : (
                 <span className="text-destructive">
                   {bloxsFoutTekst(t.fout ?? "onverwacht_antwoord")}
                   {t.status ? " (HTTP " + t.status + ")" : ""}
+                  {t.methoden?.length ? " · Bloxs vraagt: " + t.methoden.join(", ") : ""}
                 </span>
               )}
             </li>
