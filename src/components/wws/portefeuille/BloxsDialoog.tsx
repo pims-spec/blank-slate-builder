@@ -62,6 +62,10 @@ export function BloxsDialoog(p: Props) {
 
 type Fase = "testen" | "eigenaren" | "kiezen" | "objecten" | "keuze" | "opslaan" | "klaar" | "fout";
 
+/** De HTTP-status uit een mislukte stap, als die er is (alleen het getal) */
+const statusVan = (r: object) =>
+  "status" in r && typeof r.status === "number" ? r.status : undefined;
+
 interface Samenvatting {
   plan: SyncPlan;
   units: number;
@@ -91,13 +95,13 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
     teller.current += n;
     setAanvragen(teller.current);
   };
-  const mislukt = (f: BloxsFout | "gestopt" | "onbekend") => {
+  const mislukt = (f: BloxsFout | "gestopt" | "onbekend", status?: number) => {
     setFout(
       f === "gestopt"
         ? "Gestopt. Er is niets opgeslagen."
         : f === "onbekend"
           ? "Er ging iets mis. Er is niets opgeslagen."
-          : bloxsFoutTekst(f),
+          : bloxsFoutTekst(f) + (status ? " (HTTP " + status + ")" : ""),
     );
     setFase("fout");
   };
@@ -110,7 +114,7 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
         const t = await bloxsFunctiesTesten();
         tel(t.aanvragen);
         if (weg) return;
-        if (!t.ok) return mislukt(t.fout);
+        if (!t.ok) return mislukt(t.fout, statusVan(t));
         if (bestaand) {
           if (!bestaand.bloxsEigenaarRef && !bestaand.bloxsComplexRef) return mislukt("onbekend");
           await haalObjecten(
@@ -124,7 +128,7 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
         const e = await bloxsEigenaren();
         tel(e.aanvragen);
         if (weg) return;
-        if (!e.ok) return mislukt(e.fout);
+        if (!e.ok) return mislukt(e.fout, statusVan(e));
         setEigenaren(e.data);
         setFase("kiezen");
       } catch {
@@ -156,7 +160,7 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
             data: { soort, eigenaar: e, complex: c, cursor },
           });
           tel(r.aanvragen);
-          if (!r.ok) return mislukt(r.fout);
+          if (!r.ok) return mislukt(r.fout, statusVan(r));
           alle.push(...r.data.objecten);
           cursor = r.data.volgende;
         }
@@ -195,7 +199,7 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
         );
         const r = await bloxsAdressen({ data: { ids: ids.slice(i, i + MAX_ADRESSEN) } });
         tel(r.aanvragen);
-        if (!r.ok) return mislukt(r.fout);
+        if (!r.ok) return mislukt(r.fout, statusVan(r));
         adressen.push(...r.data);
       }
       const plan = maakSyncPlan(gekozen, adressen);

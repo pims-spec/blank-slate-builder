@@ -5,6 +5,7 @@ import {
   haalEigenaren,
   haalObjectenPagina,
   testFuncties,
+  testToegang,
   type Omgeving,
 } from "./sync";
 import { adresIds, complexen, idUitTekst, maakSyncPlan } from "./syncPlan";
@@ -48,7 +49,12 @@ describe("testFuncties ($top=0)", () => {
   ])("anders: stoppen (%#)", async (res, fout) => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const { o } = omgeving(() => res);
-    expect(await testFuncties(o)).toEqual({ ok: false, fout, aanvragen: 1 });
+    const r = await testFuncties(o);
+    expect(r).toMatchObject({ ok: false, fout, aanvragen: 1 });
+    // alleen het getal van de HTTP-status, nooit de inhoud van het antwoord
+    expect(Object.keys(r).sort()).toEqual(
+      res.status === 200 ? ["aanvragen", "fout", "ok"] : ["aanvragen", "fout", "ok", "status"],
+    );
   });
 });
 
@@ -314,5 +320,27 @@ describe("syncPlan", () => {
     ]);
     expect(idUitTekst("123")).toBe(123);
     expect(idUitTekst("AB-1")).toBe("AB-1");
+  });
+});
+
+describe("testToegang (diagnose)", () => {
+  it("per entiteit één vraag met $top=0; status bij weigering", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { o, urls } = omgeving((u) =>
+      u.pathname.endsWith("/owners") ? json({}, 403) : json({ value: [] }),
+    );
+    const r = await testToegang(o);
+    expect(urls.map((u) => [u.pathname.split("/").pop(), u.searchParams.get("$top")])).toEqual([
+      ["owners", "0"],
+      ["Units", "0"],
+      ["Buildings", "0"],
+      ["Addresses", "0"],
+    ]);
+    expect(r).toEqual([
+      { entiteit: "owners", ok: false, fout: "geweigerd", status: 403 },
+      { entiteit: "Units", ok: true },
+      { entiteit: "Buildings", ok: true },
+      { entiteit: "Addresses", ok: true },
+    ]);
   });
 });

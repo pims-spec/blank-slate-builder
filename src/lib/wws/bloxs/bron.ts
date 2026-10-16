@@ -8,7 +8,9 @@ import { leesMetadata, MAX_METADATA_TEKENS, type BloxsStructuur } from "./metada
 
 export type { BloxsFout } from "./fouten";
 
-export type BloxsUitkomst<T> = { ok: true; data: T } | { ok: false; fout: BloxsFout };
+export type BloxsUitkomst<T> =
+  | { ok: true; data: T }
+  | { ok: false; fout: BloxsFout; /** HTTP-status (alleen het getal) */ status?: number };
 
 export interface BloxsConfig {
   basis: string;
@@ -109,7 +111,7 @@ export async function haalBloxsUrl(
     const fout =
       res.status >= 300 && res.status < 400 ? "onverwacht_antwoord" : foutVoorStatus(res.status);
     logFout(wat, fout, res.status);
-    return { ok: false, fout };
+    return { ok: false, fout, status: res.status };
   }
   const lengte = Number(res.headers.get("content-length") ?? "0");
   if (lengte > maxTekens * 4) {

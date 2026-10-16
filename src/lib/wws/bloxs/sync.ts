@@ -7,6 +7,7 @@ import { vandaag } from "../portefeuille/datum";
 import { haalBloxsUrl, type BloxsConfig, type BloxsUitkomst } from "./bron";
 import type { BloxsFout } from "./fouten";
 import {
+  ALLOWLIST,
   IdSchema,
   leesPagina,
   volgendeLinkOk,
@@ -75,6 +76,7 @@ export async function testFuncties(o: Omgeving): Promise<Stap<true>> {
         r.fout === "onverwacht_antwoord" || r.fout === "niet_bereikbaar"
           ? "functie_niet_ondersteund"
           : r.fout,
+      ...(r.status ? { status: r.status } : {}),
       aanvragen: 1,
     };
   const p = leesPagina(r.data, o.cfg.basis, v, () => true);
@@ -301,4 +303,39 @@ export async function haalAdressen(
     }
   }
   return { ok: true, data: uit, aanvragen: 1 };
+}
+
+/**
+ * Diagnose voor beheerders: per entiteit uit de allowlist één vraag met $top=0 (geen rijen), om te
+ * zien of het account er toegang toe heeft. Geeft alleen ok of de foutcode met de HTTP-status.
+ */
+export async function testToegang(
+  o: Omgeving,
+): Promise<{ entiteit: Entiteit; ok: boolean; fout?: BloxsFout; status?: number }[]> {
+  const uit: { entiteit: Entiteit; ok: boolean; fout?: BloxsFout; status?: number }[] = [];
+  for (const entiteit of Object.keys(ALLOWLIST) as Entiteit[]) {
+    await o.slaap(o.wacht);
+    const url = vraagUrl(o.cfg.basis, {
+      entiteit,
+      velden: [ALLOWLIST[entiteit][0]] as never,
+      top: 0,
+    });
+    const r = await haalBloxsUrl(o.fetchFn, o.cfg, url, ACCEPT, "toegang " + entiteit, 100_000);
+    if (!r.ok) {
+      uit.push({ entiteit, ok: false, fout: r.fout, ...(r.status ? { status: r.status } : {}) });
+      continue;
+    }
+    const p = leesPagina(
+      r.data,
+      o.cfg.basis,
+      { entiteit, velden: [ALLOWLIST[entiteit][0]] as never },
+      () => true,
+    );
+    uit.push(
+      p.ok && !p.rijen.length
+        ? { entiteit, ok: true }
+        : { entiteit, ok: false, fout: "functie_niet_ondersteund" },
+    );
+  }
+  return uit;
 }

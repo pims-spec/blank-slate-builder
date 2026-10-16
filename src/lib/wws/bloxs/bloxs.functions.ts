@@ -16,6 +16,7 @@ import {
   haalEigenaren,
   haalObjectenPagina,
   testFuncties,
+  testToegang,
   type Omgeving,
 } from "./sync";
 
@@ -33,6 +34,16 @@ export const bloxsStructuurOphalen = createServerFn({ method: "POST" })
     const cfg = bloxsConfig(process.env);
     if (!cfg.ok) return cfg;
     return bloxsStructuur(fetch, cfg.data);
+  });
+
+/** Diagnose: toegang per entiteit uit de allowlist ($top=0, geen rijen); alleen beheerders */
+export const bloxsToegangTesten = createServerFn({ method: "POST" })
+  .middleware([vereisAdmin])
+  .handler(async ({ context }) => {
+    const o = await omgeving(context.supabase);
+    return typeof o === "string"
+      ? { ok: false as const, fout: o }
+      : { ok: true as const, data: await testToegang(o) };
   });
 
 // --- Sync (stap 2): ingelogd met een schrijfrol, zod op invoer, limiet per seconde uit Normen ---

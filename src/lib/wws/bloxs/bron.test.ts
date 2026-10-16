@@ -89,7 +89,11 @@ describe("aanroepen", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const body = "Fout bij gebruiker@voorbeeld.nl: details van de aanvraag";
     const f = vi.fn(async () => new Response(status === 302 ? null : body, { status }));
-    expect(await testBloxs(f as unknown as typeof fetch, cfg())).toEqual({ ok: false, fout });
+    expect(await testBloxs(f as unknown as typeof fetch, cfg())).toEqual({
+      ok: false,
+      fout,
+      status,
+    });
     const log = warn.mock.calls.flat().join(" ");
     expect(log).not.toContain("gebruiker");
     expect(log).not.toContain("geheim");
