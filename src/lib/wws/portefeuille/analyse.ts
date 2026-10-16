@@ -13,6 +13,7 @@
 // in de percentages; ze staan apart, om te controleren.
 import { LABELS } from "../basis";
 import { adresSleutel, adresTekst, type PortefeuilleAdres } from "./adres";
+import type { BagStatus } from "./bag";
 import { isIsoDatum, langeDatum, plusJaren, plusMaanden } from "./datum";
 
 export type LabelStatus = "gevonden" | "niet_gevonden" | "meerdere" | "fout";
@@ -33,6 +34,8 @@ export interface AnalyseAdres extends PortefeuilleAdres {
   nietInBloxsSinds?: string | null;
   /** Gezet als iemand het adres uit de analyse heeft gehaald (het blijft in de portefeuille) */
   uitgeslotenOp?: string | null;
+  /** BAG-gegevens voor de verduurzamingsraming (null = nog niet opgehaald) */
+  bag?: { status: BagStatus; oppervlakte: number | null; bouwjaar: number | null } | null;
 }
 
 export type GeenLabelEfg = "apart" | "meetellen" | "negeren";

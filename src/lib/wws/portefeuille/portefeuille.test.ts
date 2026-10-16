@@ -260,9 +260,7 @@ describe("instellingen en omschrijving", () => {
     );
     expect(
       efgOmschrijving({ ingangsdatum: "2030-07-01", klassen: ["G"], geenLabel: "meetellen" }),
-    ).toBe(
-      "Woningen met label G per 1 juli 2030. Woningen zonder geregistreerd label tellen mee.",
-    );
+    ).toBe("Woningen met label G per 1 juli 2030. Woningen zonder geregistreerd label tellen mee.");
   });
 });
 

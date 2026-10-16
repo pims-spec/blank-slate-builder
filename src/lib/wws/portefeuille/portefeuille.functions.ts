@@ -8,6 +8,7 @@ import * as z from "zod";
 import { zoekAdresBijPdok, zoekEnergielabelsBijEpOnline } from "../opzoeken/dienst";
 import { vereisSchrijfrol } from "../rollenMiddleware";
 import { epVraagVoor, schoonNaam } from "./adres";
+import { haalBagPortie } from "./bag";
 import { leesPortefeuilleNormen } from "./normenDb";
 import {
   bagToevoegingOk,
@@ -140,3 +141,14 @@ export async function vulAanPortie(
   }
   return uit;
 }
+
+// --- BAG-gegevens voor de verduurzamingsraming (PDOK, geen sleutel nodig) ---
+
+/**
+ * Oppervlakte, gebruiksdoel en bouwjaar per adres uit de BAG (PDOK), per portie van maximaal 10.
+ * Zelfde rust als bij PDOK hierboven; stopt bij te veel verzoeken of een storing.
+ */
+export const haalBagGegevens = createServerFn({ method: "POST" })
+  .middleware([vereisSchrijfrol])
+  .validator((d: unknown) => PortieSchema.parse(d))
+  .handler(async ({ data }) => haalBagPortie(fetch, PDOK_WACHT_MS, data.adressen, slaap));

@@ -6,6 +6,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import type { SyncPlan } from "../bloxs/syncPlan";
 import { adresSleutel, type PortefeuilleAdres } from "./adres";
 import type { AnalyseAdres, AnalyseUitkomst, LabelResultaat, LabelStatus } from "./analyse";
+import type { BagResultaat, BagStatus } from "./bag";
 import type { OpgeslagenResultaat } from "./ophalen";
 
 type Db = SupabaseClient<Database>;
@@ -148,7 +149,7 @@ export function maakPortefeuilleStore(db: Db) {
         const { data, error } = await db
           .from("portefeuille_adressen")
           .select(
-            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, niet_in_bloxs_sinds, uitgesloten_op, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
+            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, niet_in_bloxs_sinds, uitgesloten_op, bag_status, bag_oppervlakte, bag_bouwjaar, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
           )
           .eq("portefeuille_id", portefeuilleId)
           .order("postcode")
@@ -170,6 +171,13 @@ export function maakPortefeuilleStore(db: Db) {
             woonplaats: r.woonplaats,
             nietInBloxsSinds: r.niet_in_bloxs_sinds,
             uitgeslotenOp: r.uitgesloten_op,
+            bag: r.bag_status
+              ? {
+                  status: r.bag_status as BagStatus,
+                  oppervlakte: r.bag_oppervlakte,
+                  bouwjaar: r.bag_bouwjaar,
+                }
+              : null,
             resultaat:
               l && status && STATUSSEN.includes(status)
                 ? ({
@@ -324,6 +332,31 @@ export function maakPortefeuilleStore(db: Db) {
     },
 
     /** Resultaten van EP-Online opslaan (laatste per adres; vervangt een eerder resultaat) */
+    /** BAG-gegevens per adres opslaan (de kolommen bag_* van portefeuille_adressen) */
+    async slaBagOp(resultaten: readonly { id: string; resultaat: BagResultaat }[]): Promise<void> {
+      const nu = new Date().toISOString();
+      const fouten = await Promise.all(
+        resultaten.map(async ({ id, resultaat: r }) => {
+          const { data, error } = await db
+            .from("portefeuille_adressen")
+            .update({
+              bag_status: r.status,
+              bag_oppervlakte: r.oppervlakte,
+              bag_bouwjaar: r.bouwjaar,
+              bag_gebruiksdoel: r.gebruiksdoel,
+              bag_opgehaald_op: nu,
+            })
+            .eq("id", id)
+            .select("id");
+          return (
+            error ?? (data?.length ? null : new Error("Geen rechten om dit adres bij te werken."))
+          );
+        }),
+      );
+      const f = fouten.find(Boolean);
+      if (f) throw f;
+    },
+
     async slaResultatenOp(
       portefeuilleId: string,
       userId: string,
