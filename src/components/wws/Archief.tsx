@@ -33,6 +33,7 @@ import {
 import { useNormen } from "./NormenContext";
 import { maakArchiefExcel } from "@/lib/wws/excel";
 import type { Telling } from "@/lib/wws/opslag";
+import DelenDialoog from "./DelenDialoog";
 import { dashboardVersiesQuery, klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
 import { useDownload } from "./useDownload";
 
@@ -60,6 +61,8 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
   const [zoek, setZoek] = useState("");
   const [filters, setFilters] = useState<ArchiefFilters>(LEGE_FILTERS);
   const [teVerwijderen, setTeVerwijderen] = useState<ArchiefRij | null>(null);
+  /** Telling waarvan het deelvenster open staat */
+  const [teDelen, setTeDelen] = useState<ArchiefRij | null>(null);
   // namen en nummers van de versies (dezelfde lichte query als het dashboard)
   const { data: versieData } = useQuery(dashboardVersiesQuery());
   /** Per telling de gekozen versie om te openen ("" = werkversie) */
@@ -172,6 +175,11 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
               Openen
             </Link>
           </Button>
+          {magTellingBewerken(rechten, r.t.ownerId, userId) && (
+            <Button size="sm" variant="ghost" onClick={() => setTeDelen(r)}>
+              Delen
+            </Button>
+          )}
           {magTellingBewerken(rechten, r.t.ownerId, userId) && (
             <Button
               size="sm"
@@ -387,6 +395,17 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
             )}
           </table>
         </div>
+      )}
+
+      {teDelen && (
+        <DelenDialoog
+          open
+          onOpenChange={(o) => !o && setTeDelen(null)}
+          tellingId={teDelen.t.id}
+          ownerId={teDelen.t.ownerId}
+          userId={userId}
+          isAdmin={rechten.isAdmin}
+        />
       )}
 
       <AlertDialog open={teVerwijderen !== null} onOpenChange={(o) => !o && setTeVerwijderen(null)}>

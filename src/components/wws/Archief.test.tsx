@@ -19,9 +19,19 @@ const tellingStore = vi.hoisted(() => ({
   zetFavoriet: vi.fn(),
 }));
 const klantenStore = vi.hoisted(() => ({ lijst: vi.fn() }));
+const delenStore = vi.hoisted(() => ({
+  collegas: vi.fn(async () => [
+    { id: "anna", naam: "Anna", email: "anna@x.nl" },
+    { id: "cor", naam: "Cor", email: "cor@x.nl" },
+  ]),
+  gedeeldMet: vi.fn(async () => [] as string[]),
+  deel: vi.fn(async () => {}),
+  ontdeel: vi.fn(async () => {}),
+}));
 const versiesLijst = vi.hoisted(() => vi.fn());
 vi.mock("./tellingStore", () => ({
   tellingStore,
+  delenStore,
   tellingenQuery: () => ({ queryKey: ["tellingen"], queryFn: () => tellingStore.lijst() }),
   klantenQuery: () => ({ queryKey: ["klanten"], queryFn: () => klantenStore.lijst() }),
   dashboardVersiesQuery: () => ({ queryKey: ["dashboard-versies"], queryFn: () => versiesLijst() }),
@@ -77,12 +87,24 @@ describe("Archief", () => {
     expect(await within(rijVan("Van Anna")).findByText("Zeta Vastgoed")).toBeTruthy();
   });
 
+  it("delen vanuit het archief: alleen eigen tellingen; collega aanvinken deelt", async () => {
+    toon(["member"], "bob");
+    await screen.findByText("Eigen telling");
+    expect(within(rijVan("Van Anna")).queryByRole("button", { name: "Delen" })).toBeNull();
+    fireEvent.click(within(rijVan("Eigen telling")).getByRole("button", { name: "Delen" }));
+    const d = await screen.findByRole("dialog");
+    expect(within(d).getByText("Telling delen")).toBeTruthy();
+    fireEvent.click(await within(d).findByRole("checkbox", { name: /Cor/ }));
+    await waitFor(() => expect(delenStore.deel).toHaveBeenCalledWith("t1", "cor"));
+  });
+
   it("kijkrol: gegroepeerd per collega, niets verwijderen, geen nieuwe telling", async () => {
     toon(["viewer"], "lezer");
     await screen.findByText("Eigen telling");
     expect(screen.getByRole("columnheader", { name: /Anna/ })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: /Bob/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Verwijderen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delen" })).toBeNull();
     expect(screen.queryByText("Nieuwe telling")).toBeNull();
   });
 
