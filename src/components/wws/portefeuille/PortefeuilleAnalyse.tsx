@@ -246,6 +246,7 @@ export default function PortefeuilleAnalyse({
   async function bloxsKlaar(id: string) {
     setGekozen(id);
     setBekeken(null);
+    void qc.invalidateQueries({ queryKey: ["klanten"] });
     await qc.invalidateQueries({ queryKey: ["portefeuilles"] });
     await qc.invalidateQueries({ queryKey: ["portefeuille-adressen", id] });
   }
@@ -615,6 +616,7 @@ export default function PortefeuilleAnalyse({
         onOpenChange={(o) => !o && setBloxsOpen(null)}
         klanten={klanten}
         bestaand={bloxsOpen === "opnieuw" ? p : null}
+        portefeuilles={portefeuilles}
         onKlaar={bloxsKlaar}
       />
       <ImportDialoog

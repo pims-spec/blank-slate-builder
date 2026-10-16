@@ -29,7 +29,11 @@ import {
 import type { Klant } from "@/lib/wws/opslag";
 import type { Portefeuille } from "@/lib/wws/portefeuille/opslag";
 import { aantal } from "@/lib/wws/portefeuille/tekst";
-import { portefeuilleStore } from "../tellingStore";
+import { kiesGohomeEigenaar, naamSleutel } from "@/lib/wws/bloxs/eigenaarKoppeling";
+import { klantenStore, portefeuilleStore } from "../tellingStore";
+
+/** Waarde in de keuzelijst voor "nieuwe eigenaar in GoHome aanmaken" */
+const NIEUW = "__nieuw__";
 
 interface Props {
   open: boolean;
@@ -37,6 +41,8 @@ interface Props {
   klanten: readonly Klant[];
   /** Opnieuw inladen (anders een nieuwe portefeuille uit Bloxs) */
   bestaand: Portefeuille | null;
+  /** Alle portefeuilles, om een eerdere koppeling Bloxs-eigenaar → GoHome-eigenaar te vinden */
+  portefeuilles: readonly Portefeuille[];
   onKlaar: (portefeuilleId: string) => Promise<void> | void;
 }
 
@@ -75,7 +81,7 @@ interface Samenvatting {
   teruggekeerd: number;
 }
 
-function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
+function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Props) {
   const [fase, setFase] = useState<Fase>("testen");
   const [fout, setFout] = useState<string>("");
   const [aanvragen, setAanvragen] = useState(0);
@@ -206,10 +212,14 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
       setVoortgang("Opslaan…");
       const id = bestaand
         ? bestaand.id
-        : await portefeuilleStore.maak(naam.trim() || voorstelNaam || "Bloxs", klantId || null, {
-            eigenaarRef: String(eigenaar!.id),
-            complexRef: c != null ? String(c) : null,
-          });
+        : await portefeuilleStore.maak(
+            naam.trim() || voorstelNaam || "Bloxs",
+            await klantVoorOpslaan(),
+            {
+              eigenaarRef: String(eigenaar!.id),
+              complexRef: c != null ? String(c) : null,
+            },
+          );
       const r = await portefeuilleStore.bloxsSyncOpslaan(id, plan, crypto.randomUUID());
       setSamenvatting({
         plan,
@@ -221,6 +231,25 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
       await onKlaar(id);
     } catch {
       mislukt("onbekend");
+    }
+  }
+
+  /** Bloxs-eigenaar kiezen; de GoHome-eigenaar wordt erbij voorgesteld (aan te passen) */
+  function kies(e: Eigenaar) {
+    setEigenaar(e);
+    const k = kiesGohomeEigenaar(e, portefeuilles, klanten);
+    setKlantId(k.soort === "bestaand" ? k.klantId : NIEUW);
+  }
+
+  /** De GoHome-eigenaar bij het opslaan; "nieuw" maakt hem aan (of vindt hem als hij al bestaat) */
+  async function klantVoorOpslaan(): Promise<string | null> {
+    if (klantId !== NIEUW) return klantId || null;
+    try {
+      return (await klantenStore.voegToe(eigenaar!.naam)).id;
+    } catch {
+      // bestaat al (bijv. net door een collega aangemaakt): op naam opzoeken
+      const lijst = await klantenStore.lijst();
+      return lijst.find((k) => naamSleutel(k.naam) === naamSleutel(eigenaar!.naam))?.id ?? null;
     }
   }
 
@@ -271,7 +300,7 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
                     "w-full px-3 py-2 text-left hover:bg-secondary " +
                     (eigenaar?.id === e.id ? "bg-secondary font-medium" : "")
                   }
-                  onClick={() => setEigenaar(e)}
+                  onClick={() => kies(e)}
                 >
                   {e.naam}
                   {e.referentie && <span className="text-muted-foreground"> · {e.referentie}</span>}
@@ -331,6 +360,10 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
               onChange={(e) => setKlantId(e.target.value)}
             >
               <option value="">Geen eigenaar</option>
+              {eigenaar &&
+                !klanten.some((k) => naamSleutel(k.naam) === naamSleutel(eigenaar.naam)) && (
+                  <option value={NIEUW}>+ Nieuw in GoHome: {eigenaar.naam}</option>
+                )}
               {klanten.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.naam}
