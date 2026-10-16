@@ -564,6 +564,24 @@ export function pdfTellingBody(
 
 /** Voorpagina met de grote GoHome-wordmark en het adres — pdfCoverPage() */
 export function pdfCoverPage(doc: Doc, meta: TellingMeta, titel?: string) {
+  const mHn = /^(\d+)\s*[-\s]?\s*(.*)$/.exec(String(meta.huisnummer || "").trim());
+  const rows: [string, string][] = (
+    [
+      ["Straat", meta.adres || "-"],
+      ["Huisnummer", mHn ? mHn[1]! : meta.huisnummer || "-"],
+      ["Toevoeging", mHn ? mHn[2]! : ""],
+      ["Plaats", meta.plaats || "-"],
+      ["Postcode", meta.postcode || "-"],
+    ] as [string, string][]
+  ).filter((r) => r[0] !== "Toevoeging" || r[1]);
+  pdfVoorblad(doc, titel || "Rapportage puntentelling & verbeteradvies", rows);
+}
+
+/**
+ * De voorpagina zelf (achtergrond, paarse vorm, wordmark, titel en een tabel met rijen), zoals
+ * pdfCoverPage() in wws-site.html; ook gebruikt voor het voorblad van de label-analyse.
+ */
+export function pdfVoorblad(doc: Doc, titel: string, rows: readonly [string, string][]) {
   const W = PDF_W,
     H = 297,
     INK = PDF_INK,
@@ -593,19 +611,7 @@ export function pdfCoverPage(doc: Doc, meta: TellingMeta, titel?: string) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(14);
   doc.setTextColor(...INK);
-  doc.text(
-    doc.splitTextToSize(titel || "Rapportage puntentelling & verbeteradvies", W - CX - 16),
-    CX,
-    178,
-  );
-  const mHn = /^(\d+)\s*[-\s]?\s*(.*)$/.exec(String(meta.huisnummer || "").trim());
-  const rows = [
-    ["Straat", meta.adres || "-"],
-    ["Huisnummer", mHn ? mHn[1]! : meta.huisnummer || "-"],
-    ["Toevoeging", mHn ? mHn[2]! : ""],
-    ["Plaats", meta.plaats || "-"],
-    ["Postcode", meta.postcode || "-"],
-  ].filter((r) => r[0] !== "Toevoeging" || r[1]);
+  doc.text(doc.splitTextToSize(titel, W - CX - 16), CX, 178);
   let y = 209;
   rows.forEach((r) => {
     doc.setFont("helvetica", "bold");

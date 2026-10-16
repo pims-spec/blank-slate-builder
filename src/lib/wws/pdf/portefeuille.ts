@@ -1,11 +1,11 @@
 // PDF van de portefeuille-analyse, in de huisstijl van de andere rapporten (Inter, GoHome-kop
-// en -voettekst): samenvatting, staafdiagram, risicoprofiel, EFG-overzicht, de lijst met
+// en -voettekst): voorblad "Label-analyse" (zoals de voorpagina van de WWS-rapporten), samenvatting, staafdiagram, risicoprofiel, EFG-overzicht, de lijst met
 // woningen waarvan het label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen
 // en de bronvermelding van EP-Online.
 import type { AnalyseUitkomst } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
 import { aantal, periode } from "../portefeuille/tekst";
-import { pdfBanner } from "./delen";
+import { pdfBanner, pdfVoorblad } from "./delen";
 import {
   PDF_ALT,
   PDF_INK,
@@ -52,6 +52,23 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   const doc = nieuwDoc(lib);
   const W = PDF_W,
     M = PDF_M;
+
+  // voorblad; te lange waarden inkorten zodat ze in de kolom passen (90 mm)
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  const past = (t: string) => {
+    const regels = doc.splitTextToSize(pdfTxt(t), 88) as string[];
+    return regels.length > 1 ? regels[0]!.replace(/\s*\S{0,3}$/, "") + "…" : t;
+  };
+  pdfVoorblad(doc, "Label-analyse", [
+    ["Portefeuille", past(x.portefeuille)],
+    ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
+    ["Analysedatum", langeDatum(u.datum)],
+    ["Adressen", String(u.aantalAdressen)],
+    ["Peildatum EP-Online", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
+  ]);
+  doc.addPage();
+
   let y = pdfBanner(
     doc,
     "GoHome energielabels",
@@ -229,7 +246,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     7.5,
   );
 
-  voettekst(doc, 1);
+  voettekst(doc, 2);
   return {
     blob: doc.output("blob"),
     bestandsnaam: "Portefeuille-analyse_" + bestandsBasis(x.portefeuille) + "_" + u.datum + ".pdf",

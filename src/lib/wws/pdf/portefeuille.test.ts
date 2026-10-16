@@ -74,6 +74,31 @@ describe("PDF portefeuille-analyse", () => {
     }
   });
 
+  it("voorblad 'Label-analyse' zonder voettekst; daarna de analyse met paginanummers", async () => {
+    const met = (hn: number): AnalyseAdres => ({
+      ...adres(hn, "E", "2020-02-02"),
+      straat: "Kinkerstraat",
+      woonplaats: "Amsterdam",
+    });
+    const u = analyseer([met(7)], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    const lang = "Portefeuille " + "met een heel lange naam ".repeat(8);
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: lang, eigenaar: null, uitkomst: u });
+    const paginas = await pdfTekst(pdf.blob);
+    const voorblad = paginas[0]!.join(" ").replace(/\s+/g, " ");
+    expect(voorblad).toContain("GoHome");
+    expect(voorblad).toContain("Label-analyse");
+    expect(voorblad).toContain("Analysedatum 15 oktober 2026");
+    expect(voorblad).toContain("Adressen 1");
+    expect(voorblad).toContain("Peildatum EP-Online 14 oktober 2026");
+    expect(voorblad).not.toContain("Eigenaar");
+    expect(voorblad).not.toContain("Pagina");
+    expect(voorblad).toMatch(/Portefeuille Portefeuille met een heel lange naam .*…/);
+    expect(voorblad.length).toBeLessThan(lang.length + 150);
+    const rest = paginas.slice(1).flat().join(" ").replace(/\s+/g, " ");
+    expect(rest).toContain("Pagina 2 van " + paginas.length);
+    expect(rest).toContain("Kinkerstraat 7, 1053 ZD Amsterdam");
+  });
+
   it("peildatum: één dag of een periode", () => {
     expect(opgehaaldTekst(null, null)).toBe("nog niet opgehaald");
     expect(opgehaaldTekst("2026-10-01T08:00:00Z", "2026-10-01T09:00:00Z")).toBe("1 oktober 2026");

@@ -236,8 +236,33 @@ de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat gee
 Ophalen, importeren en analyses opslaan kan alleen met een schrijfrol. Een portefeuille of een
 analyse verwijderen kan alleen de maker of een admin.
 
-**Bloks.** Volgt zodra de documentatie er is. De tabellen hebben er al velden voor: `bron`,
-`bloks_id`, `bloks_object_id` en `bag_id`.
+**Straat en woonplaats.** Optioneel uit de import (kolommen `straat`/`straatnaam` en
+`woonplaats`/`plaats`); anders direct na de import aangevuld via PDOK. Dat gaat met een schrijfrol,
+per portie van 10 en met één vraag per postcode en huisnummer (ongeveer 4 per seconde). Lijsten en
+PDF tonen dan "Kinkerstraat 49A-2, 1053 ZD Amsterdam"; zonder straat alleen postcode en huisnummer.
+
+**PDF.** Begint met een voorblad "Label-analyse" in dezelfde vormgeving als de voorpagina van de
+WWS-rapporten (`pdfVoorblad`, gedeeld met `pdfCoverPage`). Het voorblad heeft geen voettekst; de
+paginanummers lopen vanaf 2, net als bij de WWS-rapporten.
+
+**Bloxs (OData-feed).** Bloxs (met x) via de OData-feed (`[klantomgeving].bloxs.io/odatafeed`),
+niet de REST-API.
+- **Secrets:** `BLOXS_ODATA_URL`, `BLOXS_ODATA_GEBRUIKER`, `BLOXS_ODATA_WACHTWOORD`.
+- **Inloggen:** Basic auth, alleen op de server (`bloxs/bron.ts`). De inloggegevens gaan nooit naar
+  de browser of de logs. Alleen https-adressen van `*.bloxs.io`/`*.bloxs.com`, en geen
+  doorverwijzingen volgen.
+- **Fouten:** vaste codes (`bloxs/fouten.ts`); een antwoord van Bloxs wordt nooit doorgegeven.
+- **Stap 1 (gebouwd):** op /admin → Serverinstellingen kan een beheerder de verbinding testen en
+  de structuur ophalen. Dat zijn alleen de namen van entiteiten, velden, sleutels en navigatie uit
+  `$metadata` (`bloxs/metadata.ts`), nooit rijen of waarden.
+- **Stap 2 (na akkoord):** eigenaren, objecten en BAG-gegevens.
+  - Alleen de nodige velden, met `$select`/`$filter` of anders via zod.
+  - Porties en een instelbare limiet per seconde, en netjes stoppen bij 429.
+  - De sync met `bloxs_objecten`, waarbij verdwenen objecten worden gemarkeerd
+    (`niet_in_bloxs_sinds`) in plaats van verwijderd.
+- **Database:** de oude kolommen `bloks_id` en `bloks_object_id` zijn leeg en worden niet gebruikt
+  (migratie 0006 is additief). Bron `'bloks'` in de database betekent Bloxs; in de code heet het
+  `bloxs`.
 
 ## Bewuste afwijkingen van wws-site.html
 
