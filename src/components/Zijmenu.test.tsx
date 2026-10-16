@@ -42,6 +42,7 @@ describe("Zijmenu", () => {
       ["Archief", "/archief"],
       ["Dashboard", "/portefeuille"],
       ["Indelingsadvies", "/indeling"],
+      ["Portefeuille-analyse", "/portefeuille-analyse"],
       ["Eigenaren", "/eigenaren"],
       ["Normen", "/normen"],
       ["Gebruikers", "/admin"],

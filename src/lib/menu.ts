@@ -2,7 +2,15 @@
 // onderdeel (bijv. later "Portefeuille-analyse") is één regel erbij, met een rechtencheck.
 
 export type MenuIcoon =
-  "home" | "telling" | "archief" | "indeling" | "dashboard" | "eigenaren" | "normen" | "gebruikers";
+  | "home"
+  | "telling"
+  | "archief"
+  | "indeling"
+  | "dashboard"
+  | "analyse"
+  | "eigenaren"
+  | "normen"
+  | "gebruikers";
 
 export interface MenuOnderdeel {
   to:
@@ -12,6 +20,7 @@ export interface MenuOnderdeel {
     | "/indeling"
     | "/portefeuille"
     | "/eigenaren"
+    | "/portefeuille-analyse"
     | "/normen"
     | "/admin";
   label: string;
@@ -32,14 +41,14 @@ export function menuOnderdelen(r: MenuRechten): {
 } {
   const hoofd: MenuOnderdeel[] = [{ to: "/dashboard", label: "Overzicht", icoon: "home" }];
   if (r.heeftToegang !== false) {
-    hoofd.push(
-      { to: "/wws", label: "Puntentelling", icoon: "telling" },
-    );
+    hoofd.push({ to: "/wws", label: "Puntentelling", icoon: "telling" });
     if (r.magSchrijven)
       hoofd.push({ to: "/indeling", label: "Indelingsadvies", icoon: "indeling" });
     hoofd.push({ to: "/archief", label: "Archief", icoon: "archief" });
     if (r.zietAlles || r.isAdmin)
       hoofd.push({ to: "/portefeuille", label: "Dashboard", icoon: "dashboard" });
+    // portefeuille-analyse: bekijken voor iedereen met een rol (ook de kijkrol)
+    hoofd.push({ to: "/portefeuille-analyse", label: "Portefeuille-analyse", icoon: "analyse" });
     hoofd.push({ to: "/eigenaren", label: "Eigenaren", icoon: "eigenaren" });
   }
   const beheer: MenuOnderdeel[] = r.isAdmin

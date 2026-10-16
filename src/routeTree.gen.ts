@@ -20,6 +20,7 @@ import { Route as AuthenticatedEigenarenRouteImport } from './routes/_authentica
 import { Route as AuthenticatedIndelingRouteImport } from './routes/_authenticated/indeling'
 import { Route as AuthenticatedNormenRouteImport } from './routes/_authenticated/normen'
 import { Route as AuthenticatedPortefeuilleRouteImport } from './routes/_authenticated/portefeuille'
+import { Route as AuthenticatedPortefeuilleAnalyseRouteImport } from './routes/_authenticated/portefeuille-analyse'
 import { Route as AuthenticatedWwsRouteImport } from './routes/_authenticated/wws'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +78,12 @@ const AuthenticatedPortefeuilleRoute =
     path: '/portefeuille',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPortefeuilleAnalyseRoute =
+  AuthenticatedPortefeuilleAnalyseRouteImport.update({
+    id: '/portefeuille-analyse',
+    path: '/portefeuille-analyse',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWwsRoute = AuthenticatedWwsRouteImport.update({
   id: '/wws',
   path: '/wws',
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/indeling': typeof AuthenticatedIndelingRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/portefeuille': typeof AuthenticatedPortefeuilleRoute
+  '/portefeuille-analyse': typeof AuthenticatedPortefeuilleAnalyseRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRoutesByTo {
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/indeling': typeof AuthenticatedIndelingRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/portefeuille': typeof AuthenticatedPortefeuilleRoute
+  '/portefeuille-analyse': typeof AuthenticatedPortefeuilleAnalyseRoute
   '/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRoutesById {
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/indeling': typeof AuthenticatedIndelingRoute
   '/_authenticated/normen': typeof AuthenticatedNormenRoute
   '/_authenticated/portefeuille': typeof AuthenticatedPortefeuilleRoute
+  '/_authenticated/portefeuille-analyse': typeof AuthenticatedPortefeuilleAnalyseRoute
   '/_authenticated/wws': typeof AuthenticatedWwsRoute
 }
 export interface FileRouteTypes {
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/indeling'
     | '/normen'
     | '/portefeuille'
+    | '/portefeuille-analyse'
     | '/wws'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/indeling'
     | '/normen'
     | '/portefeuille'
+    | '/portefeuille-analyse'
     | '/wws'
   id:
     | '__root__'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/indeling'
     | '/_authenticated/normen'
     | '/_authenticated/portefeuille'
+    | '/_authenticated/portefeuille-analyse'
     | '/_authenticated/wws'
   fileRoutesById: FileRoutesById
 }
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPortefeuilleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/portefeuille-analyse': {
+      id: '/_authenticated/portefeuille-analyse'
+      path: '/portefeuille-analyse'
+      fullPath: '/portefeuille-analyse'
+      preLoaderRoute: typeof AuthenticatedPortefeuilleAnalyseRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/wws': {
       id: '/_authenticated/wws'
       path: '/wws'
@@ -271,6 +291,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndelingRoute: typeof AuthenticatedIndelingRoute
   AuthenticatedNormenRoute: typeof AuthenticatedNormenRoute
   AuthenticatedPortefeuilleRoute: typeof AuthenticatedPortefeuilleRoute
+  AuthenticatedPortefeuilleAnalyseRoute: typeof AuthenticatedPortefeuilleAnalyseRoute
   AuthenticatedWwsRoute: typeof AuthenticatedWwsRoute
 }
 
@@ -282,6 +303,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndelingRoute: AuthenticatedIndelingRoute,
   AuthenticatedNormenRoute: AuthenticatedNormenRoute,
   AuthenticatedPortefeuilleRoute: AuthenticatedPortefeuilleRoute,
+  AuthenticatedPortefeuilleAnalyseRoute: AuthenticatedPortefeuilleAnalyseRoute,
   AuthenticatedWwsRoute: AuthenticatedWwsRoute,
 }
 

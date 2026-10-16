@@ -8,6 +8,7 @@ import {
   maakKlantenStore,
   maakTellingStore,
 } from "@/lib/wws/opslag";
+import { maakPortefeuilleStore } from "@/lib/wws/portefeuille/opslag";
 
 /** Terugval voor versies zonder vastgelegde normen; de app rekent met normenQuery() */
 const STANDAARD_NORMEN = DEFAULT_NORMEN as unknown as Normen;
@@ -43,4 +44,22 @@ export const dashboardVersiesQuery = () =>
   queryOptions({
     queryKey: ["dashboard-versies"],
     queryFn: () => haalDashboardVersies(supabase),
+  });
+
+// ---------- portefeuille-analyse ----------
+export const portefeuilleStore = maakPortefeuilleStore(supabase);
+
+export const portefeuillesQuery = () =>
+  queryOptions({ queryKey: ["portefeuilles"], queryFn: () => portefeuilleStore.lijst() });
+
+export const portefeuilleAdressenQuery = (id: string) =>
+  queryOptions({
+    queryKey: ["portefeuille-adressen", id],
+    queryFn: () => portefeuilleStore.adressen(id),
+  });
+
+export const portefeuilleAnalysesQuery = (id: string) =>
+  queryOptions({
+    queryKey: ["portefeuille-analyses", id],
+    queryFn: () => portefeuilleStore.analyses(id),
   });

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   ChartNoAxesColumn,
+  Gauge,
   House,
   LayoutPanelTop,
   LogOut,
@@ -23,6 +24,7 @@ const ICONEN: Record<MenuIcoon, LucideIcon> = {
   dashboard: ChartNoAxesColumn,
   indeling: LayoutPanelTop,
   eigenaren: Users,
+  analyse: Gauge,
   normen: SlidersHorizontal,
   gebruikers: UserCog,
 };

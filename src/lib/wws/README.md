@@ -178,6 +178,67 @@ reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de v
   (`home.ts`, met een vergelijkingstest tegen `reference/wws-site-home.cjs`).
 - **PDF's:** Inter ingesloten; zie hieronder.
 
+## Portefeuille-analyse energielabels (nieuw, niet in de bron)
+
+```
+src/lib/wws/portefeuille/analyse.ts     risicocategorieën, verloopdatum, EFG, percentages (puur)
+src/lib/wws/portefeuille/datum.ts       datumrekenen op ISO-datums (maandeinde, schrikkeljaren)
+src/lib/wws/portefeuille/adres.ts       adressen normaliseren, dubbele herkennen, EP-Online-vraag
+src/lib/wws/portefeuille/importeren.ts  Excel/CSV-import (postcode, huisnummer, toevoeging)
+src/lib/wws/portefeuille/ophalen.ts     EP-Online-antwoord → resultaat; wanneer stoppen
+src/lib/wws/portefeuille/portefeuille.functions.ts  server function haalLabelsOp (porties van 10)
+src/lib/wws/portefeuille/opslag.ts      tabellen portefeuilles, portefeuille_adressen,
+                                        label_resultaten, portefeuille_analyses (RLS)
+src/lib/wws/pdf/portefeuille.ts         PDF in de huisstijl
+src/components/wws/portefeuille/        scherm /portefeuille-analyse
+```
+
+**Risicocategorieën.** Elke woning valt in precies één categorie, van boven naar beneden; de
+percentages zijn van de beoordeelde woningen (gevonden of niet gevonden).
+
+1. **Geen geregistreerd label:** niet gevonden bij EP-Online, of gevonden zonder labelklasse.
+2. **Verlopen:** de verloopdatum ligt vóór de analysedatum.
+3. **Verloopt binnen N maanden:** analysedatum ≤ verloopdatum ≤ analysedatum + N maanden.
+   Precies N maanden telt mee. N is per analyse in te stellen (standaard 3).
+4. **Verouderd:** nog geldig, maar geregistreerd vóór de grens (standaard 1 januari 2021). Dat is
+   een oud energielabel of een energie-index, nog niet volgens NTA 8800.
+5. **In orde:** een geldig label volgens NTA 8800.
+
+**Verloopdatum.** "Geldig tot" van EP-Online, anders de registratiedatum + 10 jaar. Bestaat die
+dag niet, dan de laatste dag van de maand: 29 februari + 10 jaar = 28 februari.
+
+**Verlooplijst.** Woningen waarvan het label binnen N maanden verloopt, of in de afgelopen N
+maanden al verlopen is, gesorteerd op verloopdatum.
+
+**EFG-regels.** Instelbaar in Normen (`normen.portefeuille`): de ingangsdatum, de labels die
+eronder vallen, en hoe "geen label" meetelt (apart, meetellen of niet vermelden). De analyse en
+de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat geen wettekst in.
+
+**Te controleren.** Apart getoond, en niet meegeteld in de percentages:
+- niet eenduidig: meerdere verschillende labels voor één adres;
+- ophalen mislukt;
+- nog niet opgehaald.
+
+"Niet gevonden" staat er ook bij, maar telt in het risicoprofiel als "geen geregistreerd label".
+
+**EP-Online.**
+- **Aanvragen:** per adres via de bestaande kern uit fase 4a (`zoekEnergielabelsBijEpOnline`), in
+  porties van 10 met maximaal 2 aanvragen per seconde. De limiet staat in Normen en de server
+  dwingt hem af.
+- **Stoppen:** bij te veel verzoeken of een fout met de dienst of de sleutel stopt het ophalen,
+  zonder iets op te slaan. "Hervatten" gaat verder met de adressen zonder resultaat.
+- **Opslag:** per adres alleen het laatste resultaat, met het moment van opvragen.
+- **Analyses:** een opgeslagen analyse is een vaste momentopname.
+- **Totaalbestand:** het maandelijkse totaalbestand kan later; het is te groot om in een server
+  function te verwerken.
+
+**Rechten.** Lezen voor iedereen met een rol, ook de kijkrol: bekijken en de PDF downloaden.
+Ophalen, importeren en analyses opslaan kan alleen met een schrijfrol. Een portefeuille of een
+analyse verwijderen kan alleen de maker of een admin.
+
+**Bloks.** Volgt zodra de documentatie er is. De tabellen hebben er al velden voor: `bron`,
+`bloks_id`, `bloks_object_id` en `bag_id`.
+
 ## Bewuste afwijkingen van wws-site.html
 
 Dit zijn de plekken waar de app opzettelijk iets anders doet dan de bron. De vergelijkingstests

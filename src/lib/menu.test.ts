@@ -11,19 +11,34 @@ describe("zijmenu: onderdelen per rol", () => {
     expect(
       labels({ isAdmin: true, heeftToegang: true, zietAlles: true, magSchrijven: true }),
     ).toEqual([
-      ["Overzicht", "Puntentelling", "Indelingsadvies", "Archief", "Dashboard", "Eigenaren"],
+      [
+        "Overzicht",
+        "Puntentelling",
+        "Indelingsadvies",
+        "Archief",
+        "Dashboard",
+        "Portefeuille-analyse",
+        "Eigenaren",
+      ],
       ["Normen", "Gebruikers"],
     ]);
   });
   it("lid: geen dashboard en geen beheer", () => {
     expect(labels({ heeftToegang: true, magSchrijven: true })).toEqual([
-      ["Overzicht", "Puntentelling", "Indelingsadvies", "Archief", "Eigenaren"],
+      [
+        "Overzicht",
+        "Puntentelling",
+        "Indelingsadvies",
+        "Archief",
+        "Portefeuille-analyse",
+        "Eigenaren",
+      ],
       [],
     ]);
   });
   it("kijkrol: dashboard, geen indelingsadvies", () => {
     expect(labels({ heeftToegang: true, zietAlles: true })).toEqual([
-      ["Overzicht", "Puntentelling", "Archief", "Dashboard", "Eigenaren"],
+      ["Overzicht", "Puntentelling", "Archief", "Dashboard", "Portefeuille-analyse", "Eigenaren"],
       [],
     ]);
   });
