@@ -945,7 +945,7 @@ export default function TellingEditor({
             }
             alleenLezen={alleenLezen}
           />
-          <div className="col-span-2 min-w-0">
+          <div className="col-span-2 min-w-0 sm:col-span-1">
             <EigenaarKeuze
               klantId={m.klantId}
               onKies={eigenaarGekozen}
@@ -964,16 +964,19 @@ export default function TellingEditor({
               </Button>
             )}
           </div>
+          {!alleenLezen && (
+            <div className="col-span-2 flex flex-wrap items-end gap-2 pt-2 sm:col-span-1 sm:pt-6">
+              <PlattegrondKnoppen
+                heeft={heeftPlattegrond(staat.input, nieuwBeeld)}
+                onInlezen={() => setPlattegrondOpen(true)}
+                onVerwijderen={plattegrondVerwijderen}
+              />
+            </div>
+          )}
         </div>
       </fieldset>
 
-      <PlattegrondBlok
-        input={staat.input}
-        nieuw={nieuwBeeld}
-        alleenLezen={alleenLezen}
-        onInlezen={() => setPlattegrondOpen(true)}
-        onVerwijderen={plattegrondVerwijderen}
-      />
+      <PlattegrondBlok input={staat.input} nieuw={nieuwBeeld} />
 
       <AlertDialog open={verwijderVraag} onOpenChange={setVerwijderVraag}>
         <AlertDialogContent>
@@ -1404,56 +1407,55 @@ function OpzoekLink({ meta, soort }: { meta: TellingMeta; soort: LinkSoort }) {
 }
 
 /** De plattegrond bij de telling: tonen, inlezen (Claude) en verwijderen */
-function PlattegrondBlok({
-  input,
-  nieuw,
-  alleenLezen,
+/** Knoppen in de kaart "Woning": plattegrond inlezen of verwijderen */
+function PlattegrondKnoppen({
+  heeft,
   onInlezen,
   onVerwijderen,
 }: {
-  input: WwsInput;
-  nieuw: NieuwBeeld | null;
-  alleenLezen: boolean;
+  heeft: boolean;
   onInlezen: () => void;
   onVerwijderen: () => void;
 }) {
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={onInlezen}>
+        Plattegrond inlezen
+      </Button>
+      {heeft && (
+        <Button type="button" variant="ghost" onClick={onVerwijderen}>
+          Plattegrond verwijderen
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** De ingelezen plattegrond onder de kaart "Woning" (niets als er geen is) */
+function PlattegrondBlok({ input, nieuw }: { input: WwsInput; nieuw: NieuwBeeld | null }) {
   const { url, laden, fout } = usePlattegrondUrl(input, nieuw);
   const heeft = heeftPlattegrond(input, nieuw);
-  if (alleenLezen && !heeft) return null;
+  if (!heeft) return null;
   return (
-    <div className="flex flex-wrap items-start gap-4" aria-label="Plattegrond">
-      {heeft && (
-        <figure className="m-0">
-          {url ? (
-            <img
-              src={url}
-              alt="Plattegrond van deze telling"
-              className="max-h-40 max-w-xs rounded-md border border-border bg-white"
-            />
-          ) : (
-            <div className="flex h-24 w-40 items-center justify-center rounded-md border border-border text-xs text-muted-foreground">
-              {laden ? "Plattegrond laden…" : fout ? "Plattegrond niet te laden" : ""}
-            </div>
-          )}
-          {nieuw && (
-            <figcaption className="mt-1 text-xs text-muted-foreground">
-              Nieuw — wordt opgeslagen bij Opslaan
-            </figcaption>
-          )}
-        </figure>
-      )}
-      {!alleenLezen && (
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={onInlezen}>
-            Plattegrond inlezen
-          </Button>
-          {heeft && (
-            <Button type="button" variant="ghost" onClick={onVerwijderen}>
-              Plattegrond verwijderen
-            </Button>
-          )}
-        </div>
-      )}
+    <div aria-label="Plattegrond">
+      <figure className="m-0">
+        {url ? (
+          <img
+            src={url}
+            alt="Plattegrond van deze telling"
+            className="max-h-40 max-w-xs rounded-md border border-border bg-white"
+          />
+        ) : (
+          <div className="flex h-24 w-40 items-center justify-center rounded-md border border-border text-xs text-muted-foreground">
+            {laden ? "Plattegrond laden…" : fout ? "Plattegrond niet te laden" : ""}
+          </div>
+        )}
+        {nieuw && (
+          <figcaption className="mt-1 text-xs text-muted-foreground">
+            Nieuw — wordt opgeslagen bij Opslaan
+          </figcaption>
+        )}
+      </figure>
     </div>
   );
 }

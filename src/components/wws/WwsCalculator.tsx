@@ -1383,8 +1383,8 @@ export function WoningtypeVeld({
   className?: string;
 }) {
   return (
-    <div className={`flex min-w-0 items-end gap-2 ${className}`}>
-      <Veld label="Woningtype" className="min-w-0 flex-1">
+    <div className={`flex min-w-0 flex-col gap-1 ${className}`}>
+      <Veld label="Woningtype" className="min-w-0">
         <fieldset disabled={!!vergrendeld} className="m-0 min-w-0 border-0 p-0">
           <Keuze
             value={waarde}
@@ -1397,7 +1397,9 @@ export function WoningtypeVeld({
         </fieldset>
       </Veld>
       {vergrendeld && !alleenLezen && (
-        <Ontgrendel onClick={vergrendeld.onOntgrendel} veld="Woningtype" />
+        <span className="-mt-1">
+          <Ontgrendel onClick={vergrendeld.onOntgrendel} veld="Woningtype" />
+        </span>
       )}
     </div>
   );
