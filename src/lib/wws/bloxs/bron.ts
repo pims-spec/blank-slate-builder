@@ -5,6 +5,7 @@
 // codes; een antwoord van Bloxs wordt nooit doorgegeven of gelogd.
 import type { BloxsFout } from "./fouten";
 import { leesMetadata, MAX_METADATA_TEKENS, type BloxsStructuur } from "./metadata";
+import { vraagUrl } from "./odata";
 
 export type { BloxsFout } from "./fouten";
 
@@ -159,12 +160,15 @@ export async function haalBloxsUrl(
   return { ok: true, data: tekst };
 }
 
-/** Verbinding testen: de servicelijst opvragen (alleen de status telt; de inhoud wordt niet gebruikt) */
+/** Verbinding en inloggegevens testen (alleen de status telt; de inhoud wordt niet gebruikt) */
 export async function testBloxs(
   fetchFn: typeof fetch,
   cfg: BloxsConfig,
 ): Promise<BloxsUitkomst<true>> {
-  const r = await haalBloxs(fetchFn, cfg, "", "*/*", "verbinding", 2_000_000);
+  // servicelijst en $metadata zijn openbaar; daarom een gegevensvraag zonder rijen ($top=0), die
+  // alleen met geldige inloggegevens lukt
+  const url = vraagUrl(cfg.basis, { entiteit: "owners", velden: ["OwnerId"], top: 0 });
+  const r = await haalBloxsUrl(fetchFn, cfg, url, "application/json", "verbinding", 100_000);
   return r.ok ? { ok: true, data: true } : r;
 }
 

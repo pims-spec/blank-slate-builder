@@ -96,7 +96,7 @@ export function BloxsBeheer() {
             role="status"
             className={"text-sm " + (test.ok ? "text-foreground" : "text-destructive")}
           >
-            {test.ok ? "Verbinding werkt." : bloxsFoutTekst(test.fout)}
+            {test.ok ? "Verbinding en inloggegevens werken." : bloxsFoutTekst(test.fout)}
           </span>
         )}
       </div>

@@ -293,6 +293,11 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
             {aantal(objecten.filter((o) => o.soort === "building").length, "building", "buildings")}
             .
           </p>
+          {!objecten.length && (
+            <p className="text-orange-ink">
+              Deze eigenaar heeft geen (onverkochte) objecten in Bloxs. Kies een andere eigenaar.
+            </p>
+          )}
           {complexLijst.length > 0 && (
             <label className="flex flex-col gap-1">
               <span className="text-muted-foreground">Complex (optioneel)</span>
@@ -364,6 +369,19 @@ function Inhoud({ klanten, bestaand, onKlaar, onOpenChange }: Props) {
             onClick={() => eigenaar && void haalObjecten(eigenaar.id, null, false)}
           >
             Objecten ophalen
+          </Button>
+        )}
+        {fase === "keuze" && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setObjecten([]);
+              setComplex("");
+              setNaam("");
+              setFase("kiezen");
+            }}
+          >
+            Andere eigenaar
           </Button>
         )}
         {fase === "keuze" && (

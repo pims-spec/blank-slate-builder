@@ -139,3 +139,16 @@ describe("inlogMethoden", () => {
     expect(inlogMethoden(null)).toEqual([]);
   });
 });
+
+describe("testBloxs", () => {
+  it("test de inlog met een gegevensvraag zonder rijen (servicelijst is openbaar)", async () => {
+    const f = vi.fn(async () => new Response('{"value":[]}', { status: 200 }));
+    expect(await testBloxs(f as unknown as typeof fetch, cfg())).toEqual({ ok: true, data: true });
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    const u = new URL(url);
+    expect(u.pathname).toBe("/odatafeed/owners");
+    expect(u.searchParams.get("$top")).toBe("0");
+    expect(u.searchParams.get("$select")).toBe("OwnerId");
+    expect((init.headers as Record<string, string>)["Authorization"]).toMatch(/^Basic /);
+  });
+});
