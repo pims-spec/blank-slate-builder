@@ -1,5 +1,5 @@
 # Uitnodigingen
-- [ ] Uitnodigingsmail uitbreiden met de mogelijkheden van deze tool en de mail tonen.
+- [x] Uitnodigingsmail uitgebreid met zes mogelijkheden, rolbeperking en wachtwoordknop; voorbeeld op groot en klein scherm gecontroleerd, twee tests geslaagd. Publiceren en echte verzending blijven nog te controleren.
 - [x] Uitnodigen per e-mail met rolkeuze en controle op beheerdersrechten.
 - [x] Uitnodiging accepteren en wachtwoord instellen.
 - [x] Tests en controle op de Gebruikers-pagina; bestaande-accountcontrole getest als beheerder. E-mailontvangst en activering via een echte uitnodiging nog niet getest.
