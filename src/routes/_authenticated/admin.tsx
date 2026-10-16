@@ -1,9 +1,15 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { BloxsBeheer } from "@/components/wws/BloxsBeheer";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { allUsersQuery, myAccessQuery } from "@/lib/access";
 import { serverStatus } from "@/lib/wws/opzoeken/opzoeken.functions";
@@ -16,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { name: "description", content: "Geef gebruikers toegang tot GoHome WWS." },
       { property: "og:title", content: "Gebruikers beheren — GoHome WWS" },
       { property: "og:description", content: "Geef gebruikers toegang tot GoHome WWS." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   beforeLoad: async ({ context }) => {
@@ -37,6 +45,7 @@ function Admin() {
   const { user } = Route.useRouteContext();
   const { data: users } = useSuspenseQuery(allUsersQuery());
   const qc = useQueryClient();
+  const [intrekken, setIntrekken] = useState<(typeof users)[number] | null>(null);
 
   const zetRol = useMutation({
     mutationFn: async ({ id, huidig, doel }: { id: string; huidig: AppRole[]; doel: Rol }) => {
@@ -59,7 +68,10 @@ function Admin() {
         if (error) throw error;
       }
     },
-    onSuccess: () => toast.success("Rol bijgewerkt"),
+    onSuccess: (_, { doel }) => {
+      setIntrekken(null);
+      toast.success(doel === null ? "Toegang ingetrokken" : "Rol bijgewerkt");
+    },
     onError: (e: Error) => toast.error(e.message),
     onSettled: () => qc.invalidateQueries({ queryKey: ["all-users"] }),
   });
@@ -94,19 +106,24 @@ function Admin() {
                     className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={u.rol ?? ""}
                     disabled={zetRol.isPending}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (e.target.value === "intrekken") {
+                        setIntrekken(u);
+                        return;
+                      }
                       zetRol.mutate({
                         id: u.id,
                         huidig: u.roles,
                         doel: (e.target.value || null) as Rol,
-                      })
-                    }
+                      });
+                    }}
                   >
                     {KEUZES.map(([v, l]) => (
                       <option key={v} value={v}>
                         {l}
                       </option>
                     ))}
+                    {u.heeftToegang && <option value="intrekken">Toegang intrekken…</option>}
                   </select>
                 </label>
               )}
@@ -115,6 +132,28 @@ function Admin() {
         </ul>
         <ServerStatus />
       </main>
+      <AlertDialog open={intrekken !== null} onOpenChange={(open) => {
+        if (!open && !zetRol.isPending) setIntrekken(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Toegang intrekken?</AlertDialogTitle>
+            <AlertDialogDescription>
+              De toegang van {intrekken?.display_name || intrekken?.email} wordt ingetrokken.
+              Het account en bestaande tellingen blijven bewaard. Je kunt later opnieuw een rol toekennen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={zetRol.isPending}>Annuleren</AlertDialogCancel>
+            <Button variant="destructive" disabled={zetRol.isPending} onClick={() => {
+              if (!intrekken) return;
+              zetRol.mutate({ id: intrekken.id, huidig: intrekken.roles, doel: null });
+            }}>
+              {zetRol.isPending ? "Intrekken…" : "Toegang intrekken"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
