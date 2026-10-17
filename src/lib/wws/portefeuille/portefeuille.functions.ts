@@ -144,11 +144,14 @@ export async function vulAanPortie(
 
 // --- BAG-gegevens voor de verduurzamingsraming (PDOK, geen sleutel nodig) ---
 
+/** BAG: korte vragen (ca. 0,1 s), dus een kortere pauze dan bij de Locatieserver-aanvulling */
+export const BAG_WACHT_MS = 100;
+
 /**
  * Oppervlakte, gebruiksdoel en bouwjaar per adres uit de BAG (PDOK), per portie van maximaal 10.
- * Zelfde rust als bij PDOK hierboven; stopt bij te veel verzoeken of een storing.
+ * Ca. 3 korte vragen per woning, met een pauze van 0,1 s; stopt bij te veel verzoeken of een storing.
  */
 export const haalBagGegevens = createServerFn({ method: "POST" })
   .middleware([vereisSchrijfrol])
   .validator((d: unknown) => PortieSchema.parse(d))
-  .handler(async ({ data }) => haalBagPortie(fetch, PDOK_WACHT_MS, data.adressen, slaap));
+  .handler(async ({ data }) => haalBagPortie(fetch, BAG_WACHT_MS, data.adressen, slaap));

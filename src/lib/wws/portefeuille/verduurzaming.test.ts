@@ -54,15 +54,21 @@ describe("verduurzamingsraming", () => {
     expect(r.totaalC).toEqual({ laag: 27000, hoog: 40500 });
   });
 
-  it("woningen met C of beter staan er niet in; D alleen met kosten naar C", () => {
-    const r = maakRaming(
-      [
-        { adres: "A 1", klasse: "B", bag: bag(60, 2000) },
-        { adres: "A 2", klasse: "D", bag: bag(50, 1980) },
-      ],
-      N,
-    );
-    expect(r.regels.map((x) => [x.adres, x.stappenD, x.stappenC])).toEqual([["A 2", 0, 1]]);
+  it("alleen woningen onder de EFG-regels en zonder label; D alleen als die onder de regels valt", () => {
+    const woningen = [
+      { adres: "A 1", klasse: "B", bag: bag(60, 2000) },
+      { adres: "A 2", klasse: "D", bag: bag(50, 1980) },
+      { adres: "A 3", klasse: "E", bag: bag(50, 1980) },
+    ];
+    // standaard E, F, G: B en D vallen erbuiten (ook niet bij "BAG nog niet opgehaald")
+    expect(maakRaming(woningen, N).regels.map((x) => x.adres)).toEqual(["A 3"]);
+    expect(maakRaming([{ adres: "A 2", klasse: "D", bag: null }], N).bagNietOpgehaald).toBe(0);
+    // met D in de EFG-regels: D telt mee, met alleen kosten naar C
+    const r = maakRaming(woningen, N, ["D", "E", "F", "G"]);
+    expect(r.regels.map((x) => [x.adres, x.stappenD, x.stappenC])).toEqual([
+      ["A 2", 0, 1],
+      ["A 3", 1, 2],
+    ]);
     expect(r.regels[0]!.naarD).toEqual({ laag: 0, hoog: 0 });
   });
 
@@ -89,7 +95,11 @@ describe("verduurzamingsraming", () => {
   it("standaardinschatting: € 7.500 per stap bij 70 m² (€ 107 per m²), oudere woningen duurder", () => {
     expect(RAMING_STANDAARD).toMatchObject({ ingesteld: true, perM2Laag: 107, perM2Hoog: 107 });
     // 70 m², 1975–1991 (×1): één stap ≈ € 7.500
-    const een = maakRaming([{ adres: "A 1", klasse: "D", bag: bag(70, 1980) }], ramingNormen(null));
+    const een = maakRaming(
+      [{ adres: "A 1", klasse: "D", bag: bag(70, 1980) }],
+      ramingNormen(null),
+      ["D"],
+    );
     expect(een.regels[0]!.naarC).toEqual({ laag: 7500, hoog: 7500 });
     // G, 60 m², vóór 1945 (×1,3): naar D 3 stappen = 60×107×3×1,3 = 25.038 → 25.000
     const r = maakRaming([{ adres: "A 1", klasse: "G", bag: bag(60, 1930) }], ramingNormen(null));

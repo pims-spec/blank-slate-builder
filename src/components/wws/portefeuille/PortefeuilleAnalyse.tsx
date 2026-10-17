@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import type { Rechten } from "@/lib/rollen";
 import {
   analyseer,
+  isBeoordeeld,
+  klasseVan,
   portefeuilleNormen,
   type AnalyseAdres,
   type AnalyseUitkomst,
@@ -43,6 +45,7 @@ import {
 } from "../tellingStore";
 import { useDownload } from "../useDownload";
 import EigenaarKeuze from "../EigenaarKeuze";
+import { inRaming } from "@/lib/wws/portefeuille/verduurzaming";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { BloxsDialoog } from "./BloxsDialoog";
 import { CombiAnalyse } from "./CombiAnalyse";
@@ -126,9 +129,12 @@ export default function PortefeuilleAnalyse({
   const zonderStraat = uitBloxs ? [] : adressen.filter((a) => !a.straat);
   const bezig = voortgang !== null || aanvullen !== null || bagBezig !== null;
   // BAG alleen voor beoordeelde woningen (die tellen in de raming), nog zonder BAG-gegevens
+  // alleen woningen onder de EFG-regels en woningen zonder geregistreerd label
   const zonderBag = adressen.filter(
     (a) =>
-      !a.bag && (a.resultaat?.status === "gevonden" || a.resultaat?.status === "niet_gevonden"),
+      !a.bag &&
+      isBeoordeeld(a.resultaat) &&
+      inRaming(klasseVan(a.resultaat), instellingen.efg.klassen),
   );
 
   /** Een (andere) GoHome-eigenaar aan de portefeuille koppelen; ook zichtbaar in het archief */

@@ -144,11 +144,23 @@ function kosten(stappen: number, m2: number, f: number, n: RamingNormen): Bandbr
   };
 }
 
-/** De raming voor beoordeelde woningen (dubbele adressen en uitgesloten adressen al weggelaten) */
-export function maakRaming(woningen: readonly RamingInvoer[], normen: RamingNormen): Raming {
+/** Telt deze woning mee in de raming? Een label onder de EFG-regels, of geen geregistreerd label */
+export const inRaming = (klasse: string | null, efgKlassen: readonly string[]) =>
+  klasse === null || efgKlassen.includes(klasse);
+
+/**
+ * De raming voor beoordeelde woningen (dubbele adressen en uitgesloten adressen al weggelaten).
+ * Alleen woningen met een label onder de EFG-regels (`efgKlassen`) en woningen zonder label.
+ */
+export function maakRaming(
+  woningen: readonly RamingInvoer[],
+  normen: RamingNormen,
+  efgKlassen: readonly string[] = ["E", "F", "G"],
+): Raming {
   const regels: RamingRegel[] = [];
   let bagNietOpgehaald = 0;
   for (const w of woningen) {
+    if (!inRaming(w.klasse, efgKlassen)) continue;
     if (!w.bag) bagNietOpgehaald++;
     const bouwjaar = w.bag?.bouwjaar ?? null;
     const m2 = w.bag?.oppervlakte ?? null;

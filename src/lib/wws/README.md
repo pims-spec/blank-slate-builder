@@ -268,11 +268,15 @@ bekijken en de PDF downloaden.
 
 **Verduurzamingsraming (migratie 0012, nieuw, niet in de bron).** Bij de EFG-regels een grove
 kostenindicatie om woningen naar minimaal label D en naar C te brengen.
-- **BAG:** "BAG-gegevens ophalen" vraagt per beoordeelde woning de gebruiksoppervlakte en het
-  gebruiksdoel op bij de PDOK BAG OGC API (geen sleutel), plus het bouwjaar van het pand (één keer
-  per pand). Server function `haalBagGegevens` (2FA en schrijfrol, zod op invoer en antwoord,
-  pand-links alleen naar dezelfde API, eigen foutcodes, porties van 10, ca. 4 per seconde, stopt
-  bij 429 of storing). Opgeslagen in `portefeuille_adressen.bag_*`; de Bloxs-sync raakt die niet.
+- **BAG:** "BAG-gegevens ophalen" haalt alleen gegevens op voor woningen met een label onder de
+  EFG-regels en woningen zonder geregistreerd label (`inRaming`); alleen die staan ook in de
+  raming. Per woning drie korte vragen bij PDOK (geen sleutel), elk ca. 0,1 s: de Locatieserver
+  geeft het BAG-id van het verblijfsobject, de BAG OGC API dat verblijfsobject op id (oppervlakte,
+  gebruiksdoel, pand) en het pand (bouwjaar, één keer per pand). Zoeken op postcode + huisnummer in
+  de BAG OGC API zelf duurt 5–11 s per vraag en is daarom niet gebruikt. Server function
+  `haalBagGegevens` (2FA en schrijfrol, zod op invoer en antwoord, alleen BAG-ids van 16 cijfers en
+  pand-links naar dezelfde API, eigen foutcodes, porties van 10, pauze 0,1 s, stopt bij 429 of
+  storing). Opgeslagen in `portefeuille_adressen.bag_*`; de Bloxs-sync raakt die niet.
 - **Berekening** (`verduurzaming.ts`): labelstappen × m² × € per m² per stap × factor per
   bouwjaarklasse, met een lage en hoge prijs (bandbreedte), afgerond op € 100. Alleen woningen
   slechter dan C. Zonder geregistreerd label: een aangenomen label per bouwjaarklasse (gemarkeerd

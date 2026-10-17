@@ -365,6 +365,7 @@ export function analyseer(
           bag: a.bag,
         })),
         normen.raming ?? RAMING_STANDAARD,
+        normen.efg.klassen,
       );
       r.regels.sort((x, y) => sorteer(x.adres, y.adres));
       return r;
