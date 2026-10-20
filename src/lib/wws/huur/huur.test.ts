@@ -45,39 +45,77 @@ const antwoorden = (w: HuurWoning, a: Partial<HuurAntwoorden> = {}): HuurAntwoor
 });
 
 describe("referentietabel", () => {
-  it("startwaarden: landelijk, vijf steden (Q2 2026) en twaalf provincies (Q4 2025), elk met bron en datum", () => {
-    expect(STANDAARD_REGELS.filter((r) => r.niveau === "land")).toHaveLength(3);
-    expect(STANDAARD_REGELS.filter((r) => r.niveau === "gemeente")).toHaveLength(5);
-    expect(STANDAARD_REGELS.filter((r) => r.niveau === "provincie")).toHaveLength(12);
-    for (const r of STANDAARD_REGELS) {
-      expect(r.bron).toMatch(/^NVM & VGM NL/);
+  it("startwaarden: NVM/VGM NL (Q2 2026, provincies Q4 2025) en Pararius Huurmonitor Q3 2026, elk met bron en datum", () => {
+    const nvm = STANDAARD_REGELS.filter((r) => r.bron.startsWith("NVM & VGM NL"));
+    const par = STANDAARD_REGELS.filter((r) => r.bron.startsWith("Pararius"));
+    expect(nvm).toHaveLength(20);
+    expect(par.filter((r) => r.niveau === "land")).toHaveLength(3);
+    expect(par.filter((r) => r.niveau === "woonplaats")).toHaveLength(37);
+    expect(par.filter((r) => r.niveau === "provincie")).toHaveLength(12);
+    expect(nvm.length + par.length).toBe(STANDAARD_REGELS.length);
+    for (const r of nvm) {
       expect(r.url).toMatch(/^https:\/\/www\.nvm\.nl\//);
       expect(r.peildatum).toMatch(/^(2026-06-30|2025-12-31)$/);
     }
+    for (const r of par) {
+      expect(r.url).toMatch(/^https:\/\/www\.pararius\.nl\//);
+      expect(r.peildatum).toBe("2026-09-30");
+    }
+    expect(new Set(STANDAARD_REGELS.map((r) => r.id)).size).toBe(STANDAARD_REGELS.length);
+    expect(par.find((r) => r.regio === "Amsterdam")?.prijsM2).toBe(28.56);
   });
 
-  it("gemeente → provincie → landelijk; de juiste soort gaat vóór 'alle'", () => {
+  it("woonplaats → gemeente → provincie → landelijk; bij gelijk niveau de recentste; juiste soort vóór 'alle'", () => {
     const R = H.regels;
-    expect(zoekBronRegel(R, woning({ gemeente: "'s-Gravenhage" }), "appartement")?.naam).toBe(
+    // Amsterdam: woonplaats (Pararius, Q3 2026) vóór gemeente (NVM, Q2 2026)
+    const ams = woning({ plaats: "Amsterdam", gemeente: "Amsterdam", provincie: "Noord-Holland" });
+    expect(zoekBronRegel(R, ams, "appartement")?.id).toBe("par-wpl-amsterdam");
+    // geen woonplaatsregel: de gemeente (NVM)
+    expect(zoekBronRegel(R, woning({ gemeente: "'s-Gravenhage" }), "appartement")?.id).toBe(
+      "gem-den-haag",
+    );
+    expect(zoekBronRegel(R, woning({ plaats: "'s-Gravenhage" }), "appartement")?.naam).toBe(
       "Den Haag",
     );
-    expect(zoekBronRegel(R, woning({ gemeente: "Arnhem" }), "appartement")?.id).toBe(
-      "prov-gelderland",
+    // provincie: twee bronnen, de recentste (Pararius Q3 2026)
+    expect(zoekBronRegel(R, woning({ gemeente: "Ede" }), "appartement")?.id).toBe(
+      "par-prov-gelderland",
     );
     expect(zoekBronRegel(R, woning({ provincie: "Fryslan" }), "tussenwoning")?.id).toBe(
-      "prov-frysl-n",
+      "par-prov-fryslan",
     );
     expect(zoekBronRegel(R, woning({ gemeente: "", provincie: "" }), "appartement")?.id).toBe(
-      "nl-app",
+      "par-nl-app",
     );
     expect(zoekBronRegel(R, woning({ gemeente: "", provincie: "" }), "hoekwoning")?.id).toBe(
-      "nl-huis",
+      "par-nl-huis",
     );
+  });
+
+  it("vergelijking: andere bronnen voor dezelfde regio, één per bron", () => {
+    const w = woning({ plaats: "Amsterdam", gemeente: "Amsterdam", provincie: "Noord-Holland" });
+    const m = berekenMarkthuur(w, antwoorden(w, { woningtype: "appartement" }), H, VANDAAG);
+    expect(m.regel?.id).toBe("par-wpl-amsterdam");
+    expect(m.vergelijking?.map((r) => r.id)).toEqual(["gem-amsterdam"]);
+    const p = berekenMarkthuur(woning({ gemeente: "Ede" }), antwoorden(woning()), H, VANDAAG);
+    expect(p.vergelijking?.map((r) => r.id)).toEqual(["prov-gelderland"]);
+  });
+
+  it("opgeslagen tabel met oudere startwaarden: nieuwe bronregels erbij, verwijderde blijven weg", () => {
+    const oud = STANDAARD_REGELS.filter((r) => !r.id.startsWith("par-") && r.id !== "gem-utrecht");
+    const n = huurNormen({ regels: oud } as never);
+    expect(n.regels.some((r) => r.id === "gem-utrecht")).toBe(false);
+    expect(n.regels.filter((r) => r.id.startsWith("par-"))).toHaveLength(52);
+    expect(n.startwaardenVersie).toBe(2);
+    // al bijgewerkt: niets opnieuw toevoegen (een admin kan Pararius-regels verwijderen)
+    const bij = huurNormen({ regels: oud, startwaardenVersie: 2 } as never);
+    expect(bij.regels).toHaveLength(oud.length);
   });
 
   it("ongeldige regels en factoren uit de normen vallen terug op de standaard", () => {
     const n = huurNormen({
       regels: [{ id: "x" } as never, STANDAARD_REGELS[0]!],
+      startwaardenVersie: 2,
       factoren: { afwerking: { waarden: { basis: -1, goed: 1, luxe: 1.2 }, bron: "Eigen ijking" } },
     } as never);
     expect(n.regels).toHaveLength(1);
@@ -266,5 +304,22 @@ describe("advies: altijd de laagste van markthuur en maximale huur", () => {
     );
     expect(a).toMatchObject({ bedrag: 1300, grond: "maximale_huur", volledigeTellingNodig: true });
     expect(a.reden).toMatch(/^Grensgeval: .*volledige telling is nodig/);
+  });
+});
+
+describe("adres uit het venster", () => {
+  it("postcode en huisnummer met letter en/of toevoeging", async () => {
+    const { huurAdresUit } = await import("./adres");
+    expect(huurAdresUit("3511 aa", "12")).toEqual({
+      postcode: "3511 AA",
+      huisnummer: "12",
+      huisletter: "",
+      toevoeging: "",
+    });
+    expect(huurAdresUit("3511AA", "12 a")).toMatchObject({ huisletter: "a", toevoeging: "" });
+    expect(huurAdresUit("3511AA", "12-2")).toMatchObject({ huisletter: "", toevoeging: "2" });
+    expect(huurAdresUit("3511AA", "12 A 2")).toMatchObject({ huisletter: "A", toevoeging: "2" });
+    expect(huurAdresUit("351AA", "12")).toBeNull();
+    expect(huurAdresUit("3511AA", "A")).toBeNull();
   });
 });

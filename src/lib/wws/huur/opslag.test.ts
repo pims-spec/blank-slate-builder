@@ -23,9 +23,8 @@ const W: HuurWoning = {
 const D = maakHuurIndicatie(W, standaardAntwoorden(W), huurNormen(null), N, "Test", "2026-10-20");
 
 describe("huurindicaties opslaan", () => {
-  it("snapshot: alleen de gebruikte bronregel, de factoren en de normversie", () => {
-    expect(D.snapshot.normen.regels).toHaveLength(1);
-    expect(D.snapshot.normen.regels[0]!.id).toBe("gem-utrecht");
+  it("snapshot: de gebruikte bronregel en die ter vergelijking, de factoren en de normversie", () => {
+    expect(D.snapshot.normen.regels.map((r) => r.id)).toEqual(["par-wpl-utrecht", "gem-utrecht"]);
     expect(D.snapshot.normen.factoren.label.bron).toMatch(/^GoHome-inschatting/);
     expect(D.snapshot.normenVersie).toBe(N.versie);
     expect("invoer" in D.wws).toBe(false);

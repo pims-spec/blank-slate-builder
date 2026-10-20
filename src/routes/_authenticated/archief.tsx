@@ -4,6 +4,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import Archief from "@/components/wws/Archief";
 import { ArchiefAnalyses } from "@/components/wws/portefeuille/ArchiefAnalyses";
+import { HuurIndicatiesArchief } from "@/components/wws/HuurIndicatiesArchief";
 import { NormenProvider } from "@/components/wws/NormenContext";
 import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
@@ -13,14 +14,14 @@ export const Route = createFileRoute("/_authenticated/archief")({
   // tab: tellingen (standaard) of portefeuille-analyses
   validateSearch: z.object({
     indeling: z.boolean().optional(),
-    tab: z.enum(["tellingen", "analyses"]).optional(),
+    tab: z.enum(["tellingen", "analyses", "huur"]).optional(),
   }),
   head: () => ({
     meta: [
       { title: "Archief — GoHome WWS" },
       {
         name: "description",
-        content: "Opgeslagen WWS-puntentellingen en portefeuille-analyses.",
+        content: "Opgeslagen WWS-puntentellingen, portefeuille-analyses en huurprijsindicaties.",
       },
     ],
   }),
@@ -48,7 +49,13 @@ function ArchiefPage() {
       />
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
-          {tab === "analyses" && !indeling ? (
+          {tab === "huur" && !indeling ? (
+            <HuurIndicatiesArchief
+              rechten={data}
+              userId={user.id}
+              tabs={<ArchiefTabs actief="huur" />}
+            />
+          ) : tab === "analyses" && !indeling ? (
             <ArchiefAnalyses
               rechten={data}
               userId={user.id}
@@ -77,8 +84,8 @@ function ArchiefPage() {
   );
 }
 
-function ArchiefTabs({ actief }: { actief: "tellingen" | "analyses" }) {
-  const tab = (id: "tellingen" | "analyses", label: string) => (
+function ArchiefTabs({ actief }: { actief: "tellingen" | "analyses" | "huur" }) {
+  const tab = (id: "tellingen" | "analyses" | "huur", label: string) => (
     <Link
       to="/archief"
       search={id === "tellingen" ? {} : { tab: id }}
@@ -98,6 +105,7 @@ function ArchiefTabs({ actief }: { actief: "tellingen" | "analyses" }) {
     <div role="tablist" aria-label="Archief" className="mt-2 flex flex-wrap gap-1">
       {tab("tellingen", "Tellingen")}
       {tab("analyses", "Portefeuille-analyses")}
+      {tab("huur", "Huurprijsindicaties")}
     </div>
   );
 }

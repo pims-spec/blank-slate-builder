@@ -49,7 +49,11 @@ export function maakHuurIndicatie(
     wws,
     advies: huurAdvies(markthuur.verwacht, { ...wws, invoer: _invoer }, N),
     snapshot: {
-      normen: { ...structuredClone(H), regels: markthuur.regel ? [markthuur.regel] : [] },
+      // de gebruikte regel en de regels ter vergelijking; niet de hele tabel
+      normen: {
+        ...structuredClone(H),
+        regels: [...(markthuur.regel ? [markthuur.regel] : []), ...(markthuur.vergelijking ?? [])],
+      },
       normenVersie: N.versie,
       grensVrijeSector: N.grensMidden + 1,
     },

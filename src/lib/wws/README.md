@@ -377,12 +377,32 @@ Startwaarden, alleen wat letterlijk in de rapporten staat:
 
 - Het rapport over Q2 2026 geeft geen cijfers per provincie en geen cijfers per woningtype per
   stad; daarom komen de provincies uit het rapport over Q4 2025, met die datum.
+- **Pararius Huurmonitor Q3 2026** (startwaarden versie 2, peildatum 30-09-2026): landelijk
+  (alle € 20,92 · appartement € 22,61 · eengezinswoning € 16,70, gem. 96 m²), 37 woonplaatsen
+  (o.a. Amsterdam € 28,56, Amstelveen € 24,72, Haarlem € 24,34, Utrecht € 22,87, Rotterdam € 22,92,
+  Den Haag € 22,95) en alle twaalf provincies. Uit het persbericht en de grafieken bij het
+  persbericht (Flourish).
+  - Wat het meet: de huurprijs per m² van nieuwe huurders, woningen van professionele verhuurders
+    via Pararius en Huurwoningen.nl (ruim 15.000 verhuringen per kwartaal), kaal, gestoffeerd en
+    gemeubileerd samen. NVM/VGM NL meet verhuringen door hun leden (bijna 2.900 per kwartaal).
+    Daarom liggen de Pararius-cijfers hoger, vooral in Amsterdam (€ 28,56 tegen € 25,70).
+  - Steden zijn woonplaatsen (Hoofddorp, Zaandam, Voorburg), daarom het niveau "woonplaats" tussen
+    postcodegebied en gemeente; namen zoals in de BAG ("'s-Gravenhage", "'s-Hertogenbosch").
+  - Gebruiksvoorwaarden: het woningaanbod valt onder het databankenrecht van Pararius en scrapen
+    is verboden. Een handvol gepubliceerde gemiddelden uit het persbericht, met bron, datum en link,
+    is geen opvragen van het woningaanbod. Voor rapporten naar klanten is een bevestiging van
+    Pararius verstandig.
+- **Opgeslagen tabel bijwerken:** `startwaardenVersie`. Een tabel die met versie 1 is opgeslagen
+  krijgt de Pararius-regels erbij; regels die een admin daarna verwijdert, blijven weg.
+- **Ter vergelijking:** andere bronnen voor dezelfde regio staan onder Bronnen (scherm en PDF),
+  met het verschil in procenten; de berekening gebruikt alleen de gekozen regel. Ze gaan mee in de
+  snapshot.
 - Gemeente- en provincienamen zoals PDOK ze geeft ("'s-Gravenhage", "Fryslân").
 - **Gebruiksvoorwaarden.** In de rapporten en op nvm.nl staan geen voorwaarden voor hergebruik.
   We nemen alleen gepubliceerde gemiddelden over, met bron, datum en link op scherm en in de PDF.
   Voor gebruik in rapporten naar klanten is een bevestiging van NVM/VGM NL verstandig.
-- Opzoeken: postcodegebied → gemeente → provincie → landelijk; binnen een regio gaat een regel voor
-  de soort (appartement/woonhuis) vóór "alle woningtypen".
+- Opzoeken: postcodegebied → woonplaats → gemeente → provincie → landelijk; binnen een regio gaat
+  een regel voor de soort (appartement/woonhuis) vóór "alle woningtypen", daarna de recentste.
 - Later een betaalde bron: een tweede "huurbron" (server function met eigen sleutel, zod, eigen
   foutcodes) die dezelfde vorm teruggeeft als een bronregel. De rekenkern verandert niet.
 
@@ -418,6 +438,9 @@ Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
 
 ### Scherm (`HuurprijsIndicator.tsx`, route `/huurprijsindicator`)
 
+- **Venster** (`HuurAdresDialoog.tsx`), zoals bij een nieuwe telling: postcode en "huisnummer +
+  toevoeging" (`huur/adres.ts`: "12 A", "12-2", "12 A 2"); daarna wordt alles ingevuld. Bij meerdere
+  woningen op één nummer kies je in het venster.
 - **Opzoeken** (`huur/opzoeken.ts`, server function `zoekWoningVoorHuur`; ingelogd, schrijfrol en
   tweestapsverificatie): PDOK Locatieserver (adres, gemeente, provincie, BAG-id), BAG (oppervlakte,
   gebruiksdoel, bouwjaar) en EP-Online (label, registratiedatum, gebouwtype). Alleen het adres is
@@ -440,8 +463,10 @@ Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
   antwoorden, de uitkomst (markthuur, WWS-check, advies) en een **snapshot**: de gebruikte
   bronregel, alle factoren en de normversie. Een opgeslagen indicatie wordt nooit opnieuw berekend;
   zo blijft hij uitlegbaar als de tabel of de factoren veranderen.
-- "Opnieuw berekenen met huidige tabel" neemt de antwoorden over in een nieuwe, nog niet opgeslagen
-  indicatie.
+- **Archief**, tabblad "Huurprijsindicaties" (`HuurIndicatiesArchief.tsx`): zoeken, bekijken zoals
+  opgeslagen, PDF, verwijderen (eigenaar of admin, na bevestiging) en de gekoppelde telling openen.
+- "Opnieuw berekenen met huidige tabel" (`/huurprijsindicator?opnieuw=<id>`) neemt de antwoorden
+  over in een nieuwe, nog niet opgeslagen indicatie.
 - RLS: lezen voor de eigenaar, admins en de kijkrol; maken met de schrijfrol; bijwerken (telling
   koppelen) en verwijderen door de eigenaar of een admin; tweestapsverificatie verplicht.
 - "Maak een volledige puntentelling" koppelt de nieuwe telling aan de opgeslagen indicatie.

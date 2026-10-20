@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import HuurprijsIndicator from "@/components/wws/HuurprijsIndicator";
@@ -7,6 +8,8 @@ import { normenQuery } from "@/components/wws/tellingStore";
 import { myAccessQuery } from "@/lib/access";
 
 export const Route = createFileRoute("/_authenticated/huurprijsindicator")({
+  // opnieuw: id van een opgeslagen indicatie (vanuit het archief) om opnieuw te berekenen
+  validateSearch: z.object({ opnieuw: z.string().uuid().optional() }),
   head: () => ({
     meta: [
       { title: "Huurprijsindicator — GoHome WWS" },
@@ -26,6 +29,7 @@ export const Route = createFileRoute("/_authenticated/huurprijsindicator")({
 
 function HuurprijsIndicatorPage() {
   const { user } = Route.useRouteContext();
+  const { opnieuw } = Route.useSearch();
   const { data } = useSuspenseQuery(myAccessQuery(user.id));
   const { data: normen } = useSuspenseQuery(normenQuery());
   const email = user.email ?? "";
@@ -41,8 +45,9 @@ function HuurprijsIndicatorPage() {
       {data.heeftToegang ? (
         <NormenProvider normen={normen}>
           <HuurprijsIndicator
+            key={opnieuw ?? "nieuw"}
             magSchrijven={!!data.magSchrijven}
-            isAdmin={!!data.isAdmin}
+            opnieuwId={opnieuw}
             bewerker={{ id: user.id, naam: data.profile?.display_name || email, email }}
           />
         </NormenProvider>

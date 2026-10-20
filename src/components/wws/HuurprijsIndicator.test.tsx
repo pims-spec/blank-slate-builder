@@ -44,22 +44,28 @@ const WONING: HuurWoning = {
   gebouwtype: "Appartement",
 };
 
-function toon(magSchrijven = true) {
+function toon(magSchrijven = true, opnieuwId?: string) {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <HuurprijsIndicator
         magSchrijven={magSchrijven}
-        isAdmin={false}
+        opnieuwId={opnieuwId}
         bewerker={{ id: "u1", naam: "Test Gebruiker", email: "t@x.nl" }}
       />
     </QueryClientProvider>,
   );
 }
 
-async function opzoeken() {
-  fireEvent.change(screen.getByPlaceholderText("1234 AB"), { target: { value: "3511 AA" } });
-  fireEvent.change(screen.getByLabelText("Huisnummer"), { target: { value: "12" } });
-  fireEvent.click(screen.getByRole("button", { name: "Opzoeken" }));
+/** Het venster staat meteen open: postcode en huisnummer + toevoeging, dan Doorgaan */
+async function opzoeken(huisnummer = "12") {
+  const venster = await screen.findByRole("dialog", { name: "Nieuwe huurprijsindicatie" });
+  fireEvent.change(within(venster).getByPlaceholderText("1234 AB"), {
+    target: { value: "3511 aa" },
+  });
+  fireEvent.change(within(venster).getByLabelText("Huisnummer + toevoeging"), {
+    target: { value: huisnummer },
+  });
+  fireEvent.click(within(venster).getByRole("button", { name: "Doorgaan" }));
   await screen.findByRole("region", { name: "Indicatie markthuur" });
 }
 
@@ -88,9 +94,10 @@ describe("Huurprijsindicator", () => {
     expect(markt).toHaveTextContent("Betrouwbaarheid: hoog");
     const factoren = screen.getByRole("region", { name: "Invloed per factor" });
     expect(within(factoren).getAllByText("GoHome-inschatting").length).toBeGreaterThan(3);
-    expect(screen.getByRole("region", { name: "Bronnen" })).toHaveTextContent(
-      /gemeente Utrecht.*NVM & VGM NL.*30 juni 2026/,
-    );
+    // woonplaats Utrecht (Pararius, Q3 2026); NVM/VGM NL voor de gemeente ter vergelijking
+    const bronnen = screen.getByRole("region", { name: "Bronnen" });
+    expect(bronnen).toHaveTextContent(/woonplaats Utrecht.*Pararius.*30 september 2026/);
+    expect(bronnen).toHaveTextContent(/Ter vergelijking.*gemeente Utrecht.*NVM & VGM NL/);
     expect(screen.getByText(/indicatie, geen taxatie/)).toBeInTheDocument();
   });
 
@@ -111,18 +118,37 @@ describe("Huurprijsindicator", () => {
     expect(screen.getByText(/hoort wettelijk bij de servicekosten/)).toBeInTheDocument();
   });
 
-  it("meerdere woningen: kiezen zoekt opnieuw met de letter", async () => {
+  it("venster: huisletter en toevoeging uit één veld ('12 A 2')", async () => {
+    toon();
+    await opzoeken("12 A 2");
+    expect(zoek).toHaveBeenCalledWith({
+      data: { postcode: "3511 AA", huisnummer: "12", huisletter: "A", toevoeging: "2" },
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // ander adres: het venster weer open
+    fireEvent.click(screen.getByRole("button", { name: "Ander adres" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("meerdere woningen: in het venster kiezen zoekt opnieuw met de letter", async () => {
     zoek.mockResolvedValueOnce({ ok: false, fout: "meerdere", keuzes: ["A", "B"] });
     toon();
-    fireEvent.change(screen.getByPlaceholderText("1234 AB"), { target: { value: "3511AA" } });
-    fireEvent.change(screen.getByLabelText("Huisnummer"), { target: { value: "12" } });
-    fireEvent.click(screen.getByRole("button", { name: "Opzoeken" }));
-    fireEvent.click(await screen.findByRole("button", { name: "12 B" }));
+    const venster = await screen.findByRole("dialog");
+    fireEvent.change(within(venster).getByPlaceholderText("1234 AB"), {
+      target: { value: "3511AA" },
+    });
+    fireEvent.change(within(venster).getByLabelText("Huisnummer + toevoeging"), {
+      target: { value: "12" },
+    });
+    fireEvent.click(within(venster).getByRole("button", { name: "Doorgaan" }));
+    expect(await within(venster).findByRole("status")).toHaveTextContent(/meerdere woningen/);
+    fireEvent.click(within(venster).getByRole("button", { name: "12 B" }));
     await waitFor(() =>
       expect(zoek).toHaveBeenLastCalledWith({
-        data: { postcode: "3511AA", huisnummer: "12", huisletter: "B", toevoeging: "" },
+        data: { postcode: "3511 AA", huisnummer: "12", huisletter: "B", toevoeging: "" },
       }),
     );
+    await screen.findByRole("region", { name: "Indicatie markthuur" });
   });
 
   it("Maak een volledige puntentelling: nieuwe telling met de bekende gegevens, dan naar de editor", async () => {
@@ -154,7 +180,10 @@ describe("Huurprijsindicator", () => {
     expect(klant).toBeNull();
     expect(d.versie).toBe(1);
     expect(d.gemaaktDoor).toBe("Test Gebruiker");
-    expect(d.snapshot.normen.regels.map((r: { id: string }) => r.id)).toEqual(["gem-utrecht"]);
+    expect(d.snapshot.normen.regels.map((r: { id: string }) => r.id)).toEqual([
+      "par-wpl-utrecht",
+      "gem-utrecht",
+    ]);
     expect(d.snapshot.normen.factoren.afwerking.waarden.luxe).toBe(1.08);
     expect(d.markthuur.verwacht).toBeGreaterThan(0);
     expect(d.advies.reden).toMatch(/advies is de/);
@@ -168,16 +197,16 @@ describe("Huurprijsindicator", () => {
     expect(huur.koppelTelling.mock.calls[0]![0]).toBe("ind-1");
   });
 
-  it("eerdere indicaties: precies zoals opgeslagen tonen, en de eigenaar kan verwijderen", async () => {
+  it("opnieuw vanuit het archief: woning en antwoorden overgenomen, opnieuw berekend, geen venster", async () => {
     const data = maakHuurIndicatie(
       WONING,
-      standaardAntwoorden(WONING),
+      { ...standaardAntwoorden(WONING), oplevering: "kaal" },
       huurNormen(null),
       DEFAULT_NORMEN as unknown as Normen,
       "Collega",
       "2026-10-01",
     );
-    data.markthuur.verwacht = 1234; // zo opgeslagen; wordt niet opnieuw berekend
+    data.markthuur.verwacht = 1234; // oud bedrag; wordt opnieuw berekend
     huur.lijst.mockResolvedValue([
       {
         id: "i1",
@@ -188,32 +217,21 @@ describe("Huurprijsindicator", () => {
         gemaaktOp: "2026-10-01T10:00:00Z",
         data,
       },
-      {
-        id: "i2",
-        ownerId: "ander",
-        ownerNaam: "Ander",
-        klantId: null,
-        tellingId: null,
-        gemaaktOp: "2026-09-01T10:00:00Z",
-        data,
-      },
     ]);
-    toon();
-    const lijst = await screen.findByRole("region", { name: "Eerdere indicaties" });
-    await within(lijst).findAllByText(/markt € 1\.234/);
-    // alleen de eigen indicatie (u1) is te verwijderen
-    expect(within(lijst).getAllByRole("button", { name: /^Verwijder indicatie/ })).toHaveLength(1);
-    fireEvent.click(within(lijst).getAllByRole("button", { name: "Bekijken" })[0]!);
-    const bekeken = screen.getByRole("region", { name: "Opgeslagen indicatie" });
-    expect(bekeken).toHaveTextContent("€ 1.234");
-    expect(bekeken).toHaveTextContent(/met de bronregel en factoren van toen/);
-    fireEvent.click(within(lijst).getByRole("button", { name: /^Verwijder indicatie/ }));
-    await waitFor(() => expect(huur.verwijder).toHaveBeenCalledWith("i1"));
+    toon(true, "i1");
+    await screen.findByRole("region", { name: "Indicatie markthuur" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByLabelText("Oplevering")).toHaveValue("kaal");
+    expect(screen.getByRole("region", { name: "Indicatie markthuur" })).not.toHaveTextContent(
+      "€ 1.234",
+    );
+    expect(screen.getByRole("button", { name: "Opslaan" })).toBeEnabled();
   });
 
-  it("kijkrol: geen opzoeken", () => {
+  it("kijkrol: geen venster en geen opzoeken", () => {
     toon(false);
-    expect(screen.queryByRole("button", { name: "Opzoeken" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Adres invullen" })).toBeNull();
     expect(screen.getByRole("note")).toHaveTextContent(/kijkrol/);
   });
 });

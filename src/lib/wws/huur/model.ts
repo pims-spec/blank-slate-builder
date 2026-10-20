@@ -98,21 +98,22 @@ export function standaardAntwoorden(w: HuurWoning | null): HuurAntwoorden {
 
 const norm = (s: string) => s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-const NIVEAU_VOLGORDE: RegioNiveau[] = ["pc4", "gemeente", "provincie", "land"];
+const NIVEAU_VOLGORDE: RegioNiveau[] = ["pc4", "woonplaats", "gemeente", "provincie", "land"];
 
 /**
- * De meest specifieke bronregel: postcodegebied → gemeente → provincie → landelijk. Binnen een
+ * De meest specifieke bronregel: postcodegebied → woonplaats → gemeente → provincie → landelijk. Binnen een
  * regio gaat een regel voor de juiste soort (appartement/woonhuis) vóór "alle"; bij gelijke regels
  * de recentste.
  */
 export function zoekBronRegel(
   regels: readonly BronRegel[],
-  w: Pick<HuurWoning, "postcode" | "gemeente" | "provincie">,
+  w: Pick<HuurWoning, "postcode" | "plaats" | "gemeente" | "provincie">,
   type: HuurWoningtype,
 ): BronRegel | null {
   const soort = soortVan(type);
   const sleutel: Record<RegioNiveau, string> = {
     pc4: w.postcode.replace(/\s+/g, "").slice(0, 4),
+    woonplaats: w.plaats,
     gemeente: w.gemeente,
     provincie: w.provincie,
     land: "Nederland",
@@ -130,6 +131,46 @@ export function zoekBronRegel(
     if (kandidaten[0]) return kandidaten[0];
   }
   return null;
+}
+
+/**
+ * Andere bronnen voor dezelfde regio, ter vergelijking (bijv. Pararius naast NVM/VGM NL): regels
+ * op hetzelfde niveau, of op woonplaats/gemeente als de gekozen regel daarop zit. Per bron één
+ * regel (de juiste soort vóór "alle").
+ */
+export function vergelijkingsRegels(
+  regels: readonly BronRegel[],
+  w: Pick<HuurWoning, "postcode" | "plaats" | "gemeente" | "provincie">,
+  type: HuurWoningtype,
+  gekozen: BronRegel | null,
+): BronRegel[] {
+  if (!gekozen) return [];
+  const soort = soortVan(type);
+  const plaatselijk = gekozen.niveau === "woonplaats" || gekozen.niveau === "gemeente";
+  const sleutel: Record<RegioNiveau, string> = {
+    pc4: w.postcode.replace(/\s+/g, "").slice(0, 4),
+    woonplaats: w.plaats,
+    gemeente: w.gemeente,
+    provincie: w.provincie,
+    land: "Nederland",
+  };
+  const kandidaten = regels
+    .filter((r) => r.id !== gekozen.id && r.bron !== gekozen.bron)
+    .filter((r) =>
+      plaatselijk
+        ? r.niveau === "woonplaats" || r.niveau === "gemeente"
+        : r.niveau === gekozen.niveau,
+    )
+    .filter((r) => sleutel[r.niveau] && norm(r.regio) === norm(sleutel[r.niveau]))
+    .filter((r) => r.woningsoort === soort || r.woningsoort === "alle")
+    .sort(
+      (a, b) =>
+        Number(b.woningsoort === soort) - Number(a.woningsoort === soort) ||
+        b.peildatum.localeCompare(a.peildatum),
+    );
+  const perBron = new Map<string, BronRegel>();
+  for (const r of kandidaten) if (!perBron.has(r.bron)) perBron.set(r.bron, r);
+  return [...perBron.values()];
 }
 
 export const labelGroep = (l: string): LabelGroep => {
@@ -167,6 +208,8 @@ export interface BetrouwbaarheidUitleg {
 
 export interface Markthuur {
   regel: BronRegel | null;
+  /** Andere bronnen voor dezelfde regio (alleen ter vergelijking; rekenen doet de app met `regel`) */
+  vergelijking?: BronRegel[];
   /** Prijs per m² uit de bron, en de effectieve prijs per m² van de uitkomst */
   bronPrijsM2: number;
   prijsM2: number;
@@ -328,6 +371,7 @@ export function berekenMarkthuur(
   const verwacht = rond5(exact);
   return {
     regel,
+    vergelijking: vergelijkingsRegels(H.regels, w, a.woningtype, regel),
     bronPrijsM2,
     prijsM2: Math.round((exact / m2) * 100) / 100,
     basis,

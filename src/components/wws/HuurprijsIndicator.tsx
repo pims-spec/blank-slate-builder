@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +19,15 @@ import {
   type WwsCheck,
 } from "@/lib/wws/huur";
 import { zoekWoningVoorHuur } from "@/lib/wws/huur/huur.functions";
-import { maakHuurIndicatie, type HuurIndicatie } from "@/lib/wws/huur/opslag";
+import { maakHuurIndicatie } from "@/lib/wws/huur/opslag";
 import { HUUR_DISCLAIMER, maakHuurPdf } from "@/lib/wws/pdf/huur";
-import { huurFoutMelding, type HuurOpzoeking } from "@/lib/wws/huur/opzoeken";
+import type { HuurOpzoeking } from "@/lib/wws/huur/opzoeken";
 import { startTelling } from "@/lib/wws/huur/telling";
 import { maakTellingDoc, type Bewerker } from "@/lib/wws/opslag";
 import { useNormen } from "./NormenContext";
 import EigenaarKeuze from "./EigenaarKeuze";
+import type { HuurAdres } from "@/lib/wws/huur/adres";
+import HuurAdresDialoog from "./HuurAdresDialoog";
 import { huurIndicatiesQuery, huurStore, klantenQuery, tellingStore } from "./tellingStore";
 import { useDownload } from "./useDownload";
 
@@ -118,57 +120,71 @@ const effectTekst = (x: number) =>
 
 export interface HuurprijsIndicatorProps {
   magSchrijven: boolean;
-  isAdmin?: boolean;
   bewerker: Bewerker;
+  /** Vanuit het archief: de antwoorden van deze opgeslagen indicatie opnieuw berekenen */
+  opnieuwId?: string | undefined;
 }
 
 /** Huurprijsindicator: adres opzoeken, vragen, markthuur als bandbreedte en de WWS-check */
 export default function HuurprijsIndicator({
   magSchrijven,
-  isAdmin = false,
   bewerker,
+  opnieuwId,
 }: HuurprijsIndicatorProps) {
   const N = useNormen();
   const H = useMemo(() => huurNormen(N.huurindicator), [N]);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [adres, setAdres] = useState({
-    postcode: "",
-    huisnummer: "",
-    huisletter: "",
-    toevoeging: "",
-  });
   const [woning, setWoning] = useState<HuurWoning | null>(null);
   const [meldingen, setMeldingen] = useState<string[]>([]);
-  const [keuzes, setKeuzes] = useState<string[]>([]);
   const [a, setA] = useState<HuurAntwoorden | null>(null);
+  // net als bij een nieuwe telling: meteen het venster voor postcode en huisnummer
+  const [adresOpen, setAdresOpen] = useState(magSchrijven && !opnieuwId);
   /** Id van de opgeslagen indicatie bij de huidige antwoorden (null: niet opgeslagen) */
   const [opgeslagenId, setOpgeslagenId] = useState<string | null>(null);
   const [klantId, setKlantId] = useState("");
-  const [bekeken, setBekeken] = useState<HuurIndicatie | null>(null);
-  const { data: eerdere = [] } = useQuery(huurIndicatiesQuery());
+  const { data: opgeslagen } = useQuery({ ...huurIndicatiesQuery(), enabled: !!opnieuwId });
+  // vanuit het archief: de woning en antwoorden van die indicatie, opnieuw berekend
+  const opnieuwGeladen = useRef<string | null>(null);
+  useEffect(() => {
+    if (!opnieuwId || opnieuwGeladen.current === opnieuwId || !opgeslagen) return;
+    opnieuwGeladen.current = opnieuwId;
+    const i = opgeslagen.find((x) => x.id === opnieuwId);
+    if (!i) {
+      toast.error("Deze indicatie bestaat niet (meer).");
+      return;
+    }
+    setWoning(i.data.woning);
+    setA(i.data.antwoorden);
+    setKlantId(i.klantId ?? "");
+    setMeldingen([]);
+    setOpgeslagenId(null);
+    toast(
+      "Antwoorden overgenomen; de indicatie is opnieuw berekend met de huidige tabel en factoren.",
+    );
+  }, [opnieuwId, opgeslagen]);
   const { data: klanten = [] } = useQuery(klantenQuery());
   const klantNaam = (id: string | null | undefined) =>
     (id && klanten.find((k) => k.id === id)?.naam) || null;
   const download = useDownload();
 
-  const zoeken = useMutation({
-    mutationFn: (v: typeof adres) => zoekWoningVoorHuur({ data: v }) as Promise<HuurOpzoeking>,
-    onSuccess: (r) => {
-      if (!r.ok) {
-        setKeuzes(r.keuzes ?? []);
-        toast.error(huurFoutMelding(r.fout));
-        return;
-      }
-      setKeuzes([]);
+  /** Opzoeken vanuit het venster; bij succes alles invullen. null: geen verbinding. */
+  async function zoekAdres(v: HuurAdres): Promise<HuurOpzoeking | null> {
+    let r: HuurOpzoeking;
+    try {
+      r = (await zoekWoningVoorHuur({ data: v })) as HuurOpzoeking;
+    } catch {
+      return null;
+    }
+    if (r.ok) {
       setWoning(r.woning);
       setMeldingen(r.meldingen);
       setA(standaardAntwoorden(r.woning));
       setOpgeslagenId(null);
-      setBekeken(null);
-    },
-    onError: () => toast.error(huurFoutMelding("geen_verbinding")),
-  });
+      setKlantId("");
+    }
+    return r;
+  }
 
   const telling = useMutation({
     mutationFn: async () => {
@@ -211,110 +227,38 @@ export default function HuurprijsIndicator({
     onError: () => toast.error("Opslaan lukte niet. Probeer het opnieuw."),
   });
 
-  const verwijderen = useMutation({
-    mutationFn: (id: string) => huurStore.verwijder(id),
-    onSuccess: (_x, id) => {
-      if (bekeken?.id === id) setBekeken(null);
-      if (opgeslagenId === id) setOpgeslagenId(null);
-      void qc.invalidateQueries({ queryKey: ["huurindicaties"] });
-      toast.success("Indicatie verwijderd.");
-    },
-    onError: () => toast.error("Verwijderen lukte niet."),
-  });
-
   const app = a && (a.woningtype === "appartement" || a.woningtype === "studio");
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Huurprijsindicator</h1>
-        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-          Een indicatieve markthuur (laag – verwacht – hoog) voor één adres, met een check op de
-          wettelijke maximale huur volgens het WWS. Geen taxatie.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Huurprijsindicator</h1>
+          <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+            Een indicatieve markthuur (laag – verwacht – hoog) voor één adres, met een check op de
+            wettelijke maximale huur volgens het WWS. Geen taxatie. Opgeslagen indicaties staan in
+            het{" "}
+            <Link to="/archief" search={{ tab: "huur" }} className="text-primary underline">
+              archief
+            </Link>
+            .
+          </p>
+        </div>
+        {magSchrijven && (
+          <Button onClick={() => setAdresOpen(true)}>
+            {woning ? "Ander adres" : "Adres invullen"}
+          </Button>
+        )}
       </header>
 
-      {!magSchrijven ? (
+      {!magSchrijven && (
         <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm" role="note">
-          Met de kijkrol kun je opgeslagen indicaties bekijken, maar geen nieuwe maken.
+          Met de kijkrol kun je opgeslagen indicaties bekijken in het archief, maar geen nieuwe
+          maken.
         </p>
-      ) : (
-        <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            zoeken.mutate(adres);
-          }}
-        >
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Postcode</span>
-            <Input
-              className="w-32"
-              placeholder="1234 AB"
-              value={adres.postcode}
-              onChange={(e) => setAdres({ ...adres, postcode: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Huisnummer</span>
-            <Input
-              className="w-24"
-              inputMode="numeric"
-              value={adres.huisnummer}
-              onChange={(e) =>
-                setAdres({ ...adres, huisnummer: e.target.value.replace(/\D/g, "") })
-              }
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Letter</span>
-            <Input
-              className="w-16"
-              maxLength={1}
-              value={adres.huisletter}
-              onChange={(e) => setAdres({ ...adres, huisletter: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted-foreground">Toevoeging</span>
-            <Input
-              className="w-24"
-              maxLength={10}
-              value={adres.toevoeging}
-              onChange={(e) => setAdres({ ...adres, toevoeging: e.target.value })}
-            />
-          </label>
-          <Button type="submit" disabled={zoeken.isPending}>
-            {zoeken.isPending ? "Opzoeken…" : "Opzoeken"}
-          </Button>
-          {keuzes.length > 0 && (
-            <div className="w-full text-sm" role="group" aria-label="Kies de woning">
-              <span className="mr-2 text-muted-foreground">Kies:</span>
-              {keuzes.map((k) => (
-                <Button
-                  key={k}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mr-1 mb-1"
-                  onClick={() => {
-                    const [l, ...t] = k.split(" ");
-                    const letter = /^[A-Za-z]$/.test(l!) ? l! : "";
-                    const v = {
-                      ...adres,
-                      huisletter: letter,
-                      toevoeging: letter ? t.join(" ") : k,
-                    };
-                    setAdres(v);
-                    zoeken.mutate(v);
-                  }}
-                >
-                  {adres.huisnummer} {k}
-                </Button>
-              ))}
-            </div>
-          )}
-        </form>
+      )}
+      {magSchrijven && (
+        <HuurAdresDialoog open={adresOpen} onOpenChange={setAdresOpen} onZoek={zoekAdres} />
       )}
 
       {woning && a && uitkomst && (
@@ -573,82 +517,6 @@ export default function HuurprijsIndicator({
           </p>
         </>
       )}
-
-      {bekeken && (
-        <BekekenIndicatie
-          i={bekeken}
-          onSluit={() => setBekeken(null)}
-          pdfBezig={download.bezig === "huur-" + bekeken.id}
-          onPdf={() =>
-            void download.pdf("huur-" + bekeken.id, (lib) =>
-              maakHuurPdf(lib, { data: bekeken.data, eigenaar: klantNaam(bekeken.klantId) }),
-            )
-          }
-          onOpnieuw={
-            magSchrijven
-              ? () => {
-                  setWoning(bekeken.data.woning);
-                  setA(bekeken.data.antwoorden);
-                  setMeldingen([]);
-                  setOpgeslagenId(null);
-                  setKlantId(bekeken.klantId ?? "");
-                  setBekeken(null);
-                  toast(
-                    "Antwoorden overgenomen; de indicatie is opnieuw berekend met de huidige tabel en factoren.",
-                  );
-                }
-              : undefined
-          }
-        />
-      )}
-
-      <section
-        aria-label="Eerdere indicaties"
-        className="rounded-xl border border-border bg-card p-4"
-      >
-        <h2 className="mb-2 font-semibold">Eerdere indicaties</h2>
-        {eerdere.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nog geen opgeslagen indicaties.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {eerdere.map((i) => {
-              const w = i.data.woning;
-              const magWeg = magSchrijven && (i.ownerId === bewerker.id || isAdmin);
-              return (
-                <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 text-sm">
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium">
-                      {w.straat} {w.huisnummer}, {w.plaats}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {new Date(i.gemaaktOp).toLocaleDateString("nl-NL")} ·{" "}
-                      {i.ownerNaam ?? "onbekend"}
-                    </span>
-                  </span>
-                  <span className="tabular-nums">
-                    markt {euroHeel(i.data.markthuur.verwacht)} · advies{" "}
-                    <b>{euroHeel(i.data.advies.bedrag)}</b>
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => setBekeken(i)}>
-                    Bekijken
-                  </Button>
-                  {magWeg && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={"Verwijder indicatie " + w.straat + " " + w.huisnummer}
-                      disabled={verwijderen.isPending}
-                      onClick={() => verwijderen.mutate(i.id)}
-                    >
-                      Verwijderen
-                    </Button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
     </main>
   );
 }
@@ -894,71 +762,32 @@ export function Bronnen({ m }: { m: Markthuur }) {
       ) : (
         <p>Geen bronregel voor deze regio.</p>
       )}
+      {(m.vergelijking ?? []).length > 0 && (
+        <div className="mt-2">
+          <div className="text-xs font-medium">
+            Ter vergelijking (niet gebruikt in de berekening)
+          </div>
+          <ul className="list-disc pl-5 text-xs">
+            {m.vergelijking!.map((v) => (
+              <li key={v.id}>
+                {NIVEAU_NAMEN[v.niveau]} {v.naam ?? v.regio}: {eur(v.prijsM2)} per m² — {v.bron},
+                peildatum {datumTekst(v.peildatum)}
+                {r && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({v.prijsM2 >= r.prijsM2 ? "+" : "−"}
+                    {Math.abs(Math.round(((v.prijsM2 - r.prijsM2) / r.prijsM2) * 100))}% t.o.v. de
+                    gebruikte bron)
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="mt-1 text-xs text-muted-foreground">
         Woninggegevens: PDOK Locatieserver en BAG (Kadaster), energielabel: EP-Online (RVO).
         Maximale huur: woningwaarderingsstelsel en huurprijstabel uit de normen van deze app.
-      </p>
-    </section>
-  );
-}
-
-/** Een opgeslagen indicatie, precies zoals toen berekend (met de bronregel en factoren van toen) */
-function BekekenIndicatie({
-  i,
-  onSluit,
-  onOpnieuw,
-  onPdf,
-  pdfBezig,
-}: {
-  i: HuurIndicatie;
-  onSluit: () => void;
-  onOpnieuw?: (() => void) | undefined;
-  onPdf: () => void;
-  pdfBezig: boolean;
-}) {
-  const d = i.data;
-  const w = d.woning;
-  return (
-    <section
-      aria-label="Opgeslagen indicatie"
-      className="space-y-4 rounded-xl border-2 border-primary/40 bg-card p-4"
-    >
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="font-semibold">
-            {w.straat} {w.huisnummer}, {w.postcode.replace(/^(\d{4})/, "$1 ")} {w.plaats}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Opgeslagen op {new Date(i.gemaaktOp).toLocaleString("nl-NL")} door{" "}
-            {i.ownerNaam ?? d.gemaaktDoor}. Berekend op {datumTekst(d.datum)} met de bronregel en
-            factoren van toen; latere wijzigingen in Normen veranderen deze indicatie niet.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" disabled={pdfBezig} onClick={onPdf}>
-          {pdfBezig ? "PDF maken…" : "PDF"}
-        </Button>
-        {onOpnieuw && (
-          <Button variant="outline" size="sm" onClick={onOpnieuw}>
-            Opnieuw berekenen met huidige tabel
-          </Button>
-        )}
-        <Button variant="ghost" size="sm" onClick={onSluit}>
-          Sluiten
-        </Button>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <MarkthuurKaart m={d.markthuur} />
-        <WwsKaart
-          c={d.wws}
-          advies={d.advies}
-          grens={d.snapshot.grensVrijeSector}
-          kanTellen={false}
-        />
-      </div>
-      <FactorTabel m={d.markthuur} />
-      <Bronnen m={d.markthuur} />
-      <p className="text-xs text-muted-foreground" role="note">
-        {DISCLAIMER}
       </p>
     </section>
   );

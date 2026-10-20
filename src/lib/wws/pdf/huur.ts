@@ -261,6 +261,11 @@ function huurPdf(lib: PdfLib, x: HuurPdfInvoer) {
     8.5,
     PDF_INK,
   );
+  for (const v of m.vergelijking ?? [])
+    tekst(
+      `Ter vergelijking (niet gebruikt in de berekening): ${NIVEAU_NAMEN[v.niveau]} ${v.naam ?? v.regio}: ${euroCent(v.prijsM2)} per m². Bron: ${v.bron}, peildatum ${datum(v.peildatum)}.`,
+      8,
+    );
   tekst(
     "Woninggegevens: PDOK Locatieserver en BAG (Kadaster). Energielabel: EP-Online (RVO). Maximale huur: woningwaarderingsstelsel en huurprijstabel (normen " +
       d.snapshot.normenVersie +

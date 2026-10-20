@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import NormenBeheer from "./NormenBeheer";
 import { RAMING_STANDAARD } from "@/lib/wws/portefeuille/verduurzaming";
+import { STANDAARD_REGELS } from "@/lib/wws/huur";
 
 const instellingenStore = vi.hoisted(() => ({ slaNormenOp: vi.fn() }));
 vi.mock("./tellingStore", () => ({ instellingenStore }));
@@ -136,16 +137,23 @@ describe("Normen: portefeuille-analyse", () => {
       </QueryClientProvider>,
     );
     const tabel = screen.getByRole("table", { name: "Referentietabel" });
-    expect(tabel.querySelectorAll("tbody tr")).toHaveLength(20);
+    const n0 = STANDAARD_REGELS.length;
+    expect(tabel.querySelectorAll("tbody tr")).toHaveLength(n0);
     expect(screen.getAllByText("GoHome-inschatting").length).toBeGreaterThan(5);
     fireEvent.change(screen.getByLabelText("Afwerkingsniveau: Luxe"), { target: { value: "1.1" } });
     fireEvent.change(screen.getByLabelText("Afwerkingsniveau: herkomst"), {
       target: { value: "Geijkt met portefeuille 2027" },
     });
     fireEvent.click(screen.getByRole("button", { name: "+ Regel toevoegen" }));
-    fireEvent.change(screen.getByLabelText("Regio regel 21"), { target: { value: "Arnhem" } });
-    fireEvent.change(screen.getByLabelText("prijsM2 regel 21"), { target: { value: "16.2" } });
-    fireEvent.change(screen.getByLabelText("Bron regel 21"), { target: { value: "Eigen meting" } });
+    fireEvent.change(screen.getByLabelText("Regio regel " + (n0 + 1)), {
+      target: { value: "Arnhem" },
+    });
+    fireEvent.change(screen.getByLabelText("prijsM2 regel " + (n0 + 1)), {
+      target: { value: "16.2" },
+    });
+    fireEvent.change(screen.getByLabelText("Bron regel " + (n0 + 1)), {
+      target: { value: "Eigen meting" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
     fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
     await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalled());

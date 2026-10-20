@@ -25,9 +25,10 @@ export type Woningsoort = "alle" | "appartement" | "woonhuis";
 export const soortVan = (t: HuurWoningtype): Exclude<Woningsoort, "alle"> =>
   t === "studio" || t === "appartement" ? "appartement" : "woonhuis";
 
-export type RegioNiveau = "pc4" | "gemeente" | "provincie" | "land";
+export type RegioNiveau = "pc4" | "woonplaats" | "gemeente" | "provincie" | "land";
 export const NIVEAU_NAMEN: Record<RegioNiveau, string> = {
   pc4: "postcodegebied",
+  woonplaats: "woonplaats",
   gemeente: "gemeente",
   provincie: "provincie",
   land: "landelijk",
@@ -73,6 +74,12 @@ export type Oplevering = "kaal" | "gestoffeerd" | "gemeubileerd";
 
 export interface HuurNormen {
   regels: BronRegel[];
+  /**
+   * Versie van de startwaarden waarmee de tabel is opgeslagen. Komen er nieuwe startregels bij
+   * (bijv. een nieuwe bron), dan worden die aan een opgeslagen tabel toegevoegd; door een admin
+   * verwijderde regels blijven weg.
+   */
+  startwaardenVersie?: number;
   /** Oppervlakte waarbij de prijs per m² geldt, als de bronregel geen gemiddelde noemt */
   referentieM2: number;
   /** Kleinere woningen hebben een hogere prijs per m²: factor (m² / referentie)^-elasticiteit */
@@ -114,7 +121,82 @@ const NVM_Q4_2025 = {
     "Uit de provinciekaart in het rapport; het rapport over Q2 2026 geeft geen cijfers per provincie.",
 };
 
-/** Startwaarden: alleen wat in de NVM/VGM NL-rapporten staat, met bron en datum per regel */
+const PARARIUS_Q3_2026 = {
+  bron: "Pararius & Huurwoningen.nl, Huurmonitor Q3 2026 (gemiddelde huurprijs per m² van nieuwe huurders, vrije sector)",
+  url: "https://www.pararius.nl/nieuws/duurste-huurwoningen-nu-vaakst-verkocht",
+  peildatum: "2026-09-30",
+  opmerking:
+    "Huurwoningen van professionele verhuurders via Pararius en Huurwoningen.nl; kaal, gestoffeerd en gemeubileerd samen (landelijk: kaal € 18,51, gestoffeerd € 22,09, gemeubileerd € 24,90 per m²).",
+};
+
+/** Woonplaatsen in de Huurmonitor Q3 2026, met de naam zoals PDOK/BAG hem geeft */
+const PARARIUS_PLAATSEN: readonly (readonly [string, number, string?])[] = [
+  ["Almere", 18.69],
+  ["Amersfoort", 17.81],
+  ["Amstelveen", 24.72],
+  ["Amsterdam", 28.56],
+  ["Apeldoorn", 15.7],
+  ["Arnhem", 17.24],
+  ["Breda", 18.75],
+  ["Delft", 22.49],
+  ["'s-Hertogenbosch", 20.09, "Den Bosch"],
+  ["'s-Gravenhage", 22.95, "Den Haag"],
+  ["Diemen", 21.33],
+  ["Dordrecht", 17.17],
+  ["Eindhoven", 19.61],
+  ["Enschede", 15.98],
+  ["Groningen", 19.05],
+  ["Haarlem", 24.34],
+  ["Helmond", 15.31],
+  ["Hilversum", 22.09],
+  ["Hoofddorp", 23.66],
+  ["Hoorn", 20.44],
+  ["Leeuwarden", 14.33],
+  ["Leiden", 23.45],
+  ["Maastricht", 18.87],
+  ["Nieuwegein", 19.96],
+  ["Nijmegen", 19.36],
+  ["Purmerend", 21.07],
+  ["Rijswijk", 18.89],
+  ["Roermond", 17.18],
+  ["Rotterdam", 22.92],
+  ["Schiedam", 20.52],
+  ["Tilburg", 17.64],
+  ["Utrecht", 22.87],
+  ["Veldhoven", 16.67],
+  ["Voorburg", 20.19],
+  ["Zaandam", 21.32],
+  ["Zoetermeer", 16.87],
+  ["Zwolle", 14.32],
+];
+
+const PARARIUS_PROVINCIES: readonly (readonly [string, number])[] = [
+  ["Groningen", 17.66],
+  ["Fryslân", 13.6],
+  ["Drenthe", 13.16],
+  ["Overijssel", 15.05],
+  ["Flevoland", 18.14],
+  ["Gelderland", 16.44],
+  ["Utrecht", 20.86],
+  ["Noord-Holland", 25.44],
+  ["Zuid-Holland", 21.58],
+  ["Zeeland", 15.98],
+  ["Noord-Brabant", 17.82],
+  ["Limburg", 15.97],
+];
+
+const slug = (t: string) =>
+  t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\W+/g, "-")
+    .replace(/^-|-$/g, "");
+
+/** Versie van de startwaarden: 1 = NVM/VGM NL; 2 = ook de Pararius Huurmonitor Q3 2026 */
+export const STARTWAARDEN_VERSIE = 2;
+
+/** Startwaarden: alleen wat in de NVM/VGM NL- en Pararius-rapporten staat, met bron en datum */
 export const STANDAARD_REGELS: BronRegel[] = [
   {
     id: "nl-alle",
@@ -182,6 +264,49 @@ export const STANDAARD_REGELS: BronRegel[] = [
     prijsM2,
     ...NVM_Q4_2025,
   })),
+  // Pararius Huurmonitor Q3 2026 (startwaarden versie 2)
+  {
+    id: "par-nl-alle",
+    niveau: "land",
+    regio: "Nederland",
+    woningsoort: "alle",
+    prijsM2: 20.92,
+    gemOppervlakte: 96,
+    ...PARARIUS_Q3_2026,
+  },
+  {
+    id: "par-nl-app",
+    niveau: "land",
+    regio: "Nederland",
+    woningsoort: "appartement",
+    prijsM2: 22.61,
+    ...PARARIUS_Q3_2026,
+  },
+  {
+    id: "par-nl-huis",
+    niveau: "land",
+    regio: "Nederland",
+    woningsoort: "woonhuis",
+    prijsM2: 16.7,
+    ...PARARIUS_Q3_2026,
+  },
+  ...PARARIUS_PLAATSEN.map(([regio, prijsM2, naam]): BronRegel => ({
+    id: "par-wpl-" + slug(naam ?? regio),
+    niveau: "woonplaats",
+    regio,
+    ...(naam ? { naam } : {}),
+    woningsoort: "alle",
+    prijsM2,
+    ...PARARIUS_Q3_2026,
+  })),
+  ...PARARIUS_PROVINCIES.map(([regio, prijsM2]): BronRegel => ({
+    id: "par-prov-" + slug(regio),
+    niveau: "provincie",
+    regio,
+    woningsoort: "alle",
+    prijsM2,
+    ...PARARIUS_Q3_2026,
+  })),
 ];
 
 const g = <K extends string>(waarden: Record<K, number>): FactorGroep<K> => ({
@@ -234,7 +359,7 @@ const isRegel = (r: unknown): r is BronRegel => {
   return (
     !!x &&
     typeof x.id === "string" &&
-    ["pc4", "gemeente", "provincie", "land"].includes(x.niveau) &&
+    ["pc4", "woonplaats", "gemeente", "provincie", "land"].includes(x.niveau) &&
     typeof x.regio === "string" &&
     ["alle", "appartement", "woonhuis"].includes(x.woningsoort) &&
     typeof x.prijsM2 === "number" &&
@@ -244,12 +369,23 @@ const isRegel = (r: unknown): r is BronRegel => {
   );
 };
 
+/** Nieuwe startregels toevoegen aan een tabel die met oudere startwaarden is opgeslagen */
+function aangevuldeRegels(regels: BronRegel[], n: Partial<HuurNormen>): BronRegel[] {
+  if ((n.startwaardenVersie ?? 1) >= STARTWAARDEN_VERSIE) return regels;
+  const ids = new Set(regels.map((r) => r.id));
+  const nieuw = STANDAARD_REGELS.filter(
+    (r) => r.id.startsWith("par-") && !ids.has(r.id), // startwaarden versie 2
+  );
+  return [...regels, ...nieuw];
+}
+
 /** De instellingen uit de normen, aangevuld met de standaard (ongeldige waarden → standaard) */
 export function huurNormen(n: Partial<HuurNormen> | null | undefined): HuurNormen {
   const s = HUUR_STANDAARD;
   const f = n?.factoren;
   return {
-    regels: Array.isArray(n?.regels) ? n.regels.filter(isRegel) : s.regels,
+    regels: Array.isArray(n?.regels) ? aangevuldeRegels(n.regels.filter(isRegel), n) : s.regels,
+    startwaardenVersie: STARTWAARDEN_VERSIE,
     referentieM2: positief(n?.referentieM2, s.referentieM2),
     grootte: {
       elasticiteit:
