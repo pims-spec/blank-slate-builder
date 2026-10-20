@@ -1229,7 +1229,7 @@ export default function WwsCalculator({
                   />
                 </Veld>
               )}
-              <Veld label="Kengetallen van jaar">
+              <Veld label="Peildatum">
                 <Keuze
                   value={inp.woz.jaar}
                   onChange={(v) =>
