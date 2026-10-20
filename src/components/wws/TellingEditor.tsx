@@ -1021,17 +1021,21 @@ export default function TellingEditor({
               </Button>
             )}
           </div>
-          {!alleenLezen && (
-            <div className="col-span-2 flex flex-wrap items-end gap-2 pt-2 sm:col-span-1 sm:pt-6">
-              <PlattegrondKnoppen
-                heeft={heeftPlattegrond(staat.input, nieuwBeeld)}
-                onInlezen={() => setPlattegrondOpen(true)}
-                onVerwijderen={plattegrondVerwijderen}
-              />
-            </div>
-          )}
         </div>
       </fieldset>
+
+      {!alleenLezen && (
+        <section
+          aria-label="Plattegrond inlezen"
+          className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3"
+        >
+          <PlattegrondKnoppen
+            heeft={heeftPlattegrond(staat.input, nieuwBeeld)}
+            onInlezen={() => setPlattegrondOpen(true)}
+            onVerwijderen={plattegrondVerwijderen}
+          />
+        </section>
+      )}
 
       <PlattegrondBlok input={staat.input} nieuw={nieuwBeeld} />
 
