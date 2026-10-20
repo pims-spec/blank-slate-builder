@@ -354,6 +354,68 @@ niet de REST-API.
   (migratie 0006 is additief). Bron `'bloks'` in de database betekent Bloxs; in de code heet het
   `bloxs`.
 
+## Huurprijsindicator (nieuw, niet in de bron)
+
+Een indicatieve markthuur (laag – verwacht – hoog) voor één adres, met een verplichte WWS-check.
+Code: `huur/` (rekenkern, puur TypeScript met tests).
+
+### Bronnen voor de prijs per m² (`huur/normen.ts`, `STANDAARD_REGELS`)
+
+Er is geen open, officiële bron met huurprijzen per m² per regio. CBS (StatLine, CC-BY 4.0)
+publiceert wel de huurverhoging per regio en de woningvoorraad, maar geen huurniveau per m².
+WoON is een officiële enquête (eens per 3 jaar) zonder API. Commerciële bronnen (Brainbay/NVM,
+Calcasa, Altum) hebben voorwaarden of kosten; Funda/Pararius scrapen we niet.
+
+De app gebruikt daarom een eigen referentietabel in Normen (admin), met bron en datum per regel.
+Startwaarden, alleen wat letterlijk in de rapporten staat:
+
+| Niveau | Regels | Bron | Peildatum |
+|---|---|---|---|
+| Landelijk | alle € 19,32 · appartement € 20,72 (gem. 88 m²) · woonhuis € 15,10 (gem. 121 m²) | NVM & VGM NL, huurontwikkelingen Q2 2026 | 30-06-2026 |
+| Gemeente | Amsterdam € 25,70 · Utrecht € 22,49 · Den Haag € 20,82 · Rotterdam € 19,67 · Eindhoven € 16,64 (alle woningtypen) | idem | 30-06-2026 |
+| Provincie | twaalf provincies (alle woningtypen), van Drenthe € 11,43 tot Noord-Holland € 22,27 | NVM & VGM NL, huurontwikkelingen Q4 2025 (provinciekaart) | 31-12-2025 |
+
+- Het rapport over Q2 2026 geeft geen cijfers per provincie en geen cijfers per woningtype per
+  stad; daarom komen de provincies uit het rapport over Q4 2025, met die datum.
+- Gemeente- en provincienamen zoals PDOK ze geeft ("'s-Gravenhage", "Fryslân").
+- **Gebruiksvoorwaarden.** In de rapporten en op nvm.nl staan geen voorwaarden voor hergebruik.
+  We nemen alleen gepubliceerde gemiddelden over, met bron, datum en link op scherm en in de PDF.
+  Voor gebruik in rapporten naar klanten is een bevestiging van NVM/VGM NL verstandig.
+- Opzoeken: postcodegebied → gemeente → provincie → landelijk; binnen een regio gaat een regel voor
+  de soort (appartement/woonhuis) vóór "alle woningtypen".
+- Later een betaalde bron: een tweede "huurbron" (server function met eigen sleutel, zod, eigen
+  foutcodes) die dezelfde vorm teruggeeft als een bronregel. De rekenkern verandert niet.
+
+### Rekenmodel (`huur/model.ts`)
+
+Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
+
+- **Groottefactor:** (m² / gemiddelde oppervlakte van de bronregel)^−0,25; zonder gemiddelde
+  90 m². Zo telt een grote woning niet dubbel (de bronprijs hoort bij een gemiddeld formaat).
+- **Woningtype** alleen als de bronregel voor alle woningtypen is; bij een regel per soort alleen
+  de studio-factor.
+- **Factoren:** label, afwerking, onderhoud, keuken, badkamer, buitenruimte, oplevering, hoog zonder
+  lift; parkeren als vast bedrag. Alle standaarden zijn "GoHome-inschatting (nog niet geijkt)" en
+  staan zo in Normen en in de uitleg, tot een admin de herkomst aanpast.
+- **Effect per factor** in euro's, in een vaste volgorde, zodat de effecten precies optellen.
+- **Gemeubileerd:** dezelfde kale huur als gestoffeerd; de vergoeding voor meubels hoort wettelijk
+  bij de servicekosten en staat er apart bij.
+- **Betrouwbaarheid** (hoog/middel/laag): lager bij provincie of landelijk, een bronregel ouder
+  dan 12 maanden, geen BAG-oppervlakte of geen label. Zonder lage/hoge prijs in de bronregel is de
+  bandbreedte ±7% / ±12% / ±18%.
+
+### WWS-check (`huur/wws.ts`)
+
+- Een globale telling in twee scenario's (75% en 85% van de oppervlakte is vertrek; keuken en
+  sanitair minder of meer uitgebreid bij de gekozen staat), gerekend met `calc()`. De uitkomst is
+  een bandbreedte in punten, geen exact puntenaantal.
+- Zonder WOZ-waarde: de minimum-WOZ, plus de WOZ-waarde vanaf welke de woning 187 punten haalt.
+- **Grensgeval** (de scenario's vallen in een ander segment): "volledige telling nodig".
+- **Advies: altijd de laagste van markthuur en wettelijke maximale huur.** Onder 187 punten
+  geldt de maximale huur bij de lage puntenschatting (voorzichtig, naar beneden op hele euro's);
+  vanaf 187 punten is er geen wettelijk maximum en is het advies de markthuur. De reden staat
+  erbij.
+
 ## Tweestapsverificatie (nieuw, niet in de bron)
 
 Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase
