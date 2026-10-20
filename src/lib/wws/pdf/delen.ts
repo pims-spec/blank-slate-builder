@@ -1180,6 +1180,7 @@ export function pdfEnergieAdviesKeuze(
       theme: "striped",
       styles: { fontSize: 8, textColor: INK, cellPadding: 1.4 },
       headStyles: { fillColor: PUR, textColor: [255, 255, 255], fontSize: 8 },
+      columnStyles: { 0: { cellWidth: 16 }, 2: { cellWidth: 30 } },
       margin: { left: M, right: M },
     }) + 5;
   const g = opties.find((o) => o.index === gekozen);

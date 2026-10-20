@@ -542,10 +542,13 @@ export default function TellingEditor({
   ) {
     const bewaard = await bewaarVoorToepassen("indeling");
     if (!bewaard) return;
+    // niet meer "gebaseerd op" een versie: Opslaan mag de bewaarde uitgangssituatie nooit
+    // overschrijven met het advies
     setStaat((s) => ({
       ...s,
       input,
       meta: { ...s.meta, klantId: keuze.klantId, pveId: keuze.pveId },
+      basedOn: null,
     }));
     // de oude plattegrond past niet meer: de AI-afbeelding of het blokkenschema komt ervoor in de
     // plaats (gaat bij Opslaan naar Storage), zoals de bron
@@ -725,7 +728,9 @@ export default function TellingEditor({
   async function adviesToepassen(input: WwsInput, n: number, punten: number) {
     const bewaard = await bewaarVoorToepassen("vrije sector");
     if (!bewaard) return;
-    setStaat((s) => ({ ...s, input }));
+    // niet meer "gebaseerd op" een versie: Opslaan mag de bewaarde uitgangssituatie nooit
+    // overschrijven met het advies
+    setStaat((s) => ({ ...s, input, basedOn: null }));
     setDirty(true);
     setAdviesOpen(false);
     toast(

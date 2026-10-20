@@ -420,6 +420,9 @@ zonder eerst zelf een versie vast te leggen. De app legt die situatie nu eerst v
 - **Niets gewijzigd sinds de laatste versie** (adres, eigenaar en invoer gelijk): geen dubbele
   versie; de melding noemt de versie die als uitgangssituatie geldt.
 - **Opslaan mislukt:** het advies wordt niet toegepast, met een duidelijke foutmelding.
+- **Niet meer "gebaseerd op" een versie:** na toepassen werkt Opslaan alleen de werkversie bij,
+  nooit de versie waarop de telling gebaseerd was (anders zou de bewaarde uitgangssituatie met
+  het advies worden overschreven).
 - **Daarna:** het advies staat, zoals in de bron, in een niet-opgeslagen werkversie. Een melding
   zegt "Uitgangssituatie bewaard als versie '…'". Met Versies vergelijken zie je vóór en na.
 - Tests: `uitgangssituatie.test.ts` en `TellingEditor.test.tsx` (eerste keer opslaan, ongewijzigd,

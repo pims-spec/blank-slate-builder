@@ -563,6 +563,26 @@ describe("TellingEditor", () => {
       );
     });
 
+    it("vanuit een geopende versie: daarna niet meer gebaseerd op die versie", async () => {
+      metPve();
+      const t = tellingMetPve();
+      const v = maakVersie({ ...t, versieCount: 0, aantalVersies: 0, basedOn: null }, N, "Oud");
+      store.versies.mockResolvedValue([{ ...v, id: "v0001" }]);
+      store.haal.mockResolvedValue({ ...t, versieCount: 1, aantalVersies: 1 });
+      toegepast();
+      renderEditor("t-pve");
+      fireEvent.click(await screen.findByRole("button", { name: "Openen" }));
+      expect(screen.getByRole("button", { name: "Versie 1 bijwerken" })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+      await waitFor(() => expect(toastMock.toast.success).toHaveBeenCalled());
+      expect(store.voegVersieToe).not.toHaveBeenCalled();
+      // Opslaan bewaart de werkversie; versie 1 (de uitgangssituatie) blijft ongemoeid
+      expect(screen.queryByRole("button", { name: "Versie 1 bijwerken" })).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+      await waitFor(() => expect(store.bewaar).toHaveBeenCalled());
+      expect(store.werkVersieBij).not.toHaveBeenCalled();
+    });
+
     it("opslaan mislukt: advies niet toegepast, duidelijke foutmelding", async () => {
       metPve();
       store.bewaar.mockRejectedValue(new Error("Failed to fetch"));
