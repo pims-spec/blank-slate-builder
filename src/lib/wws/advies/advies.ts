@@ -19,6 +19,7 @@ import {
   MAATREGELEN,
   volgendeLabelVoorIndexOfBouwjaar,
 } from "./maatregelen";
+import { niveauVan } from "./niveaus";
 import type {
   AdviesBron,
   AdviesInstellingen,
@@ -56,6 +57,11 @@ export function standaardInstellingen(N: Normen): AdviesInstellingen {
 export interface AdviesOpties {
   /** yyyy-mm-dd voor een nieuw op te nemen label; default: vandaag */
   vandaag?: string;
+  /**
+   * Precies als de bron (voor de vergelijkingstests): kosten per punt gewogen met de
+   * haalbaarheid, zonder eenvoudsniveau per voorziening. Standaard: eenvoudigste eerst.
+   */
+  brongetrouw?: boolean;
 }
 
 const vandaagVan = (o: AdviesOpties) => o.vandaag ?? new Date().toISOString().slice(0, 10);
@@ -72,7 +78,11 @@ function pasToe(f: Toepassing, x: WwsInput): WwsInput {
   }
 }
 
-/** Alle maatregelen die vanuit x punten opleveren, goedkoopst (per punt, gewogen) eerst. */
+/**
+ * Alle maatregelen die vanuit x punten opleveren. Brongetrouw: goedkoopst (per punt, gewogen met
+ * de haalbaarheid) eerst. Anders (bewuste afwijking): eerst de eenvoudigste, daarbinnen goedkoopst
+ * per punt; een lastigere maatregel komt pas als er geen eenvoudigere meer is.
+ */
 export function kandidaten(
   x0: WwsInput,
   N: Normen,
@@ -80,15 +90,24 @@ export function kandidaten(
   alles: boolean,
   origLabel: string | undefined,
   vandaag: string,
+  brongetrouw = false,
 ): Kandidaat[] {
   const x = normaliseer(x0);
   const base = calc(x, N).exact;
-  const ctx = { K: inst.kosten, N, san: deriveFac(x).san, origLabel, vandaag };
+  const ctx = {
+    K: inst.kosten,
+    N,
+    san: deriveFac(x).san,
+    origLabel,
+    vandaag,
+    niveau: brongetrouw ? undefined : (k: string) => niveauVan(N, k),
+  };
   const out: Kandidaat[] = [];
   for (const m of MAATREGELEN) {
     if (inst.uit[m.key]) continue;
+    const mh = brongetrouw ? m.h : (niveauVan(N, m.key) ?? m.h);
     for (const c of m.gen(x, ctx)) {
-      const h = c.h || m.h || "gemiddeld";
+      const h = c.h || mh || "gemiddeld";
       if (!alles && h === "lastig" && !inst.lastig) continue;
       const y = pasToe(c.a, x);
       const g = r2(calc(y, N).exact - base);
@@ -113,7 +132,9 @@ export function kandidaten(
         });
     }
   }
-  return out.sort((a, b) => a.score - b.score);
+  return brongetrouw
+    ? out.sort((a, b) => a.score - b.score)
+    : out.sort((a, b) => RANK[a.h] - RANK[b.h] || a.score - b.score);
 }
 
 /** Losse maatregel in de route, vóór het samenvoegen per soort */
@@ -145,11 +166,12 @@ interface KernOpties {
   /** berekenRouteVoorDoel zet g.naarLabel bij de labelstap */
   metNaarLabel: boolean;
   vandaag: string;
+  brongetrouw: boolean;
 }
 
 /** Het gedeelde deel van runAdvies() en berekenRouteVoorDoel(). */
 function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: KernOpties) {
-  const { doel, baseOptie, vandaag } = o;
+  const { doel, baseOptie, vandaag, brongetrouw } = o;
   const K = inst.kosten,
     uit = inst.uit;
   const begin = normaliseer(input);
@@ -158,7 +180,7 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
   const start = calc(x, N);
   const stappen: Stap[] = [];
   let guard = 0;
-  const eerste = kandidaten(begin, N, inst, true, undefined, vandaag);
+  const eerste = kandidaten(begin, N, inst, true, undefined, vandaag, brongetrouw);
 
   // Optie 2 bouwt voort op optie 1: die maatregelen gaan eerst en blijven staan.
   if (baseOptie) {
@@ -274,7 +296,7 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
   }
 
   while (calc(x, N).totaal < doel && guard++ < 40) {
-    const c = kandidaten(x, N, inst, false, origLabel, vandaag);
+    const c = kandidaten(x, N, inst, false, origLabel, vandaag, brongetrouw);
     if (!c.length) break;
     const best = c[0]!;
     x = pasToe(best.apply, x);
@@ -291,13 +313,17 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
       ...bronVan(best),
     });
   }
-  // Overbodige maatregelen schrappen, duurste eerst
+  // Overbodige maatregelen schrappen, duurste eerst (niet brongetrouw: lastigste eerst, dan duurste)
   let route = stappen;
   if (calc(x, N).totaal >= doel) {
     const order = stappen
       .map((_st, i) => i)
       .filter((i) => !stappen[i]!.forced)
-      .sort((a, b) => stappen[b]!.c - stappen[a]!.c);
+      .sort((a, b) =>
+        brongetrouw
+          ? stappen[b]!.c - stappen[a]!.c
+          : RANK[stappen[b]!.h] - RANK[stappen[a]!.h] || stappen[b]!.c - stappen[a]!.c,
+      );
     const keep = new Set(stappen.map((_st, i) => i));
     for (const i of order) {
       keep.delete(i);
@@ -347,7 +373,10 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     }
     g.c += st.c;
     g.applies.push(st.apply);
-    if (!g.delen.includes(st.o)) g.delen.push(st.o);
+    if (!g.delen.includes(st.o)) {
+      g.delen.push(st.o);
+      if (!brongetrouw) (g.delenH ??= []).push(st.h);
+    }
     if (st.bron) g.bron = st.bron;
     (st.omschrijving || []).forEach((oms) => {
       if (!g.omschrijving.includes(oms)) g.omschrijving.push(oms);
@@ -437,12 +466,13 @@ export function berekenAdvies(
 ): AdviesResultaat {
   const vandaag = vandaagVan(opties);
   const doel = N.grensMidden + 1 + (inst.marge || 0);
-  const k = routeKern(input, N, inst, { doel, metNaarLabel: false, vandaag });
+  const brongetrouw = !!opties.brongetrouw;
+  const k = routeKern(input, N, inst, { doel, metNaarLabel: false, vandaag, brongetrouw });
   // Absoluut plafond: wat is maximaal haalbaar, ook met de lastige maatregelen?
   let xMax = k.begin;
   let guardMax = 0;
   while (calc(xMax, N).totaal < doel && guardMax++ < 40) {
-    const c = kandidaten(xMax, N, inst, true, undefined, vandaag);
+    const c = kandidaten(xMax, N, inst, true, undefined, vandaag, brongetrouw);
     if (!c.length) break;
     xMax = pasToe(c[0]!.apply, xMax);
   }
@@ -475,6 +505,7 @@ export function berekenRoute(
     baseOptie,
     metNaarLabel: true,
     vandaag: vandaagVan(opties),
+    brongetrouw: !!opties.brongetrouw,
   });
   return {
     start: k.start,

@@ -26,12 +26,17 @@ export interface GenContext {
   origLabel: string | undefined;
   /** yyyy-mm-dd, datum van een nieuw op te nemen label */
   vandaag: string;
+  /**
+   * Eenvoudsniveau van een extra voorziening ("sanExtra.kastje"); niet gezet in de brongetrouwe
+   * modus, dan geldt h van de maatregel (zoals de bron).
+   */
+  niveau?: ((sleutel: string) => Haalbaarheid | undefined) | undefined;
 }
 
 export interface GenKandidaat extends AdviesBron {
   o: string;
   c: number;
-  h?: Haalbaarheid;
+  h?: Haalbaarheid | undefined;
   hr?: string;
   nominal?: number;
   a: Toepassing;
@@ -272,7 +277,7 @@ export const MAATREGELEN: readonly Maatregel[] = [
     hr: "Inbouwapparatuur of kraan plaatsen",
     naam: "Extra keukenvoorzieningen (kosten per punt)",
     kost: "keukenPunt",
-    gen(x, { K, N }) {
+    gen(x, { K, N, niveau }) {
       const i = x.vertrekken.findIndex(
         (r) => r.fac && r.fac.kind === "keuken" && r.fac.keuken.lengte !== "<1",
       );
@@ -286,6 +291,7 @@ export const MAATREGELEN: readonly Maatregel[] = [
         .map((it) => ({
           o: it.l + " (keuken)",
           c: K.keukenPunt * it.p,
+          h: niveau?.("keukenExtra." + it.k),
           nominal: it.p,
           a: (y) => {
             const fy = y.vertrekken[i]!.fac;
@@ -452,7 +458,7 @@ export const MAATREGELEN: readonly Maatregel[] = [
     hr: "Accessoires en kranen in de badkamer",
     naam: "Extra sanitaire voorzieningen (kosten per punt)",
     kost: "sanPunt",
-    gen(x, { K, N }) {
+    gen(x, { K, N, niveau }) {
       const i = x.vertrekken.findIndex(
         (r) => r.fac && r.fac.kind === "badkamer" && r.fac.san.eisenOk,
       );
@@ -481,6 +487,7 @@ export const MAATREGELEN: readonly Maatregel[] = [
         .map((it) => ({
           o: it.l,
           c: K.sanPunt * it.p,
+          h: niveau?.("sanExtra." + it.k),
           nominal: it.p,
           a: (y) => {
             const fy = y.vertrekken[i]!.fac;

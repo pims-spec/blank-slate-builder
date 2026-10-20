@@ -102,6 +102,8 @@ export interface AdviesStap {
   applies: Toepassing[];
   /** De losse maatregelen (omschrijvingen) in deze stap */
   delen: string[];
+  /** Eenvoudsniveau per onderdeel in `delen` (zelfde volgorde) */
+  delenH?: Haalbaarheid[] | undefined;
   bron?: "advies" | undefined;
   omschrijving: string[];
   kostenMin: number;

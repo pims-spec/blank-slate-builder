@@ -145,7 +145,10 @@ describe("verbeteradvies gelijk aan wws-site.html", () => {
       const { A, state } = origineel(inp, inst);
       A.runAdvies();
       const ref = state["result"] as Ref;
-      const ts = berekenAdvies(inp, N, structuredClone(inst), { vandaag: VANDAAG });
+      const ts = berekenAdvies(inp, N, structuredClone(inst), {
+        vandaag: VANDAAG,
+        brongetrouw: true,
+      });
       try {
         expect(vorm(ts)).toEqual(vorm(ref));
       } catch (e) {
@@ -171,14 +174,18 @@ describe("verbeteradvies gelijk aan wws-site.html", () => {
       const margeGewenst = inst.marge > 0 ? inst.marge : 4;
       const doel1 = N.grensMidden + 1;
       const r1Ref = A.berekenRouteVoorDoel(doel1);
-      const r1Ts = berekenRoute(inp, N, inst, doel1, undefined, { vandaag: VANDAAG });
+      const r1Ts = berekenRoute(inp, N, inst, doel1, undefined, {
+        vandaag: VANDAAG,
+        brongetrouw: true,
+      });
       let r2Ref = A.berekenRouteVoorDoel(doel1 + margeGewenst, r1Ref);
       let r2Ts: RouteResultaat = berekenRoute(inp, N, inst, doel1 + margeGewenst, r1Ts, {
         vandaag: VANDAAG,
+        brongetrouw: true,
       });
       if (!r2Ref["gehaald"]) {
         r2Ref = A.berekenRouteVoorDoel(9999, r1Ref);
-        r2Ts = berekenRoute(inp, N, inst, 9999, r1Ts, { vandaag: VANDAAG });
+        r2Ts = berekenRoute(inp, N, inst, 9999, r1Ts, { vandaag: VANDAAG, brongetrouw: true });
       }
       try {
         expect(vorm(r1Ts)).toEqual(vorm(r1Ref));

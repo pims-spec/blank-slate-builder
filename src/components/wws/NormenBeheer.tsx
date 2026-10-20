@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Normen } from "@/lib/wws";
 import { AI_LIMIET_STANDAARD, mergeNormen } from "@/lib/wws/normen";
-import { MAATREGELEN } from "@/lib/wws/advies";
+import { MAATREGELEN, NIVEAU_STANDAARD, NIVEAUS, type Haalbaarheid } from "@/lib/wws/advies";
 import {
   ENERGIE_RIJEN,
   NORM_SECTIES,
@@ -46,6 +46,19 @@ const KOSTEN_VELDEN: NormVeld[] = [
   })),
   { label: "Oppervlakte nieuw balkon (m²)", pad: "kosten.balkonM2" },
 ];
+
+/**
+ * Eenvoudsniveau per maatregel in het verbeteradvies. Het energielabel en het extra toilet volgen
+ * een vaste regel (aantal labelstappen; wel of geen bestaande toiletruimte) en staan er niet in.
+ */
+const NIVEAU_MAATREGELEN = MAATREGELEN.filter(
+  (m) => !["indexKlasse", "label", "toilet", "sanExtra", "keukenExtra"].includes(m.key),
+);
+
+/** Alleen wat afwijkt van de standaard bewaren, zodat nieuwe standaarden doorwerken */
+function afwijkendeNiveaus(n: Record<string, Haalbaarheid>): Record<string, Haalbaarheid> {
+  return Object.fromEntries(Object.entries(n).filter(([k, v]) => NIVEAU_STANDAARD[k] !== v));
+}
 
 /** Daglimiet AI-gebruik per gebruiker (ai_gebruik_boeken() in de database leest dit) */
 const AI_VELDEN: NormVeld[] = [
@@ -88,6 +101,10 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
   const [bevestig, setBevestig] = useState(false);
   const [terugzetten, setTerugzetten] = useState(false);
   const [pf, setPf] = useState<PortefeuilleNormen>(() => portefeuilleNormen(normen.portefeuille));
+  const [niveaus, setNiveaus] = useState<Record<string, Haalbaarheid>>(() => ({
+    ...NIVEAU_STANDAARD,
+    ...normen.adviesNiveaus,
+  }));
 
   /** btnNormReset: het formulier vullen met de standaardwaarden; pas opgeslagen bij "Normen opslaan" */
   function zetStandaardTerug() {
@@ -97,6 +114,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     setNaam(d.naam);
     setGecontroleerd(d.gecontroleerd || "");
     setPf(portefeuilleNormen(null));
+    setNiveaus({ ...NIVEAU_STANDAARD });
     toast("Standaardwaarden ingevuld. Klik op ‘Normen opslaan’ om ze te bewaren.");
   }
   const status = controleStatus(normen.gecontroleerd);
@@ -118,8 +136,9 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     };
     // portefeuille-analyse: gecontroleerd aangevuld (ongeldige waarden → standaard)
     n.portefeuille = portefeuilleNormen(pf);
+    n.adviesNiveaus = afwijkendeNiveaus(niveaus);
     return n;
-  }, [basis, getallen, naam, gecontroleerd, pf]);
+  }, [basis, getallen, naam, gecontroleerd, pf, niveaus]);
 
   const zet = (pad: string, waarde: string) => setGetallen((g) => ({ ...g, [pad]: waarde }));
   const veld = (v: NormVeld) => (
@@ -322,6 +341,55 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
             adviesvenster.
           </p>
           <div className="grid gap-3 sm:grid-cols-3">{KOSTEN_VELDEN.map(veld)}</div>
+        </Sectie>
+
+        <Sectie titel="Eenvoud van maatregelen (verbeteradvies)">
+          <p className="mb-3 text-xs text-muted-foreground">
+            Het verbeteradvies kiest eerst de eenvoudige maatregelen en pas daarna op kosten per
+            punt; een lastigere maatregel komt alleen als het doel anders niet gehaald wordt. Het
+            energielabel (3 of meer stappen: lastig) en een extra toilet (zonder bestaande
+            toiletruimte: lastig) volgen een vaste regel.
+          </p>
+          <div className="grid gap-x-8 gap-y-6 lg:grid-cols-3">
+            {(
+              [
+                ["Maatregelen", NIVEAU_MAATREGELEN.map((m) => [m.key, m.naam] as const)],
+                [
+                  "Extra keukenvoorzieningen",
+                  basis.voorzKeuken.map((v) => ["keukenExtra." + v.k, v.l] as const),
+                ],
+                [
+                  "Extra sanitaire voorzieningen",
+                  basis.voorzSan.map((v) => ["sanExtra." + v.k, v.l] as const),
+                ],
+              ] as const
+            ).map(([titel, rijen]) => (
+              <div key={titel}>
+                <h3 className="mb-2 text-sm font-medium">{titel}</h3>
+                <ul className="space-y-1.5">
+                  {rijen.map(([k, l]) => (
+                    <li key={k} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0">{l}</span>
+                      <select
+                        className="h-8 shrink-0 rounded-xl border border-input bg-background px-2 text-sm"
+                        aria-label={"Niveau: " + l}
+                        value={niveaus[k] ?? "gemiddeld"}
+                        onChange={(e) =>
+                          setNiveaus({ ...niveaus, [k]: e.target.value as Haalbaarheid })
+                        }
+                      >
+                        {NIVEAUS.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </Sectie>
 
         <Sectie titel="AI-gebruik per gebruiker per dag">

@@ -109,4 +109,22 @@ describe("Normen: portefeuille-analyse", () => {
       aangenomen: { ...RAMING_STANDAARD.aangenomen, "1975-1991": "F" },
     });
   });
+
+  it("eenvoud van maatregelen: alleen afwijkingen van de standaard worden opgeslagen", async () => {
+    instellingenStore.slaNormenOp.mockResolvedValue(undefined);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NormenBeheer normen={structuredClone(N)} />
+      </QueryClientProvider>,
+    );
+    const stopcontact = screen.getByLabelText("Niveau: Stopcontact (max. 2 per wastafel)");
+    expect(stopcontact).toHaveValue("gemiddeld");
+    expect(screen.getByLabelText(/^Niveau: Ingebouwd kastje/)).toHaveValue("eenvoudig");
+    fireEvent.change(stopcontact, { target: { value: "lastig" } });
+    fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalled());
+    const n = instellingenStore.slaNormenOp.mock.calls.at(-1)![0] as Normen;
+    expect(n.adviesNiveaus).toEqual({ "sanExtra.stopcontact": "lastig" });
+  });
 });

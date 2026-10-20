@@ -76,6 +76,34 @@ describe("bewuste afwijkingen in de PDF's", () => {
     expect(nu.some((t) => t.includes("1,4 < EI <= 1,8"))).toBe(true);
   });
 
+  it("route-PDF: eenvoudsniveau per maatregel (de bron toont het niet)", async () => {
+    let getest = 0;
+    for (let seed = 1; seed <= 30 && getest < 3; seed++) {
+      const input = normaliseer(genereer(seed));
+      const A = berekenAdvies(input, N, standaardInstellingen(N));
+      const delen = A.stappen.filter((s) => s.key !== "label").flatMap((s) => s.delen);
+      if (!delen.length) continue;
+      const meta = willekeurigeMeta(seed);
+      const tekst = (
+        await pdfTekst(maakRoutePdf(LIB, { meta, input, normen: N, advies: A, overslaan: {} }).blob)
+      )
+        .flat()
+        .join(" ");
+      expect(tekst).toMatch(/\((eenvoudig|gemiddeld|lastig)\)/);
+      const bron = (
+        await pdfTekst(
+          maakRoutePdf(LIB, { meta, input, normen: N, advies: A, overslaan: {}, bronGetrouw: true })
+            .blob,
+        )
+      )
+        .flat()
+        .join(" ");
+      expect(bron).not.toMatch(/\((eenvoudig|gemiddeld|lastig)\)|Niveau: /);
+      getest++;
+    }
+    expect(getest).toBe(3);
+  });
+
   it("route-PDF: beginsituatie en eindlabel ingevuld (geen undefined en ?)", async () => {
     let vanLabel = 0,
       vanAnders = 0;

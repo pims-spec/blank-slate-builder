@@ -13,3 +13,10 @@ export {
   standaardInstellingen,
   type AdviesOpties,
 } from "./advies";
+export {
+  MAATREGEL_NIVEAU,
+  NIVEAU_STANDAARD,
+  NIVEAUS,
+  VOORZIENING_NIVEAU,
+  niveauVan,
+} from "./niveaus";

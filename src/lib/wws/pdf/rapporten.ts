@@ -289,15 +289,16 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   const margeGewenst = inst.marge > 0 ? inst.marge : 4;
   const doel1 = N.grensMidden + 1;
   const doel2 = N.grensMidden + 1 + margeGewenst;
-  const route1 = berekenRoute(x.input, N, inst, doel1);
-  let route2 = berekenRoute(x.input, N, inst, doel2, route1);
+  const opt = { brongetrouw: !!x.bronGetrouw };
+  const route1 = berekenRoute(x.input, N, inst, doel1, undefined, opt);
+  let route2 = berekenRoute(x.input, N, inst, doel2, route1, opt);
   let titel2 = "Optie 2: route met marge naar de vrije sector",
     sub2 =
       "De maatregelen van optie 1, aangevuld tot een marge van " +
       margeGewenst +
       " punten boven de grens van de vrije sector";
   if (!route2.gehaald) {
-    route2 = berekenRoute(x.input, N, inst, 9999, route1);
+    route2 = berekenRoute(x.input, N, inst, 9999, route1, opt);
     route2.doel = route2.eind.totaal;
     route2.gehaald = true;
     titel2 = "Optie 2: maximaal haalbare route";

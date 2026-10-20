@@ -425,6 +425,34 @@ zonder eerst zelf een versie vast te leggen. De app legt die situatie nu eerst v
 - Tests: `uitgangssituatie.test.ts` en `TellingEditor.test.tsx` (eerste keer opslaan, ongewijzigd,
   opslaan mislukt, kijkrol).
 
+### Verbeteradvies: eenvoudigste maatregel eerst (`advies/niveaus.ts`, `advies.ts`)
+
+De bron kiest de maatregel met de laagste kosten per punt, gewogen met de haalbaarheid
+(`H_FACTOR`). Alle extra sanitaire en keukenvoorzieningen zijn daar samen "eenvoudig" en kosten
+per punt hetzelfde, dus koos het advies de eerste uit de lijst: een handdoekradiator vóór een
+kastje, stopcontacten vóór een wastafel met kastje.
+
+- **Niveau per voorziening.** Elke maatregel én elke extra voorziening heeft een niveau:
+  eenvoudig, gemiddeld of lastig (`NIVEAU_STANDAARD`). De maatregelen houden het niveau uit de
+  bron. Voorzieningen:
+  - eenvoudig: wastafel met ingebouwd kastje, kastruimte 40 × 40, mengkranen, douche-afscheiding,
+    keukenkast, losse inbouwapparaten;
+  - gemiddeld: handdoekradiator, stopcontact, bubbelbad, kookplaten, gasoven, afzuiging,
+    kokendwaterkraan.
+- **Instelbaar in Normen** (alleen admin), sectie "Eenvoud van maatregelen". Alleen afwijkingen
+  van de standaard worden bewaard (`normen.adviesNiveaus`). Het energielabel (3 of meer stappen:
+  lastig) en een extra toilet volgen een vaste regel.
+- **Volgorde.** Eerst het laagste niveau, daarbinnen de kosten per punt. Een lastigere maatregel
+  komt alleen als er geen eenvoudigere meer is die punten oplevert. Bij het schrappen van
+  overbodige stappen gaan de lastigste (dan de duurste) eerst. Alle aftoppingen blijven, want de
+  punten komen uit `calc()`.
+- **Weergave.** Het niveau staat in de route en "Alle maatregelen" (zoals de bron) en nu ook per
+  maatregel in de PDF ("Ingebouwd kastje … (eenvoudig)").
+- **Brongetrouwe modus.** `berekenAdvies`/`berekenRoute` met `{ brongetrouw: true }` rekent precies
+  als de bron; de vergelijkingstests en `maakAdviesPdf({ bronGetrouw: true })` gebruiken die.
+- Tests: `niveaus.test.ts` (kastje vóór stopcontacten, kastruimte vóór handdoekradiator, lastiger
+  alleen als het moet, aftopping), `NormenBeheer.test.tsx`, `pdf.afwijkingen.test.ts`.
+
 ### Archief: versie kiezen (`archief.ts`, `Archief.tsx`)
 
 De bron toont per telling alleen het aantal versies ("geen versies", "1 versie", "3 versies").

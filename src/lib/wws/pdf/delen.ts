@@ -23,6 +23,7 @@ import {
   PDF_WARN_BG,
   PDF_WARN_INK,
   facSummary,
+  isBronModus,
   pdfTxt,
   segName,
   tabel,
@@ -807,10 +808,14 @@ export function pdfCategorieKaarten(doc: Doc, y: number, route: PdfRoute): numbe
       (g.omschrijving && g.omschrijving.length ? g.omschrijving : [g.o]).forEach((d) =>
         c.bullets.push(d),
       );
+      if (!isBronModus() && g.h) c.bullets.push("Niveau: " + g.h);
     } else {
-      (g.delen && g.delen.length ? g.delen : [g.o]).forEach((d) =>
-        c.bullets.push(d.replace(/ \(keuken\)$/, "")),
-      );
+      (g.delen && g.delen.length ? g.delen : [g.o]).forEach((d, i) => {
+        const tekst = d.replace(/ \(keuken\)$/, "");
+        // bewuste afwijking: het eenvoudsniveau per maatregel erbij
+        const h = isBronModus() ? undefined : (g.delenH?.[i] ?? g.h);
+        c.bullets.push(h ? tekst + " (" + h + ")" : tekst);
+      });
     }
   });
   if (!cats.length) {

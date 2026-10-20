@@ -44,6 +44,8 @@ export const PDF_SEGC: Record<Segment, RGB> = {
  * die blijft staan. Alleen als Inter niet geladen kon worden, wordt "≤" nog "<=".
  */
 let bronModus = false;
+/** Maakt de huidige PDF bron-getrouw (zonder bewuste afwijkingen)? */
+export const isBronModus = () => bronModus;
 let interActief = false;
 export const pdfTxt = (s: unknown) => {
   const t = String(s ?? "")

@@ -251,6 +251,12 @@ export interface NormenShape {
    * de EFG-regels. Ontbrekende waarden: PORTEFEUILLE_STANDAARD (portefeuille/analyse.ts).
    */
   portefeuille?: Partial<PortefeuilleNormen>;
+  /**
+   * Verbeteradvies (niet in de bron): eenvoudsniveau per maatregel ("bad", "sanExtra", …) en per
+   * extra voorziening ("sanExtra.kastje", "keukenExtra.afzuig", …). Ontbrekende waarden:
+   * NIVEAU_STANDAARD (advies/niveaus.ts).
+   */
+  adviesNiveaus?: Record<string, "eenvoudig" | "gemiddeld" | "lastig">;
 }
 
 export type Normen = NormenShape;
@@ -268,6 +274,8 @@ export function mergeNormen(n?: Partial<Normen> | null): Normen {
   if (!n) return d as unknown as Normen;
   if (n.versie !== NORMEN_VERSIE) {
     if (n.kosten) Object.assign(d["kosten"] as object, n.kosten);
+    // eigen instellingen van het verbeteradvies (geen wettelijke normen): ook bewaren
+    if (n.adviesNiveaus) d["adviesNiveaus"] = clone(n.adviesNiveaus);
     return d as unknown as Normen;
   }
   for (const [k, v] of Object.entries(n)) {
