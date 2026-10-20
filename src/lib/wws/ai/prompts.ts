@@ -34,7 +34,18 @@ export function platPrompt(nImages: number, notitie: string): string {
   ].join("\n");
 }
 
-/** Instructie voor het inlezen van een verduurzamingsadvies — energieAdviesPrompt() */
+/**
+ * Extra regels voor het inlezen van een energieadvies (bewuste afwijking van de bron): alle opties
+ * apart, het beginlabel van het advies en de datum. Komen na de regel over meerdere opties; het
+ * voorbeeld-JSON krijgt een "datum".
+ */
+export const ENERGIEADVIES_EXTRA_REGELS = [
+  "- Een advies noemt vaak meerdere opties naast elkaar (bijvoorbeeld van E naar C, van E naar B en van E naar A), elk met eigen maatregelen en kosten. Neem ELKE optie op als aparte regel in maatregelen, met het eindlabel van die optie, alle maatregelen van die optie, de kosten en (alleen als vermeld) de besparing.",
+  "- Neem bij huidig.label het label waarvan het advies uitgaat (de huidige situatie volgens het advies), ook als dat afwijkt van een geregistreerd label.",
+  '- Zet in "datum" de datum van het advies (opgesteld of uitgebracht) als yyyy-mm-dd; laat het leeg (null) als die niet in de tekst staat.',
+];
+
+/** Instructie voor het inlezen van een verduurzamingsadvies — energieAdviesPrompt(), met extra regels */
 export function energieAdviesPrompt(tekst: string): string {
   return [
     "Je leest een Nederlands verduurzamings- of energieadvies (bijvoorbeeld van een energieadviseur, makelaar of installateur) over een huurwoning, voor gebruik bij een puntentelling volgens het woningwaarderingsstelsel (WWS).",
@@ -49,9 +60,10 @@ export function energieAdviesPrompt(tekst: string): string {
     '- Als er een "huidige situatie" of "huidige energiestatus" in staat (woningtype, bouwjaar, huidig label, oppervlakte, installaties voor verwarming/warmwater/pv/ventilatie/koeling, isolatie van muur en glas), neem die over; laat een veld leeg als het niet in de tekst staat.',
     "- Gebruik ALLEEN informatie die letterlijk in de tekst staat. Verzin geen kosten, besparingen of merknamen.",
     "- Als er meerdere verbeteropties of maatregelen met overlappende labelstappen in de tekst staan, neem ze allemaal op; de tool kiest er later zelf uit.",
+    ...ENERGIEADVIES_EXTRA_REGELS,
     "",
     "Antwoord met ALLEEN dit JSON-object:",
-    '{"huidig":{"label":"G","woningtype":"","bouwjaar":"","oppervlakte_m2":null,"installaties":{"verwarming":"","warmwater":"","pv":"","ventilatie":"","koeling":""},"isolatie":{"muur":"","glas":""}},"maatregelen":[{"vanLabel":"G","naarLabel":"A","omschrijving":["Hybride warmtepomp: merk en type","Overige onderdelen"],"kosten_min":10000,"kosten_max":14000,"besparing_min":600,"besparing_max":950}]}',
+    '{"datum":"2026-03-14","huidig":{"label":"G","woningtype":"","bouwjaar":"","oppervlakte_m2":null,"installaties":{"verwarming":"","warmwater":"","pv":"","ventilatie":"","koeling":""},"isolatie":{"muur":"","glas":""}},"maatregelen":[{"vanLabel":"G","naarLabel":"A","omschrijving":["Hybride warmtepomp: merk en type","Overige onderdelen"],"kosten_min":10000,"kosten_max":14000,"besparing_min":600,"besparing_max":950}]}',
     "",
     "TEKST UIT HET DOCUMENT:",
     tekst,

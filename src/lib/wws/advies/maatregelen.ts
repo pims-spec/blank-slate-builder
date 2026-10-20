@@ -6,7 +6,7 @@
 import { fmt, INDEX_KLASSEN, LABELS, num, overigType, r2, vertrekType } from "../basis";
 import { calc, type SanAgg } from "../calc";
 import type { Normen } from "../normen";
-import type { Energie, Labelklasse, WwsInput } from "../types";
+import type { Energie, EnergieAdviesMaatregel, Labelklasse, WwsInput } from "../types";
 import type {
   AdviesBron,
   Haalbaarheid,
@@ -31,6 +31,117 @@ export interface GenContext {
    * modus, dan geldt h van de maatregel (zoals de bron).
    */
   niveau?: ((sleutel: string) => Haalbaarheid | undefined) | undefined;
+  /** Niet brongetrouw: beginpunt en gekozen optie uit het geüploade energieadvies */
+  start?: AdviesStart | undefined;
+}
+
+/**
+ * Beginpunt van de labelmaatregel (bewuste afwijking, zie energieAdvies.ts). Geldt alleen zolang
+ * het energielabel van de invoer nog dat van de huidige situatie is.
+ */
+export interface AdviesStart {
+  energie: Energie;
+  /** Beginlabel: het advieslabel na bevestiging, anders het geregistreerde (null: geen label) */
+  label: string | null;
+  bron: "advies" | "registratie";
+  /** De gekozen optie uit het advies: dan is dat de enige labelmaatregel */
+  gekozen: EnergieAdviesMaatregel | null;
+}
+
+const lIdx = (l: string) => (LABELS as readonly string[]).indexOf(l);
+
+/** Eindlabel zetten; zonder label (index of bouwjaar) wordt het een nieuw label (NTA 8800) */
+function zetLabel(y: WwsInput, naar: string, vandaag: string) {
+  if (y.energie.soort === "label" || y.energie.soort === "labelOud")
+    y.energie.label = naar as Labelklasse;
+  else
+    y.energie = {
+      soort: "label",
+      label: naar as Labelklasse,
+      indexKlasse: "",
+      bouwjaar: "",
+      datum: vandaag,
+    };
+}
+
+/** Een optie uit het advies als labelmaatregel, gerekend vanaf het beginlabel */
+function adviesOptie(
+  m: EnergieAdviesMaatregel,
+  x: WwsInput,
+  start: AdviesStart,
+  K: Kosten,
+  vandaag: string,
+): GenKandidaat {
+  const st = start.label ? lIdx(start.label) - lIdx(m.naarLabel) : null;
+  const kost = (num(m.kostenMin) + num(m.kostenMax)) / 2 || K.labelStap * Math.max(1, st ?? 1);
+  return {
+    o: start.label
+      ? "Energielabel " +
+        start.label +
+        (start.bron === "advies" ? " (volgens energieadvies)" : "") +
+        " naar " +
+        m.naarLabel +
+        (st != null && st > 1 ? " (" + st + " stappen)" : "")
+      : "Nieuw energielabel (vanaf 2021, NTA 8800) laten opnemen: " +
+        energieVanOmschrijving(x.energie) +
+        " naar klasse " +
+        m.naarLabel,
+    c: kost,
+    h: st != null && st >= 3 ? "lastig" : "gemiddeld",
+    hr: (m.omschrijving || []).join("; ") || "Volgens geüpload verduurzamingsadvies",
+    a: (y) => zetLabel(y, m.naarLabel, vandaag),
+    bron: "advies",
+    omschrijving: m.omschrijving || [],
+    kostenMin: num(m.kostenMin),
+    kostenMax: num(m.kostenMax),
+    besparingMin: num(m.besparingMin),
+    besparingMax: num(m.besparingMax),
+  };
+}
+
+/**
+ * Labelmaatregelen vanaf een beginpunt uit het energieadvies (niet brongetrouw): de gekozen optie
+ * alleen, of — met het bevestigde advieslabel als begin — de opties uit het advies plus de
+ * standaardstappen vanaf dat label. null: geen bijzonder beginpunt, gewoon zoals de bron.
+ */
+function labelVanafStart(x: WwsInput, ctx: GenContext): GenKandidaat[] | null {
+  const st = ctx.start;
+  if (!st) return null;
+  const ongewijzigd = x.energie.soort === st.energie.soort && x.energie.label === st.energie.label;
+  if (st.gekozen) return ongewijzigd ? [adviesOptie(st.gekozen, x, st, ctx.K, ctx.vandaag)] : [];
+  if (!ongewijzigd || st.bron !== "advies" || !st.label) return null;
+  const lab = st.label;
+  const i = lIdx(lab);
+  if (i <= 0) return [];
+  const out: GenKandidaat[] = [];
+  const doelen = new Set<number>();
+  for (const m of x.energieAdvies?.maatregelen ?? []) {
+    const j = lIdx(m.naarLabel);
+    if (m.vanLabel !== lab || j < 0 || j >= i) continue;
+    doelen.add(j);
+    out.push(adviesOptie(m, x, st, ctx.K, ctx.vandaag));
+  }
+  for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
+    if (doelen.has(j)) continue;
+    const to = LABELS[j]!,
+      stappen = i - j;
+    out.push({
+      o:
+        "Energielabel " +
+        lab +
+        " (volgens energieadvies) naar " +
+        to +
+        (stappen > 1 ? " (" + stappen + " stappen)" : ""),
+      c: ctx.K.labelStap * stappen,
+      h: stappen >= 3 ? "lastig" : "gemiddeld",
+      hr:
+        stappen >= 3
+          ? "Grote renovatie: gevel, dak en installatie"
+          : "Isolatie, glas of installatie; nieuw label laten opnemen",
+      a: (y) => zetLabel(y, to, ctx.vandaag),
+    });
+  }
+  return out;
 }
 
 export interface GenKandidaat extends AdviesBron {
@@ -79,7 +190,10 @@ export const MAATREGELEN: readonly Maatregel[] = [
     hr: "Isolatie, glas of installatie; nieuw label laten opnemen",
     naam: "Energielabel verbeteren (per labelstap)",
     kost: "labelStap",
-    gen(x, { K, N, origLabel, vandaag }) {
+    gen(x, ctx) {
+      const { K, N, origLabel, vandaag } = ctx;
+      const vanafStart = labelVanafStart(x, ctx);
+      if (vanafStart) return vanafStart;
       // Geen energielabel (index of bouwjaar): één standaardstap, de eerstvolgende labelklasse
       // die boven de huidige score zit (zie de toelichting in wws-site.html).
       if (x.energie.soort === "index" || x.energie.soort === "bouwjaar") {

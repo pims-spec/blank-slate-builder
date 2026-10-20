@@ -25,11 +25,13 @@ import {
   type KostenKey,
   type MaatregelKey,
 } from "@/lib/wws/advies";
+import { vergelijkBeginlabel } from "@/lib/wws/advies/energieAdvies";
 import type { TellingMeta } from "@/lib/wws/opslag";
 import { maakAdviesPdf, maakRoutePdf } from "@/lib/wws/pdf/rapporten";
 import { useNormen } from "./NormenContext";
 import { useDownload } from "./useDownload";
 import EnergieAdviesBlok from "./EnergieAdviesBlok";
+import EnergieAdviesKeuze from "./EnergieAdviesKeuze";
 import { instellingenStore } from "./tellingStore";
 
 const H_LABEL: Record<Haalbaarheid, string> = {
@@ -130,6 +132,8 @@ interface Props {
   isAdmin?: boolean;
   /** Uit bij alleen-lezen (kijkrol, gedeelde telling) */
   magToepassen?: boolean;
+  /** Naam van de gebruiker, voor de bevestiging van het beginlabel uit het energieadvies */
+  bewerker?: string;
 }
 
 /** Advies vrije sector: route naar de vrije sector, zoals het adviesvenster in wws-site.html. */
@@ -143,6 +147,7 @@ export default function AdviesDialoog({
   onToepassen,
   isAdmin = false,
   magToepassen = true,
+  bewerker = "",
 }: Props) {
   const NORMEN = useNormen();
   return (
@@ -164,6 +169,7 @@ export default function AdviesDialoog({
             plattegrond={plattegrond}
             onEnergieAdvies={onEnergieAdvies}
             onToepassen={onToepassen}
+            bewerker={bewerker}
             isAdmin={isAdmin}
             magToepassen={magToepassen}
           />
@@ -181,9 +187,11 @@ function AdviesInhoud({
   onToepassen,
   isAdmin,
   magToepassen,
+  bewerker,
 }: Pick<Props, "input" | "meta" | "plattegrond" | "onEnergieAdvies" | "onToepassen"> & {
   isAdmin: boolean;
   magToepassen: boolean;
+  bewerker: string;
 }) {
   const NORMEN = useNormen();
   const download = useDownload();
@@ -196,6 +204,12 @@ function AdviesInhoud({
   const [margeTekst, setMargeTekst] = useState(String(inst.marge));
   const [skip, setSkip] = useState<Record<number, boolean>>({});
   const [toepassenBezig, setToepassenBezig] = useState(false);
+  const [tab, setTab] = useState("route");
+  const ea = input.energieAdvies;
+  const beginVraag = useMemo(() => {
+    const v = vergelijkBeginlabel(input.energie, ea);
+    return v?.verschil && ea?.uitgangspunt?.label !== v.advies.label ? v : null;
+  }, [input.energie, ea]);
 
   const A = useMemo(() => berekenAdvies(input, NORMEN, inst), [input, inst, NORMEN]);
   const S = useMemo(() => selectieResultaat(input, NORMEN, A, skip), [input, A, skip, NORMEN]);
@@ -325,14 +339,32 @@ function AdviesInhoud({
         Altijd 1 labelsprong verwerken in het advies (ook in de downloadbare adviesrapporten)
       </label>
 
-      <Tabs defaultValue="route">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="route">Route ({A.stappen.length})</TabsTrigger>
           <TabsTrigger value="alle">Alle maatregelen ({A.los.length})</TabsTrigger>
+          {ea && <TabsTrigger value="energie">Energieadvies</TabsTrigger>}
           <TabsTrigger value="inst">Instellingen en kosten</TabsTrigger>
         </TabsList>
 
         <TabsContent value="route" className="space-y-3">
+          {beginVraag && (
+            <div
+              role="note"
+              className="flex flex-wrap items-center gap-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm"
+            >
+              <span className="min-w-0 flex-1">
+                Het energieadvies gaat uit van label {beginVraag.advies.label}, EP-Online van{" "}
+                {beginVraag.registratie.label
+                  ? "label " + beginVraag.registratie.label
+                  : beginVraag.registratie.omschrijving}
+                . Tot je dat bevestigt, rekent deze route met het geregistreerde label.
+              </span>
+              <Button size="sm" variant="outline" onClick={() => setTab("energie")}>
+                Naar Energieadvies
+              </Button>
+            </div>
+          )}
           {A.start.totaal >= A.doel ? (
             <Melding ok>
               De woning heeft al {A.start.totaal} punten en haalt het doel zonder maatregelen.
@@ -444,6 +476,21 @@ function AdviesInhoud({
             );
           })}
         </TabsContent>
+
+        {ea && (
+          <TabsContent value="energie">
+            <EnergieAdviesKeuze
+              input={input}
+              normen={NORMEN}
+              magBewerken={magToepassen && !!onEnergieAdvies}
+              bewerker={bewerker}
+              onZet={(a) => {
+                setSkip({});
+                onEnergieAdvies?.(a);
+              }}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="inst" className="space-y-4">
           {meta && onEnergieAdvies ? (

@@ -32,8 +32,11 @@ export function verwerkEnergieAdvies(tekst: string): EnergieAdviesUitkomst {
       besparingMax: num(m.besparing_max) || num(m.besparing_min) || 0,
     }));
   if (!maatregelen.length) return { ok: false, fout: "geen_maatregelen" };
+  const huidig = (r.data.huidig ?? null) as EnergieAdviesHuidig | null;
+  // het beginlabel alleen als het een geldig label is (bewuste afwijking: de bron nam alles over)
+  if (huidig?.label && !isLabel(huidig.label)) delete huidig.label;
   return {
     ok: true,
-    advies: { huidig: (r.data.huidig ?? null) as EnergieAdviesHuidig | null, maatregelen },
+    advies: { huidig, maatregelen, ...(r.data.datum ? { datum: r.data.datum } : {}) },
   };
 }

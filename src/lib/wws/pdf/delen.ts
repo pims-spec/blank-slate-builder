@@ -5,6 +5,7 @@
 // Waar de bron de globale normen N gebruikte, komen die hier als parameter binnen.
 import type { CellHookData } from "jspdf-autotable";
 import type { RouteResultaat } from "../advies";
+import { REGISTRATIE_MELDING, uitgangspuntTekst, vergelijkOpties } from "../advies/energieAdvies";
 import { eur, fmt, LABELS, num, overigType, r2, vertrekType } from "../basis";
 import { calc, normaliseer } from "../calc";
 import type { Normen } from "../normen";
@@ -1093,6 +1094,109 @@ export function pdfVerduurzamingPagina(lib: PdfLib, doc: Doc, EA: unknown) {
       y += cardH + 6;
     });
   }
+  return y;
+}
+
+/**
+ * Bewuste afwijking: het uitgangspunt (beginlabel) van het verbeteradvies en de opties uit het
+ * energieadvies naast elkaar, met de gekozen optie. Geeft de nieuwe y terug.
+ */
+export function pdfEnergieAdviesKeuze(
+  lib: PdfLib,
+  doc: Doc,
+  y: number,
+  input: WwsInput,
+  N: Normen,
+): number {
+  const M = PDF_M,
+    W = PDF_W,
+    PUR = PDF_PUR,
+    INK = PDF_INK,
+    MUT = PDF_MUT;
+  const kop = (t: string) => {
+    if (y > 250) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PUR);
+    doc.text(t, M, y);
+    y += 5;
+  };
+  const alinea = (t: string, kleur: RGB = INK, grootte = 9.5) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(grootte);
+    doc.setTextColor(...kleur);
+    const regels: string[] = doc.splitTextToSize(pdfTxt(t), W - 2 * M);
+    if (y + regels.length * 4.6 > 275) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.text(regels, M, y);
+    y += regels.length * 4.6 + 2;
+  };
+  const uitgangspunt = uitgangspuntTekst(input);
+  if (uitgangspunt) {
+    kop("UITGANGSPUNT VERBETERADVIES");
+    alinea(uitgangspunt);
+    alinea(REGISTRATIE_MELDING, MUT, 8.5);
+    y += 3;
+  }
+  const opties = vergelijkOpties(input, N, new Date().toISOString().slice(0, 10));
+  if (!opties.length) return y;
+  const gekozen = input.energieAdvies?.gekozenOptie;
+  kop(
+    opties.length > 1 ? "OPTIES UIT HET ENERGIEADVIES VERGELEKEN" : "OPTIE UIT HET ENERGIEADVIES",
+  );
+  const plusTekst = (n: number) => (n > 0 ? "+" : "") + n;
+  y =
+    tabel(lib, doc, {
+      startY: y,
+      head: [
+        [
+          "Optie",
+          "Stappen",
+          "Kosten",
+          "Punten",
+          "Segment",
+          "Max. huur",
+          "Extra huur p/m",
+          "Terugverdientijd*",
+          "",
+        ],
+      ],
+      body: opties.map((o) => [
+        (o.van ?? "?") + " -> " + o.naar,
+        o.stappen == null ? "-" : String(o.stappen),
+        eur(o.kostenMin) + (o.kostenMax > o.kostenMin ? " - " + eur(o.kostenMax) : ""),
+        plusTekst(o.puntenErbij) + " -> " + o.totaal,
+        segName(o.seg),
+        eur(o.maxHuur),
+        eur(o.extraHuurMaand),
+        o.terugverdienJaren != null ? fmt(o.terugverdienJaren, 1) + " jaar" : "-",
+        o.index === gekozen ? "Gekozen" : "",
+      ]),
+      theme: "striped",
+      styles: { fontSize: 8, textColor: INK, cellPadding: 1.4 },
+      headStyles: { fillColor: PUR, textColor: [255, 255, 255], fontSize: 8 },
+      margin: { left: M, right: M },
+    }) + 5;
+  const g = opties.find((o) => o.index === gekozen);
+  alinea(
+    g
+      ? "Gekozen optie: label " +
+          (g.van ?? "?") +
+          " naar " +
+          g.naar +
+          ". Deze optie is de labelmaatregel in het verbeteradvies."
+      : "Er is geen optie gekozen; het verbeteradvies kiest zelf de labelmaatregel.",
+  );
+  alinea(
+    "* Terugverdientijd = gemiddelde kosten / extra huur per jaar. Dit is een indicatie, zonder besparing voor de huurder, rente, onderhoud of regels voor huurverhoging. Het eindlabel van een optie bepaalt de punten.",
+    MUT,
+    8,
+  );
   return y;
 }
 

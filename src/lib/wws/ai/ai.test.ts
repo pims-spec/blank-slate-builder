@@ -15,6 +15,7 @@ import {
 import { anonimiseer, verwijderPatronen } from "./privacy";
 import {
   INDELING_EXTRA_REGELS,
+  ENERGIEADVIES_EXTRA_REGELS,
   energieAdviesPrompt,
   indelingAIPrompt,
   platPrompt,
@@ -56,8 +57,14 @@ describe("instructies gelijk aan wws-site.html", () => {
   it("platPrompt en energieAdviesPrompt", () => {
     for (const notitie of ["", "maten in mm, 2e verdieping", "x".repeat(800)])
       for (const n of [1, 3]) expect(platPrompt(n, notitie)).toBe(BRON.platPrompt(n, notitie));
+    // bewuste afwijking: extra regels na de regel over meerdere opties, en een datum in het voorbeeld
+    const meerdere = "de tool kiest er later zelf uit.";
     for (const t of ["", "Advies voor de woning: label G naar A, € 12.000"])
-      expect(energieAdviesPrompt(t)).toBe(BRON.energieAdviesPrompt(t));
+      expect(energieAdviesPrompt(t)).toBe(
+        BRON.energieAdviesPrompt(t)
+          .replace(meerdere, meerdere + "\n" + ENERGIEADVIES_EXTRA_REGELS.join("\n"))
+          .replace('{"huidig":{', '{"datum":"2026-03-14","huidig":{'),
+      );
   });
 
   it("indelingAIPrompt: 100 willekeurige varianten (bron met standaardnamen)", () => {
@@ -215,6 +222,8 @@ describe("antwoorden van Claude", () => {
     expect([m.kostenMin, m.kostenMax, m.besparingMin, m.besparingMax]).toEqual([
       10000, 10000, 600, 950,
     ]);
+    expect(v.advies.datum).toBeUndefined();
+    expect(v.advies.huidig?.label).toBe("G");
     expect(verwerkEnergieAdvies('{"maatregelen":[]}')).toEqual({
       ok: false,
       fout: "geen_maatregelen",
@@ -371,5 +380,27 @@ describe("invoer van de browser", () => {
       VariantAfbeeldingVraag.safeParse({ afbeelding, ruimten: [{ ...ok, naam: "Jan" }] }).data
         ?.ruimten[0],
     ).toEqual(ok);
+  });
+
+  it("verduurzamingsadvies: datum en beginlabel alleen als ze geldig zijn; alle opties", () => {
+    const opties = ["C", "B", "A"].map((naar) => ({
+      vanLabel: "E",
+      naarLabel: naar,
+      omschrijving: ["Optie " + naar],
+      kosten_min: 1000,
+      kosten_max: 2000,
+    }));
+    const v = verwerkEnergieAdvies(
+      JSON.stringify({ datum: "2026-03-14", huidig: { label: "E" }, maatregelen: opties }),
+    );
+    expect(v.ok && v.advies.datum).toBe("2026-03-14");
+    expect(v.ok && v.advies.maatregelen!.map((m) => m.naarLabel)).toEqual(["C", "B", "A"]);
+    for (const datum of ["14-03-2026", "2026-13-45", 20260314, "morgen"]) {
+      const w = verwerkEnergieAdvies(
+        JSON.stringify({ datum, huidig: { label: "X" }, maatregelen: opties }),
+      );
+      expect(w.ok && w.advies.datum).toBeUndefined();
+      expect(w.ok && w.advies.huidig?.label).toBeUndefined();
+    }
   });
 });

@@ -453,6 +453,51 @@ kastje, stopcontacten vóór een wastafel met kastje.
 - Tests: `niveaus.test.ts` (kastje vóór stopcontacten, kastruimte vóór handdoekradiator, lastiger
   alleen als het moet, aftopping), `NormenBeheer.test.tsx`, `pdf.afwijkingen.test.ts`.
 
+### Energieadvies: afwijkend beginlabel en opties vergelijken (`advies/energieAdvies.ts`)
+
+**Wat de bron doet.** De bron leest het label uit het advies wel uit (`huidig.label`), maar toont
+het alleen in de PDF ("Huidige energiestatus"). Het verbeteradvies gebruikt een labelstap uit het
+advies alleen als het beginlabel van die stap precies gelijk is aan het label in de telling. Wijkt
+het af, dan worden de opties zonder melding genegeerd en rekent de bron met de standaardkosten per
+stap. Ook kiest de bron zelf tussen de opties; je ziet ze niet naast elkaar.
+
+**Inlezen.** De prompt vraagt elke optie apart, het beginlabel en de datum van het advies
+(`ENERGIEADVIES_EXTRA_REGELS`, het voorbeeld-JSON krijgt `datum`). Zod neemt de datum alleen over
+als geldige yyyy-mm-dd, en het beginlabel alleen als geldig label.
+
+**Afwijkend beginlabel (1a).**
+- `vergelijkBeginlabel` vergelijkt klasse, soort (een label van vóór 2015 telt als verschil) en
+  datum. Het voorstel is het advies als dat recenter is dan de registratie, anders EP-Online.
+- **Controlevraag**: "Het energieadvies van [datum] gaat uit van label E. In EP-Online staat label
+  C, geregistreerd op [datum]. Wil je het verbeteradvies baseren op label E uit het advies? De
+  WWS-punten van de huidige situatie blijven gebaseerd op label C." Knoppen "Ja, ga uit van het
+  advies" en "Nee, gebruik EP-Online"; het voorstel is voorgeselecteerd.
+- **Pas na bevestiging.** Tot die tijd rekent het verbeteradvies met het geregistreerde label. De
+  keuze staat in `energieAdvies.uitgangspunt` met wie en wanneer, en geldt alleen voor dat
+  advieslabel (een nieuw advies vraagt opnieuw). Wijzigen kan altijd, opnieuw met bevestiging.
+- **Punten.** De WWS-punten van de huidige situatie blijven op het geregistreerde label; het label
+  in de telling wordt nooit automatisch gewijzigd ("Een nieuw label telt pas mee … na registratie
+  in EP-Online"). Het eindlabel van een optie bepaalt de punten in de route. Het gekozen beginlabel
+  bepaalt alleen het aantal stappen, het niveau (3 of meer: lastig) en de standaardkosten.
+- **Waar te zien:** in de telling (rubriek energie), het tabblad Energieadvies van het
+  verbeteradvies (met een melding in de route zolang het niet bevestigd is) en beide advies-PDF's.
+
+**Opties vergelijken (1b).**
+- `vergelijkOpties` rekent per optie met `calc()`: labelsprong vanaf het beginlabel, kosten,
+  maatregelen, besparing, punten erbij, nieuw totaal, segment, maximale huur, extra huur per maand
+  en een terugverdientijd als indicatie (gemiddelde kosten ÷ extra huur per jaar).
+- In het tabblad Energieadvies staan de opties naast elkaar (op telefoon onder elkaar). "Kies deze
+  optie" legt `energieAdvies.gekozenOptie` vast; bij de andere opties staat het verschil. "Keuze
+  opheffen" laat het verbeteradvies weer zelf kiezen. Bij één optie geen vergelijking.
+- De gekozen optie is de enige labelmaatregel en gaat altijd mee in de route (ook bij "1
+  labelsprong"); er komen geen labelstappen bovenop.
+- De advies-PDF's tonen het uitgangspunt, de tabel met alle opties en de gekozen optie.
+
+**Brongetrouw.** Met `brongetrouw: true` (vergelijkingstests) en `bronGetrouw: true` (PDF) wordt
+het advieslabel nooit gebruikt en is er geen gekozen optie. Tests: `energieAdvies.test.ts`
+(zonder bevestiging, na "Nee", na "Ja"; punten huidige situatie gelijk), `EnergieAdviesKeuze.test.tsx`,
+`ai.test.ts`, `pdf.afwijkingen.test.ts`.
+
 ### Archief: versie kiezen (`archief.ts`, `Archief.tsx`)
 
 De bron toont per telling alleen het aantal versies ("geen versies", "1 versie", "3 versies").

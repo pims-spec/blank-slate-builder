@@ -14,10 +14,12 @@ import { INDEX_KLASSEN, LABELS, num, r2 } from "../basis";
 import { calc, deriveFac, normaliseer } from "../calc";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import type { WwsInput } from "../types";
+import { beginlabel, gekozenOptie } from "./energieAdvies";
 import {
   energieVanOmschrijving,
   MAATREGELEN,
   volgendeLabelVoorIndexOfBouwjaar,
+  type AdviesStart,
 } from "./maatregelen";
 import { niveauVan } from "./niveaus";
 import type {
@@ -91,6 +93,8 @@ export function kandidaten(
   origLabel: string | undefined,
   vandaag: string,
   brongetrouw = false,
+  /** Niet brongetrouw: beginpunt en gekozen optie uit het energieadvies (adviesStart()) */
+  start?: AdviesStart,
 ): Kandidaat[] {
   const x = normaliseer(x0);
   const base = calc(x, N).exact;
@@ -101,6 +105,7 @@ export function kandidaten(
     origLabel,
     vandaag,
     niveau: brongetrouw ? undefined : (k: string) => niveauVan(N, k),
+    start: brongetrouw ? undefined : start,
   };
   const out: Kandidaat[] = [];
   for (const m of MAATREGELEN) {
@@ -135,6 +140,18 @@ export function kandidaten(
   return brongetrouw
     ? out.sort((a, b) => a.score - b.score)
     : out.sort((a, b) => RANK[a.h] - RANK[b.h] || a.score - b.score);
+}
+
+/**
+ * Beginpunt van de labelmaatregel uit het energieadvies (bewuste afwijking): het bevestigde
+ * advieslabel en/of de gekozen optie. undefined: geen advies, of niets bijzonders (zoals de bron).
+ */
+export function adviesStart(x: WwsInput): AdviesStart | undefined {
+  if (!x.energieAdvies) return undefined;
+  const b = beginlabel(x);
+  const gekozen = gekozenOptie(x.energieAdvies);
+  if (b.bron !== "advies" && !gekozen) return undefined;
+  return { energie: structuredClone(x.energie), label: b.label, bron: b.bron, gekozen };
 }
 
 /** Losse maatregel in de route, vóór het samenvoegen per soort */
@@ -176,11 +193,14 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     uit = inst.uit;
   const begin = normaliseer(input);
   let x = begin;
-  const origLabel = x.energie.label;
+  const aStart = brongetrouw ? undefined : adviesStart(begin);
+  // met een bevestigd advieslabel telt de labelafstand vanaf dat label
+  const vanAdvies = aStart?.bron === "advies" && !!aStart.label;
+  const origLabel = vanAdvies ? aStart.label! : x.energie.label;
   const start = calc(x, N);
   const stappen: Stap[] = [];
   let guard = 0;
-  const eerste = kandidaten(begin, N, inst, true, undefined, vandaag, brongetrouw);
+  const eerste = kandidaten(begin, N, inst, true, undefined, vandaag, brongetrouw, aStart);
 
   // Optie 2 bouwt voort op optie 1: die maatregelen gaan eerst en blijven staan.
   if (baseOptie) {
@@ -210,8 +230,16 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
       }),
     );
   }
+  // De gekozen optie uit het energieadvies is de labelmaatregel en gaat altijd mee
+  const gekozenKandidaat =
+    aStart?.gekozen && !baseOptie && !inst.forced.some((f) => f.startsWith("label|"))
+      ? eerste.find((z) => z.key === "label")
+      : undefined;
+  const forcedKeys = gekozenKandidaat
+    ? ["label|" + gekozenKandidaat.o, ...inst.forced]
+    : inst.forced;
   // Zelf gekozen maatregelen uit "Alle maatregelen" gaan altijd mee
-  inst.forced.forEach((fk) => {
+  forcedKeys.forEach((fk) => {
     const c = eerste.find((z) => z.key + "|" + z.o === fk);
     if (!c) return;
     const b = calc(x, N).exact;
@@ -231,24 +259,44 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     });
   });
   // "1 labelsprong": precies één stap verbetering van het energielabel (niet opnieuw bij optie 2)
-  if (
+  if (inst.labelsprong && !baseOptie && aStart?.gekozen) {
+    // de gekozen optie uit het energieadvies is al de labelsprong
+  } else if (
     inst.labelsprong &&
     !baseOptie &&
-    (x.energie.soort === "label" || x.energie.soort === "labelOud")
+    (vanAdvies || x.energie.soort === "label" || x.energie.soort === "labelOud")
   ) {
-    const i0 = labelIndex(x.energie.label);
+    const i0 = labelIndex(vanAdvies ? aStart.label! : x.energie.label);
     if (i0 > 0) {
       const target = LABELS[i0 - 1]!;
-      const applyFn: Toepassing = (y) => {
-        y.energie.label = target;
-      };
+      const applyFn: Toepassing = vanAdvies
+        ? (y) => {
+            if (y.energie.soort === "label" || y.energie.soort === "labelOud")
+              y.energie.label = target;
+            else
+              y.energie = {
+                soort: "label",
+                label: target,
+                indexKlasse: "",
+                bouwjaar: "",
+                datum: vandaag,
+              };
+          }
+        : (y) => {
+            y.energie.label = target;
+          };
       const b = calc(x, N).exact;
       x = pasToe(applyFn, x);
       const R = calc(x, N);
       stappen.push({
         key: "label",
         forced: true,
-        o: "Energielabel " + LABELS[i0] + " naar " + target,
+        o:
+          "Energielabel " +
+          LABELS[i0] +
+          (vanAdvies ? " (volgens energieadvies)" : "") +
+          " naar " +
+          target,
         g: r2(R.exact - b),
         c: K.labelStap,
         h: "gemiddeld",
@@ -296,7 +344,7 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
   }
 
   while (calc(x, N).totaal < doel && guard++ < 40) {
-    const c = kandidaten(x, N, inst, false, origLabel, vandaag, brongetrouw);
+    const c = kandidaten(x, N, inst, false, origLabel, vandaag, brongetrouw, aStart);
     if (!c.length) break;
     const best = c[0]!;
     x = pasToe(best.apply, x);
@@ -386,8 +434,12 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     g.besparingMin += num(st.besparingMin);
     g.besparingMax += num(st.besparingMax);
   }
-  const origSoort = begin.energie.soort;
-  const vanLabel = begin.energie.label;
+  // met een bevestigd advieslabel: de route begint bij dat label (als een gewoon label)
+  const origSoort =
+    vanAdvies && begin.energie.soort !== "label" && begin.energie.soort !== "labelOud"
+      ? "label"
+      : begin.energie.soort;
+  const vanLabel = vanAdvies ? aStart.label! : begin.energie.label;
   const vanOmschrijving = energieVanOmschrijving(begin.energie);
   x = begin;
   let prevE = calc(x, N).exact;
@@ -402,7 +454,12 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     if (g.key === "label") {
       if (o.metNaarLabel) g.naarLabel = x.energie.label;
       if (origSoort === "label" || origSoort === "labelOud") {
-        g.o = "Energielabel " + vanLabel + " naar " + x.energie.label;
+        g.o =
+          "Energielabel " +
+          vanLabel +
+          (vanAdvies ? " (volgens energieadvies)" : "") +
+          " naar " +
+          x.energie.label;
         const d = labelIndex(vanLabel) - labelIndex(x.energie.label);
         g.h = d >= 3 ? "lastig" : "gemiddeld";
         g.hr =
@@ -472,7 +529,16 @@ export function berekenAdvies(
   let xMax = k.begin;
   let guardMax = 0;
   while (calc(xMax, N).totaal < doel && guardMax++ < 40) {
-    const c = kandidaten(xMax, N, inst, true, undefined, vandaag, brongetrouw);
+    const c = kandidaten(
+      xMax,
+      N,
+      inst,
+      true,
+      undefined,
+      vandaag,
+      brongetrouw,
+      adviesStart(k.begin),
+    );
     if (!c.length) break;
     xMax = pasToe(c[0]!.apply, xMax);
   }

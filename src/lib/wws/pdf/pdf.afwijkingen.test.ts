@@ -7,7 +7,7 @@ import { berekenAdvies, selectieResultaat, standaardInstellingen } from "../advi
 import { normaliseer } from "../calc";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { genereer } from "../testdata";
-import { maakRoutePdf, maakTellingPdf } from "./rapporten";
+import { maakAdviesPdf, maakRoutePdf, maakTellingPdf } from "./rapporten";
 import { binnenTekenset, nieuwDoc } from "./stijl";
 import { INTER, bytesVan, pdfTekst, willekeurigeMeta } from "./testhulp";
 
@@ -74,6 +74,52 @@ describe("bewuste afwijkingen in de PDF's", () => {
     ).flat();
     expect(nu.some(gespatieerd)).toBe(false);
     expect(nu.some((t) => t.includes("1,4 < EI <= 1,8"))).toBe(true);
+  });
+
+  it("advies-PDF's: uitgangspunt (wie en wanneer) en de opties uit het energieadvies", async () => {
+    const input = normaliseer(genereer(7));
+    input.energie = {
+      soort: "label",
+      label: "F",
+      indexKlasse: "",
+      bouwjaar: "",
+      datum: "2020-01-01",
+    };
+    input.energieAdvies = {
+      datum: "2026-03-14",
+      huidig: { label: "E" },
+      maatregelen: ["C", "B", "A"].map((naar, i) => ({
+        vanLabel: "E",
+        naarLabel: naar,
+        omschrijving: ["Optie " + naar],
+        kostenMin: 5000 * (i + 1),
+        kostenMax: 7000 * (i + 1),
+      })),
+      uitgangspunt: {
+        keuze: "advies",
+        label: "E",
+        door: "Test Gebruiker",
+        op: "2026-10-15T09:00:00Z",
+      },
+      gekozenOptie: 1,
+    };
+    const meta = willekeurigeMeta(7);
+    const inst = standaardInstellingen(N);
+    const A = berekenAdvies(input, N, inst);
+    const pdfs = {
+      route: (b = false) =>
+        maakRoutePdf(LIB, { meta, input, normen: N, advies: A, overslaan: {}, bronGetrouw: b }),
+      advies: (b = false) => maakAdviesPdf(LIB, { meta, input, normen: N, inst, bronGetrouw: b }),
+    };
+    for (const maak of Object.values(pdfs)) {
+      const tekst = (await pdfTekst(maak().blob)).flat().join(" ");
+      expect(tekst).toContain("UITGANGSPUNT VERBETERADVIES");
+      expect(tekst).toContain("bevestigd door Test Gebruiker op 15 oktober 2026");
+      expect(tekst).toContain("OPTIES UIT HET ENERGIEADVIES VERGELEKEN");
+      expect(tekst).toContain("Gekozen optie: label E naar B");
+      const bron = (await pdfTekst(maak(true).blob)).flat().join(" ");
+      expect(bron).not.toContain("UITGANGSPUNT VERBETERADVIES");
+    }
   });
 
   it("route-PDF: eenvoudsniveau per maatregel (de bron toont het niet)", async () => {

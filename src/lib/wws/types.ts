@@ -198,12 +198,34 @@ export interface EnergieAdviesHuidig {
   isolatie?: Partial<Record<"muur" | "glas", string>>;
 }
 
+/**
+ * Bevestigd uitgangspunt van het verbeteradvies als het beginlabel in het advies afwijkt van het
+ * geregistreerde label (bewuste afwijking van de bron). De WWS-punten van de huidige situatie
+ * blijven altijd op het geregistreerde label gebaseerd.
+ */
+export interface EnergieAdviesUitgangspunt {
+  keuze: "registratie" | "advies";
+  /** Het beginlabel uit het advies waarop bevestigd is */
+  label: string;
+  /** Naam (of e-mail) van wie het bevestigde */
+  door: string;
+  /** ISO-tijdstip van de bevestiging */
+  op: string;
+}
+
 /** Geüpload verduurzamingsadvies; het verbeteradvies gebruikt de labelstappen hieruit. */
 export interface EnergieAdvies {
   bestand?: string;
   geuploadOp?: string;
+  /** Datum van het advies (yyyy-mm-dd), als die in het document staat */
+  datum?: string;
   huidig?: EnergieAdviesHuidig | null;
+  /** Alle opties (labelsprongen) uit het advies */
   maatregelen?: EnergieAdviesMaatregel[];
+  /** Bevestigd beginlabel van het verbeteradvies; ontbreekt = het geregistreerde label */
+  uitgangspunt?: EnergieAdviesUitgangspunt;
+  /** Gekozen optie (index in `maatregelen`); ontbreekt = het verbeteradvies kiest zelf */
+  gekozenOptie?: number;
 }
 
 export type MonumentKeuze = "geen" | "gemprov" | "stads" | "rijks_voor" | "rijks_na";

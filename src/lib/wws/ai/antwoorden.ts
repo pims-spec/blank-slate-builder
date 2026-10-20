@@ -68,6 +68,13 @@ export type PlattegrondAntwoord = z.infer<typeof PlattegrondAntwoord>;
 const Label = z.enum(LABELS as [string, ...string[]]);
 
 export const EnergieAdviesAntwoord = z.object({
+  /** Datum van het advies (yyyy-mm-dd); ongeldig of afwezig → null */
+  datum: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .refine((d) => !Number.isNaN(Date.parse(d)))
+    .nullish()
+    .catch(null),
   huidig: z
     .object({
       label: tekst(10),

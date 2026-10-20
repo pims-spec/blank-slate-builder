@@ -9,6 +9,7 @@ import {
   type AdviesInstellingen,
   type AdviesResultaat,
 } from "../advies";
+import { beginlabel } from "../advies/energieAdvies";
 import { eur, fmt } from "../basis";
 import { calc } from "../calc";
 import type { Dashboard } from "../dashboard";
@@ -25,6 +26,7 @@ import {
   pdfPlattegrondBlok,
   pdfSamenvattingPagina,
   pdfTellingBody,
+  pdfEnergieAdviesKeuze,
   pdfVerduurzamingPagina,
   type PdfRoute,
 } from "./delen";
@@ -199,6 +201,19 @@ function routePdf(lib: PdfLib, x: RoutePdfInvoer): PdfBestand {
     "Advies",
   ));
 
+  // Bewuste afwijking: uitgangspunt en opties uit het energieadvies
+  if (!x.bronGetrouw && cur.energieAdvies) {
+    doc.addPage();
+    y = pdfBanner(
+      doc,
+      "WWS-rapport",
+      "Energieadvies",
+      "Uitgangspunt van het verbeteradvies en de opties uit het geüploade advies",
+      vandaag,
+    );
+    y = pdfEnergieAdviesKeuze(lib, doc, y, cur, N);
+  }
+
   // Sectie 3: nieuwe situatie, na de gekozen maatregelen
   doc.addPage();
   y = pdfBanner(
@@ -245,6 +260,13 @@ export function routeAanvullen(
 ) {
   route.origSoort = cur.energie.soort;
   route.vanOmschrijving = energieVanOmschrijving(cur.energie);
+  // bevestigd beginlabel uit het energieadvies: de route begint daar
+  const b = beginlabel(cur);
+  if (b.bron === "advies" && b.label) {
+    route.vanLabel = b.label;
+    if (cur.energie.soort !== "label" && cur.energie.soort !== "labelOud")
+      route.origSoort = "label";
+  }
   route.stappen = chosen.map((g, i) =>
     g.key === "label"
       ? {
@@ -347,7 +369,11 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   ({ y, R: R3 } = pdfOptiePagina(lib, doc, N, 2, titel2, sub2, route2, undefined, meta));
 
   // Verduurzamingsopties uit een geüpload advies (optioneel)
-  if (cur.energieAdvies) pdfVerduurzamingPagina(lib, doc, cur.energieAdvies);
+  if (cur.energieAdvies) {
+    const yEa = pdfVerduurzamingPagina(lib, doc, cur.energieAdvies);
+    // bewuste afwijking: uitgangspunt en opties naast elkaar
+    if (!x.bronGetrouw) pdfEnergieAdviesKeuze(lib, doc, (yEa ?? 20) + 4, cur, N);
+  }
 
   // Altijd: uitleg energielabel en WOZ-waarde
   pdfEnergieUitlegPagina(doc, N);

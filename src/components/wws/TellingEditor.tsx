@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { weergaveAdres } from "@/lib/wws/opslag";
 import { bewaarUitgangssituatie, type AdviesSoort } from "@/lib/wws/opslag/uitgangssituatie";
+import { REGISTRATIE_MELDING, uitgangspuntTekst } from "@/lib/wws/advies/energieAdvies";
 import { blobNaarBytes } from "@/lib/wws/plattegrond/beeld";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
@@ -1286,6 +1287,15 @@ export default function TellingEditor({
         pasRuimteAan={pasRuimteAan}
         energieExtra={
           <>
+            {uitgangspuntTekst(staat.input) && (
+              <p
+                className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs"
+                role="note"
+                aria-label="Uitgangspunt verbeteradvies"
+              >
+                {uitgangspuntTekst(staat.input)} {REGISTRATIE_MELDING}
+              </p>
+            )}
             <OpzoekLink meta={m} soort="ep" />
             {!alleenLezen && (
               <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />
@@ -1352,6 +1362,7 @@ export default function TellingEditor({
         onToepassen={adviesToepassen}
         isAdmin={rechten.isAdmin}
         magToepassen={!alleenLezen}
+        bewerker={bewerker?.naam || bewerker?.email || ""}
       />
       {!alleenLezen && !isNieuw && (
         <DelenDialoog
