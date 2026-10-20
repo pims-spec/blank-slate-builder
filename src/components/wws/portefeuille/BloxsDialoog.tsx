@@ -177,6 +177,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
             data: { soort, eigenaar: e, complex: c, cursor },
           });
           tel(r.aanvragen);
+          if (stoppen.current) return mislukt("gestopt");
           if (!r.ok) return mislukt(r.fout, statusVan(r));
           alle.push(...r.data.objecten);
           cursor = r.data.volgende;
@@ -242,6 +243,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
         },
       );
       tel(r0.aanvragen);
+      if (stoppen.current) return mislukt("gestopt");
       if (!r0.ok) return mislukt(r0.fout, r0.status);
       const adressen: BloxsAdres[] = r0.data;
       const plan = maakSyncPlan(gekozen, adressen);

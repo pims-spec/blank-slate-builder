@@ -169,6 +169,23 @@ describe("Bloxs: eigenaar in GoHome", () => {
     expect(fn.bloxsObjectenPagina.mock.calls.map((c) => c[0].data.eigenaar)).toEqual([8, 8]);
   });
 
+  it("slaat eigenaren zonder objecten over bij een meervoudige import", async () => {
+    toon();
+    fn.bloxsObjectenPagina.mockImplementation(async ({ data }: { data: { eigenaar: number; soort: string } }) => ({
+      ok: true, aanvragen: 1, data: { volgende: null, objecten: data.eigenaar === 8 && data.soort === "building" ? [
+        { ref: "1", soort: "building", referentie: "B1", complexId: null, complexNaam: null, adresId: 5 },
+      ] : [] },
+    }));
+    const lijst = await screen.findByRole("list", { name: "Eigenaren" });
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Nieuwe Eigenaar" }));
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Heel Andere Naam" }));
+    fireEvent.click(screen.getByRole("button", { name: "Objecten ophalen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Inladen" }));
+    await waitFor(() => expect(store.bloxsSyncOpslaan).toHaveBeenCalledTimes(1));
+    expect(store.maak).toHaveBeenCalledExactlyOnceWith("Heel Andere Naam", "k1", { eigenaarRef: "8", complexRef: null });
+    expect(klantenStore.voegToe).not.toHaveBeenCalled();
+  });
+
   it("stopt bij een mislukte tweede import en bewaart de eerste portefeuille", async () => {
     const onKlaar = toon();
     const lijst = await screen.findByRole("list", { name: "Eigenaren" });
