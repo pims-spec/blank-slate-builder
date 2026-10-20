@@ -92,6 +92,13 @@
       "when": 1792160919689,
       "tag": "0012_bag_gegevens_adressen",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792484771610,
+      "tag": "0013_huurindicaties",
+      "breakpoints": true
     }
   ]
 }
