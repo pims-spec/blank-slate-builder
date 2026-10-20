@@ -83,6 +83,67 @@ export type Database = {
           },
         ]
       }
+      huurindicaties: {
+        Row: {
+          created_at: string
+          data: Json
+          huisnummer: string
+          id: string
+          klant_id: string | null
+          owner_id: string
+          plaats: string
+          postcode: string
+          straat: string
+          telling_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          huisnummer: string
+          id?: string
+          klant_id?: string | null
+          owner_id?: string
+          plaats?: string
+          postcode: string
+          straat?: string
+          telling_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          huisnummer?: string
+          id?: string
+          klant_id?: string | null
+          owner_id?: string
+          plaats?: string
+          postcode?: string
+          straat?: string
+          telling_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "huurindicaties_klant_id_fkey"
+            columns: ["klant_id"]
+            isOneToOne: false
+            referencedRelation: "klanten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "huurindicaties_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "huurindicaties_telling_id_fkey"
+            columns: ["telling_id"]
+            isOneToOne: false
+            referencedRelation: "tellingen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instellingen: {
         Row: {
           data: Json
