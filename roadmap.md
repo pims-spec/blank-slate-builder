@@ -1,4 +1,7 @@
 # Uitnodigingen
+# Bloxs
+- [ ] Meerdere eigenaren kiezen en ieder in een eigen portefeuille inladen; bestaande koppelingen en enkelvoudige selectie behouden, testen en controleren.
+
 - [x] Uitnodigingsmail uitgebreid met zes mogelijkheden, rolbeperking en wachtwoordknop; voorbeeld op groot en klein scherm gecontroleerd, twee tests geslaagd. Publiceren en echte verzending blijven nog te controleren.
 - [x] Uitnodigen per e-mail met rolkeuze en controle op beheerdersrechten.
 - [x] Uitnodiging accepteren en wachtwoord instellen.
