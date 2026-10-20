@@ -36,6 +36,8 @@ import {
   BOUWJAAR_NAMEN,
   RAMING_BRON,
 } from "@/lib/wws/portefeuille/verduurzaming";
+import { huurNormen, type HuurNormen } from "@/lib/wws/huur";
+import HuurNormenBeheer from "./HuurNormenBeheer";
 import { instellingenStore } from "./tellingStore";
 
 /** Kostenramingen van het verbeteradvies, als standaard voor iedereen */
@@ -101,6 +103,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
   const [bevestig, setBevestig] = useState(false);
   const [terugzetten, setTerugzetten] = useState(false);
   const [pf, setPf] = useState<PortefeuilleNormen>(() => portefeuilleNormen(normen.portefeuille));
+  const [huur, setHuur] = useState<HuurNormen>(() => huurNormen(normen.huurindicator));
   const [niveaus, setNiveaus] = useState<Record<string, Haalbaarheid>>(() => ({
     ...NIVEAU_STANDAARD,
     ...normen.adviesNiveaus,
@@ -115,6 +118,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     setGecontroleerd(d.gecontroleerd || "");
     setPf(portefeuilleNormen(null));
     setNiveaus({ ...NIVEAU_STANDAARD });
+    setHuur(huurNormen(null));
     toast("Standaardwaarden ingevuld. Klik op ‘Normen opslaan’ om ze te bewaren.");
   }
   const status = controleStatus(normen.gecontroleerd);
@@ -137,8 +141,10 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     // portefeuille-analyse: gecontroleerd aangevuld (ongeldige waarden → standaard)
     n.portefeuille = portefeuilleNormen(pf);
     n.adviesNiveaus = afwijkendeNiveaus(niveaus);
+    // huurprijsindicator: ongeldige regels en factoren vallen terug op de standaard
+    n.huurindicator = huurNormen(huur);
     return n;
-  }, [basis, getallen, naam, gecontroleerd, pf, niveaus]);
+  }, [basis, getallen, naam, gecontroleerd, pf, niveaus, huur]);
 
   const zet = (pad: string, waarde: string) => setGetallen((g) => ({ ...g, [pad]: waarde }));
   const veld = (v: NormVeld) => (
@@ -498,6 +504,10 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
           >
             Omschrijving in de analyse: {efgOmschrijving(portefeuilleNormen(pf).efg)}
           </p>
+        </Sectie>
+
+        <Sectie titel="Huurprijsindicator">
+          <HuurNormenBeheer waarde={huur} onChange={setHuur} />
         </Sectie>
 
         <Sectie titel="Verduurzamingsraming">

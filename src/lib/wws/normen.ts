@@ -257,6 +257,11 @@ export interface NormenShape {
    * NIVEAU_STANDAARD (advies/niveaus.ts).
    */
   adviesNiveaus?: Record<string, "eenvoudig" | "gemiddeld" | "lastig">;
+  /**
+   * Huurprijsindicator (niet in de bron): referentietabel met prijzen per m² per regio en de
+   * correctiefactoren. Ontbrekende waarden: HUUR_STANDAARD (huur/normen.ts).
+   */
+  huurindicator?: Partial<HuurNormen>;
 }
 
 export type Normen = NormenShape;
@@ -264,6 +269,7 @@ export type Normen = NormenShape;
 /** Standaard daglimiet AI-gebruik (zelfde als in de database-functie) */
 export const AI_LIMIET_STANDAARD = { lezen: 30, afbeelding: 10 } as const;
 
+import type { HuurNormen } from "./huur/normen";
 import type { PortefeuilleNormen } from "./portefeuille/analyse";
 
 const clone = <T>(o: T): T => JSON.parse(JSON.stringify(o));
@@ -276,6 +282,7 @@ export function mergeNormen(n?: Partial<Normen> | null): Normen {
     if (n.kosten) Object.assign(d["kosten"] as object, n.kosten);
     // eigen instellingen van het verbeteradvies (geen wettelijke normen): ook bewaren
     if (n.adviesNiveaus) d["adviesNiveaus"] = clone(n.adviesNiveaus);
+    if (n.huurindicator) d["huurindicator"] = clone(n.huurindicator);
     return d as unknown as Normen;
   }
   for (const [k, v] of Object.entries(n)) {

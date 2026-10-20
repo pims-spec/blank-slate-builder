@@ -127,4 +127,38 @@ describe("Normen: portefeuille-analyse", () => {
     const n = instellingenStore.slaNormenOp.mock.calls.at(-1)![0] as Normen;
     expect(n.adviesNiveaus).toEqual({ "sanExtra.stopcontact": "lastig" });
   });
+
+  it("huurprijsindicator: startwaarden met GoHome-inschatting; factor en regel worden opgeslagen", async () => {
+    instellingenStore.slaNormenOp.mockResolvedValue(undefined);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NormenBeheer normen={structuredClone(N)} />
+      </QueryClientProvider>,
+    );
+    const tabel = screen.getByRole("table", { name: "Referentietabel" });
+    expect(tabel.querySelectorAll("tbody tr")).toHaveLength(20);
+    expect(screen.getAllByText("GoHome-inschatting").length).toBeGreaterThan(5);
+    fireEvent.change(screen.getByLabelText("Afwerkingsniveau: Luxe"), { target: { value: "1.1" } });
+    fireEvent.change(screen.getByLabelText("Afwerkingsniveau: herkomst"), {
+      target: { value: "Geijkt met portefeuille 2027" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "+ Regel toevoegen" }));
+    fireEvent.change(screen.getByLabelText("Regio regel 21"), { target: { value: "Arnhem" } });
+    fireEvent.change(screen.getByLabelText("prijsM2 regel 21"), { target: { value: "16.2" } });
+    fireEvent.change(screen.getByLabelText("Bron regel 21"), { target: { value: "Eigen meting" } });
+    fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalled());
+    const n = instellingenStore.slaNormenOp.mock.calls.at(-1)![0] as Normen;
+    expect(n.huurindicator?.factoren?.afwerking).toEqual({
+      waarden: { basis: 0.95, goed: 1, luxe: 1.1 },
+      bron: "Geijkt met portefeuille 2027",
+    });
+    expect(n.huurindicator?.regels?.at(-1)).toMatchObject({
+      niveau: "gemeente",
+      regio: "Arnhem",
+      prijsM2: 16.2,
+      bron: "Eigen meting",
+    });
+  });
 });
