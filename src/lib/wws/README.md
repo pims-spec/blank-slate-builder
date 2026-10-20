@@ -446,6 +446,15 @@ Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
   koppelen) en verwijderen door de eigenaar of een admin; tweestapsverificatie verplicht.
 - "Maak een volledige puntentelling" koppelt de nieuwe telling aan de opgeslagen indicatie.
 
+### PDF (`pdf/huur.ts`)
+
+Voorblad "Huurprijsindicatie" (adres, eigenaar, datum, opsteller, markthuur, advies), daarna de
+woning, de bandbreedte met betrouwbaarheid, het advies (laagste van markthuur en maximale huur) met
+de reden, de WWS-check als bandbreedte (met "Grensgeval: volledige telling nodig"), de invloed per
+factor met "GoHome-inschatting", de bronnen met peildatum en link, en de disclaimer. Altijd uit de
+opgeslagen gegevens (of de huidige berekening), dus met de bronregel en factoren van dat moment.
+Ook de kijkrol kan de PDF van een opgeslagen indicatie downloaden.
+
 ## Tweestapsverificatie (nieuw, niet in de bron)
 
 Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase

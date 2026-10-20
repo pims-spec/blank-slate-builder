@@ -20,18 +20,19 @@ import {
 } from "@/lib/wws/huur";
 import { zoekWoningVoorHuur } from "@/lib/wws/huur/huur.functions";
 import { maakHuurIndicatie, type HuurIndicatie } from "@/lib/wws/huur/opslag";
+import { HUUR_DISCLAIMER, maakHuurPdf } from "@/lib/wws/pdf/huur";
 import { huurFoutMelding, type HuurOpzoeking } from "@/lib/wws/huur/opzoeken";
 import { startTelling } from "@/lib/wws/huur/telling";
 import { maakTellingDoc, type Bewerker } from "@/lib/wws/opslag";
 import { useNormen } from "./NormenContext";
 import EigenaarKeuze from "./EigenaarKeuze";
-import { huurIndicatiesQuery, huurStore, tellingStore } from "./tellingStore";
+import { huurIndicatiesQuery, huurStore, klantenQuery, tellingStore } from "./tellingStore";
+import { useDownload } from "./useDownload";
 
 const selectCls =
   "h-10 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring";
 
-export const DISCLAIMER =
-  "Dit is een indicatie, geen taxatie. De bedragen zijn kale huur per maand en gebaseerd op gemiddelde huurprijzen per regio en vaste correctiefactoren. De wettelijke maximale huur volgt pas zeker uit een volledige puntentelling.";
+export const DISCLAIMER = HUUR_DISCLAIMER;
 
 /** De vragen met waarom ze invloed hebben */
 const WAAROM = {
@@ -146,6 +147,10 @@ export default function HuurprijsIndicator({
   const [klantId, setKlantId] = useState("");
   const [bekeken, setBekeken] = useState<HuurIndicatie | null>(null);
   const { data: eerdere = [] } = useQuery(huurIndicatiesQuery());
+  const { data: klanten = [] } = useQuery(klantenQuery());
+  const klantNaam = (id: string | null | undefined) =>
+    (id && klanten.find((k) => k.id === id)?.naam) || null;
+  const download = useDownload();
 
   const zoeken = useMutation({
     mutationFn: (v: typeof adres) => zoekWoningVoorHuur({ data: v }) as Promise<HuurOpzoeking>,
@@ -536,6 +541,17 @@ export default function HuurprijsIndicator({
                   >
                     {opgeslagenId ? "Opgeslagen" : opslaan.isPending ? "Opslaan…" : "Opslaan"}
                   </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!!download.bezig}
+                    onClick={() =>
+                      void download.pdf("huur", (lib) =>
+                        maakHuurPdf(lib, { data: uitkomst, eigenaar: klantNaam(klantId) }),
+                      )
+                    }
+                  >
+                    {download.bezig === "huur" ? "PDF maken…" : "PDF"}
+                  </Button>
                 </section>
               )}
               <MarkthuurKaart m={uitkomst.markthuur} />
@@ -562,6 +578,12 @@ export default function HuurprijsIndicator({
         <BekekenIndicatie
           i={bekeken}
           onSluit={() => setBekeken(null)}
+          pdfBezig={download.bezig === "huur-" + bekeken.id}
+          onPdf={() =>
+            void download.pdf("huur-" + bekeken.id, (lib) =>
+              maakHuurPdf(lib, { data: bekeken.data, eigenaar: klantNaam(bekeken.klantId) }),
+            )
+          }
           onOpnieuw={
             magSchrijven
               ? () => {
@@ -885,10 +907,14 @@ function BekekenIndicatie({
   i,
   onSluit,
   onOpnieuw,
+  onPdf,
+  pdfBezig,
 }: {
   i: HuurIndicatie;
   onSluit: () => void;
   onOpnieuw?: (() => void) | undefined;
+  onPdf: () => void;
+  pdfBezig: boolean;
 }) {
   const d = i.data;
   const w = d.woning;
@@ -908,6 +934,9 @@ function BekekenIndicatie({
             factoren van toen; latere wijzigingen in Normen veranderen deze indicatie niet.
           </p>
         </div>
+        <Button variant="outline" size="sm" disabled={pdfBezig} onClick={onPdf}>
+          {pdfBezig ? "PDF maken…" : "PDF"}
+        </Button>
         {onOpnieuw && (
           <Button variant="outline" size="sm" onClick={onOpnieuw}>
             Opnieuw berekenen met huidige tabel
