@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,12 @@ interface Samenvatting {
   teruggekeerd: number;
 }
 
+interface InlaadKeuze {
+  eigenaar: Eigenaar;
+  objecten: BloxsObject[];
+  klantId: string;
+}
+
 function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Props) {
   const [fase, setFase] = useState<Fase>("testen");
   const [fout, setFout] = useState<string>("");
@@ -90,6 +97,9 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
   const [eigenaren, setEigenaren] = useState<Eigenaar[]>([]);
   const [zoek, setZoek] = useState("");
   const [eigenaar, setEigenaar] = useState<Eigenaar | null>(null);
+  const [selectie, setSelectie] = useState<Eigenaar[]>([]);
+  const [inlaadKeuzes, setInlaadKeuzes] = useState<InlaadKeuze[]>([]);
+  const [uitkomsten, setUitkomsten] = useState<{ naam: string; samenvatting: Samenvatting }[]>([]);
   const [objecten, setObjecten] = useState<BloxsObject[]>([]);
   const [voortgang, setVoortgang] = useState("");
   const [complex, setComplex] = useState("");
@@ -106,10 +116,11 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       f === "gestopt"
         ? "Gestopt. Er is niets opgeslagen."
         : f === "onbekend"
-          ? "Er ging iets mis. Er is niets opgeslagen."
+          ? "Er ging iets mis bij het inladen van deze eigenaar."
           : bloxsFoutTekst(f) + (status ? " (HTTP " + status + ")" : ""),
     );
     setFase("fout");
+    return null;
   };
 
   // bij openen: eerst testen of $select/$filter/$top werken (zonder rijen)
@@ -149,7 +160,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function haalObjecten(e: BloxsId, c: BloxsId | null, directOpslaan: boolean) {
+  async function haalObjecten(e: BloxsId, c: BloxsId | null, directOpslaan: boolean, meerdere = false): Promise<BloxsObject[] | null> {
     setFase("objecten");
     stoppen.current = false;
     const alle: BloxsObject[] = [];
@@ -174,16 +185,37 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
     } catch {
       return mislukt("onbekend");
     }
+    if (meerdere) return alle;
     setObjecten(alle);
     if (directOpslaan) await opslaan(alle, c);
     else setFase("keuze");
+    return alle;
+  }
+
+  async function haalGekozen() {
+    setUitkomsten([]);
+    if (selectie.length === 1) {
+      const e = selectie[0];
+      if (e) await haalObjecten(e.id, null, false);
+      return;
+    }
+    const keuzes: InlaadKeuze[] = [];
+    for (const e of selectie) {
+      if (stoppen.current) return mislukt("gestopt");
+      const alle = await haalObjecten(e.id, null, false, true);
+      if (!alle) return;
+      const k = kiesGohomeEigenaar(e, portefeuilles, klanten);
+      keuzes.push({ eigenaar: e, objecten: alle, klantId: k.soort === "bestaand" ? k.klantId : NIEUW });
+    }
+    setInlaadKeuzes(keuzes);
+    setFase("keuze");
   }
 
   const complexLijst = useMemo(() => complexen(objecten), [objecten]);
   const gekozenComplex = complexLijst.find((c) => String(c.id) === complex) ?? null;
   const voorstelNaam = (eigenaar?.naam ?? "") + (gekozenComplex ? " – " + gekozenComplex.naam : "");
 
-  async function opslaan(alle: readonly BloxsObject[], c: BloxsId | null) {
+  async function opslaan(alle: readonly BloxsObject[], c: BloxsId | null, keuze?: InlaadKeuze) {
     setFase("opslaan");
     const gekozen =
       c != null
@@ -196,6 +228,8 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       return;
     }
     try {
+      const bronEigenaar = keuze?.eigenaar ?? eigenaar;
+      if (!bestaand && !bronEigenaar) return mislukt("onbekend");
       const ids = adresIds(gekozen);
       // kleine porties; bij een 400 (filter te ingewikkeld) halveert adressenInPorties de portie
       const r0 = await adressenInPorties(
@@ -215,20 +249,22 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       const id = bestaand
         ? bestaand.id
         : await portefeuilleStore.maak(
-            naam.trim() || voorstelNaam || "Bloxs",
-            await klantVoorOpslaan(),
+            keuze ? keuze.eigenaar.naam : naam.trim() || voorstelNaam || "Bloxs",
+            await klantVoorOpslaan(bronEigenaar, keuze?.klantId ?? klantId),
             {
-              eigenaarRef: String(eigenaar!.id),
+              eigenaarRef: String(bronEigenaar?.id),
               complexRef: c != null ? String(c) : null,
             },
           );
       const r = await portefeuilleStore.bloxsSyncOpslaan(id, plan, crypto.randomUUID());
-      setSamenvatting({
+      const resultaat: Samenvatting = {
         plan,
         units: gekozen.filter((o) => o.soort === "unit").length,
         buildings: gekozen.filter((o) => o.soort === "building").length,
         ...r,
-      });
+      };
+      if (keuze) return { id, samenvatting: resultaat };
+      setSamenvatting(resultaat);
       setFase("klaar");
       await onKlaar(id);
     } catch {
@@ -236,22 +272,47 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
     }
   }
 
+  async function laadMeerdereIn() {
+    const opgeslagen: typeof uitkomsten = [];
+    let laatsteId = "";
+    for (const keuze of inlaadKeuzes.filter((k) => k.objecten.length > 0)) {
+      if (stoppen.current) {
+        mislukt("gestopt");
+        break;
+      }
+      const r = await opslaan(keuze.objecten, null, keuze);
+      if (!r) break;
+      laatsteId = r.id;
+      opgeslagen.push({ naam: keuze.eigenaar.naam, samenvatting: r.samenvatting });
+      setUitkomsten([...opgeslagen]);
+    }
+    if (opgeslagen.length === inlaadKeuzes.filter((k) => k.objecten.length > 0).length) setFase("klaar");
+    if (laatsteId) await onKlaar(laatsteId);
+  }
+
   /** Bloxs-eigenaar kiezen; de GoHome-eigenaar wordt erbij voorgesteld (aan te passen) */
   function kies(e: Eigenaar) {
-    setEigenaar(e);
-    const k = kiesGohomeEigenaar(e, portefeuilles, klanten);
+    const volgende = selectie.some((x) => x.id === e.id) ? selectie.filter((x) => x.id !== e.id) : [...selectie, e];
+    setSelectie(volgende);
+    const enkel = volgende.length === 1 ? volgende[0] : null;
+    setEigenaar(enkel ?? null);
+    if (!enkel) return;
+    const k = kiesGohomeEigenaar(enkel, portefeuilles, klanten);
     setKlantId(k.soort === "bestaand" ? k.klantId : NIEUW);
   }
 
   /** De GoHome-eigenaar bij het opslaan; "nieuw" maakt hem aan (of vindt hem als hij al bestaat) */
-  async function klantVoorOpslaan(): Promise<string | null> {
-    if (klantId !== NIEUW) return klantId || null;
+  async function klantVoorOpslaan(e: Eigenaar | null, gekozenKlant: string): Promise<string | null> {
+    if (gekozenKlant !== NIEUW) return gekozenKlant || null;
+    if (!e) throw new Error("Geen eigenaar gekozen");
     try {
-      return (await klantenStore.voegToe(eigenaar!.naam)).id;
+      return (await klantenStore.voegToe(e.naam)).id;
     } catch {
       // bestaat al (bijv. net door een collega aangemaakt): op naam opzoeken
       const lijst = await klantenStore.lijst();
-      return lijst.find((k) => naamSleutel(k.naam) === naamSleutel(eigenaar!.naam))?.id ?? null;
+      const bestaandKlant = lijst.find((k) => naamSleutel(k.naam) === naamSleutel(e.naam));
+      if (!bestaandKlant) throw new Error("Eigenaar aanmaken mislukt");
+      return bestaandKlant.id;
     }
   }
 
@@ -282,7 +343,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       {fase === "kiezen" && (
         <div className="space-y-2">
           <label className="block font-medium" htmlFor="bloxs-zoek">
-            Eigenaar ({eigenaren.length})
+            Eigenaren ({eigenaren.length}) · {selectie.length} geselecteerd
           </label>
           <Input
             id="bloxs-zoek"
@@ -296,17 +357,16 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
           >
             {zichtbaar.map((e) => (
               <li key={String(e.id)}>
-                <button
-                  type="button"
+                <label
                   className={
-                    "w-full px-3 py-2 text-left hover:bg-secondary " +
-                    (eigenaar?.id === e.id ? "bg-secondary font-medium" : "")
+                    "flex w-full cursor-pointer items-start gap-3 px-3 py-2 text-left hover:bg-secondary " +
+                    (selectie.some((x) => x.id === e.id) ? "bg-secondary font-medium" : "")
                   }
-                  onClick={() => kies(e)}
                 >
-                  {e.naam}
-                  {e.referentie && <span className="text-muted-foreground"> · {e.referentie}</span>}
-                </button>
+                  <Checkbox className="mt-0.5" checked={selectie.some((x) => x.id === e.id)} onCheckedChange={() => kies(e)} aria-label={e.naam} />
+                  <span className="min-w-0 break-words">{e.naam}
+                  {e.referentie && <span className="text-muted-foreground"> · {e.referentie}</span>}</span>
+                </label>
               </li>
             ))}
             {!zichtbaar.length && (
@@ -316,7 +376,28 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
         </div>
       )}
 
-      {fase === "keuze" && (
+      {fase === "keuze" && inlaadKeuzes.length > 0 && (
+        <ul className="space-y-3">
+          {inlaadKeuzes.map((k, i) => (
+            <li key={String(k.eigenaar.id)} className="border-b border-border pb-3">
+              <p className="font-medium break-words">{k.eigenaar.naam} · {aantal(k.objecten.length, "object", "objecten")}</p>
+              {!k.objecten.length ? <p className="text-muted-foreground">Geen onverkochte objecten; wordt overgeslagen.</p> : (
+                <label className="mt-2 flex flex-col gap-1">
+                  <span className="text-muted-foreground">Eigenaar in GoHome · {k.eigenaar.naam}</span>
+                  <select className="h-9 w-full min-w-0 rounded-xl border border-input bg-background px-2" value={k.klantId}
+                    onChange={(e) => setInlaadKeuzes((vorige) => vorige.map((x, n) => n === i ? { ...x, klantId: e.target.value } : x))}>
+                    <option value="">Geen eigenaar</option>
+                    <option value={NIEUW}>+ Nieuw in GoHome: {k.eigenaar.naam}</option>
+                    {klanten.map((klant) => <option key={klant.id} value={klant.id}>{klant.naam}</option>)}
+                  </select>
+                </label>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {fase === "keuze" && !inlaadKeuzes.length && (
         <div className="space-y-3">
           <p>
             <b>{eigenaar?.naam}</b>:{" "}
@@ -377,10 +458,13 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       )}
 
       {fase === "klaar" && samenvatting && <Uitkomst s={samenvatting} opnieuw={!!bestaand} />}
+      {uitkomsten.length > 0 && <div className="space-y-3" aria-label="Ingeladen portefeuilles">
+        {uitkomsten.map((u) => <div key={u.naam}><p className="font-medium">{u.naam}</p><Uitkomst s={u.samenvatting} opnieuw={false} /></div>)}
+      </div>}
 
       {fase === "fout" && (
         <p role="alert" className="text-destructive">
-          {fout}
+          {uitkomsten.length ? "De hierboven vermelde portefeuilles zijn opgeslagen. " + fout.replace("Er is niets opgeslagen.", "De overige eigenaren zijn niet opgeslagen.") : fout}
         </p>
       )}
 
@@ -400,8 +484,8 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
         )}
         {fase === "kiezen" && (
           <Button
-            disabled={!eigenaar}
-            onClick={() => eigenaar && void haalObjecten(eigenaar.id, null, false)}
+            disabled={!selectie.length}
+            onClick={() => { stoppen.current = false; void haalGekozen(); }}
           >
             Objecten ophalen
           </Button>
@@ -413,16 +497,17 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
               setObjecten([]);
               setComplex("");
               setNaam("");
+              setInlaadKeuzes([]);
               setFase("kiezen");
             }}
           >
-            Andere eigenaar
+            Andere eigenaren
           </Button>
         )}
         {fase === "keuze" && (
           <Button
-            disabled={!objecten.length}
-            onClick={() => void opslaan(objecten, gekozenComplex ? gekozenComplex.id : null)}
+            disabled={inlaadKeuzes.length ? !inlaadKeuzes.some((k) => k.objecten.length > 0) : !objecten.length}
+            onClick={() => { stoppen.current = false; void (inlaadKeuzes.length ? laadMeerdereIn() : opslaan(objecten, gekozenComplex ? gekozenComplex.id : null)); }}
           >
             Inladen
           </Button>
