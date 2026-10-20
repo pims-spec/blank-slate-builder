@@ -416,6 +416,24 @@ Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
   vanaf 187 punten is er geen wettelijk maximum en is het advies de markthuur. De reden staat
   erbij.
 
+### Scherm (`HuurprijsIndicator.tsx`, route `/huurprijsindicator`)
+
+- **Opzoeken** (`huur/opzoeken.ts`, server function `zoekWoningVoorHuur`; ingelogd, schrijfrol en
+  tweestapsverificatie): PDOK Locatieserver (adres, gemeente, provincie, BAG-id), BAG (oppervlakte,
+  gebruiksdoel, bouwjaar) en EP-Online (label, registratiedatum, gebouwtype). Alleen het adres is
+  verplicht; ontbreekt BAG of label, dan volgt een melding. Meerdere woningen op één nummer: de
+  gebruiker kiest de letter of toevoeging.
+- **Vragen** (9, of 10 bij een appartement), met verstandige standaarden en per vraag waarom die
+  invloed heeft; het energielabel staat eronder en is aan te passen.
+- **Resultaat:** bandbreedte en prijs per m², betrouwbaarheid met redenen, invloed per factor
+  (met "GoHome-inschatting"), bronnen met datum en link, en de disclaimer "indicatie, geen taxatie".
+- **WWS-check** met het advies (laagste van markthuur en maximale huur) en de reden; bij een
+  grensgeval "Grensgeval: volledige telling nodig".
+- **Maak een volledige puntentelling** (`huur/telling.ts`): een nieuwe telling met adres, bouwjaar,
+  woningtype, label, WOZ, buitenruimte en garage, en de ruimten als lijst zonder oppervlakte (die
+  meet je zelf; de aannames van de WWS-check gaan niet mee).
+- **Kijkrol:** geen opzoeken of nieuwe indicaties.
+
 ## Tweestapsverificatie (nieuw, niet in de bron)
 
 Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase

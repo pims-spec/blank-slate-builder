@@ -8,6 +8,7 @@ export type MenuIcoon =
   | "indeling"
   | "dashboard"
   | "analyse"
+  | "huur"
   | "eigenaren"
   | "normen"
   | "gebruikers"
@@ -22,6 +23,7 @@ export interface MenuOnderdeel {
     | "/portefeuille"
     | "/eigenaren"
     | "/portefeuille-analyse"
+    | "/huurprijsindicator"
     | "/normen"
     | "/admin"
     | "/beveiliging";
@@ -48,6 +50,8 @@ export function menuOnderdelen(r: MenuRechten): {
       hoofd.push({ to: "/indeling", label: "Indelingsadvies", icoon: "indeling" });
     // portefeuille-analyse: bekijken voor iedereen met een rol (ook de kijkrol)
     hoofd.push({ to: "/portefeuille-analyse", label: "Portefeuille-analyse", icoon: "analyse" });
+    // huurprijsindicator: bekijken voor iedereen met een rol, maken alleen met de schrijfrol
+    hoofd.push({ to: "/huurprijsindicator", label: "Huurprijsindicator", icoon: "huur" });
     hoofd.push({ to: "/archief", label: "Archief", icoon: "archief" });
     if (r.zietAlles || r.isAdmin)
       hoofd.push({ to: "/portefeuille", label: "Dashboard", icoon: "dashboard" });

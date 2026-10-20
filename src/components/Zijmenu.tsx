@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
+  BadgeEuro,
   ChartNoAxesColumn,
   Gauge,
   House,
@@ -26,6 +27,7 @@ const ICONEN: Record<MenuIcoon, LucideIcon> = {
   indeling: LayoutPanelTop,
   eigenaren: Users,
   analyse: Gauge,
+  huur: BadgeEuro,
   normen: SlidersHorizontal,
   gebruikers: UserCog,
   beveiliging: ShieldCheck,

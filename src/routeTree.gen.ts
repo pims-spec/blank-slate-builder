@@ -20,6 +20,7 @@ import { Route as AuthenticatedArchiefRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedBeveiligingRouteImport } from './routes/_authenticated/beveiliging'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEigenarenRouteImport } from './routes/_authenticated/eigenaren'
+import { Route as AuthenticatedHuurprijsindicatorRouteImport } from './routes/_authenticated/huurprijsindicator'
 import { Route as AuthenticatedIndelingRouteImport } from './routes/_authenticated/indeling'
 import { Route as AuthenticatedNormenRouteImport } from './routes/_authenticated/normen'
 import { Route as AuthenticatedPortefeuilleRouteImport } from './routes/_authenticated/portefeuille'
@@ -83,6 +84,12 @@ const AuthenticatedEigenarenRoute = AuthenticatedEigenarenRouteImport.update({
   path: '/eigenaren',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHuurprijsindicatorRoute =
+  AuthenticatedHuurprijsindicatorRouteImport.update({
+    id: '/huurprijsindicator',
+    path: '/huurprijsindicator',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIndelingRoute = AuthenticatedIndelingRouteImport.update({
   id: '/indeling',
   path: '/indeling',
@@ -132,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/beveiliging': typeof AuthenticatedBeveiligingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
+  '/huurprijsindicator': typeof AuthenticatedHuurprijsindicatorRoute
   '/indeling': typeof AuthenticatedIndelingRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/portefeuille': typeof AuthenticatedPortefeuilleRoute
@@ -151,6 +159,7 @@ export interface FileRoutesByTo {
   '/beveiliging': typeof AuthenticatedBeveiligingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eigenaren': typeof AuthenticatedEigenarenRoute
+  '/huurprijsindicator': typeof AuthenticatedHuurprijsindicatorRoute
   '/indeling': typeof AuthenticatedIndelingRoute
   '/normen': typeof AuthenticatedNormenRoute
   '/portefeuille': typeof AuthenticatedPortefeuilleRoute
@@ -172,6 +181,7 @@ export interface FileRoutesById {
   '/_authenticated/beveiliging': typeof AuthenticatedBeveiligingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/eigenaren': typeof AuthenticatedEigenarenRoute
+  '/_authenticated/huurprijsindicator': typeof AuthenticatedHuurprijsindicatorRoute
   '/_authenticated/indeling': typeof AuthenticatedIndelingRoute
   '/_authenticated/normen': typeof AuthenticatedNormenRoute
   '/_authenticated/portefeuille': typeof AuthenticatedPortefeuilleRoute
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/beveiliging'
     | '/dashboard'
     | '/eigenaren'
+    | '/huurprijsindicator'
     | '/indeling'
     | '/normen'
     | '/portefeuille'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/beveiliging'
     | '/dashboard'
     | '/eigenaren'
+    | '/huurprijsindicator'
     | '/indeling'
     | '/normen'
     | '/portefeuille'
@@ -232,6 +244,7 @@ export interface FileRouteTypes {
     | '/_authenticated/beveiliging'
     | '/_authenticated/dashboard'
     | '/_authenticated/eigenaren'
+    | '/_authenticated/huurprijsindicator'
     | '/_authenticated/indeling'
     | '/_authenticated/normen'
     | '/_authenticated/portefeuille'
@@ -331,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEigenarenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/huurprijsindicator': {
+      id: '/_authenticated/huurprijsindicator'
+      path: '/huurprijsindicator'
+      fullPath: '/huurprijsindicator'
+      preLoaderRoute: typeof AuthenticatedHuurprijsindicatorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/indeling': {
       id: '/_authenticated/indeling'
       path: '/indeling'
@@ -389,6 +409,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBeveiligingRoute: typeof AuthenticatedBeveiligingRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEigenarenRoute: typeof AuthenticatedEigenarenRoute
+  AuthenticatedHuurprijsindicatorRoute: typeof AuthenticatedHuurprijsindicatorRoute
   AuthenticatedIndelingRoute: typeof AuthenticatedIndelingRoute
   AuthenticatedNormenRoute: typeof AuthenticatedNormenRoute
   AuthenticatedPortefeuilleRoute: typeof AuthenticatedPortefeuilleRoute
@@ -402,6 +423,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBeveiligingRoute: AuthenticatedBeveiligingRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEigenarenRoute: AuthenticatedEigenarenRoute,
+  AuthenticatedHuurprijsindicatorRoute: AuthenticatedHuurprijsindicatorRoute,
   AuthenticatedIndelingRoute: AuthenticatedIndelingRoute,
   AuthenticatedNormenRoute: AuthenticatedNormenRoute,
   AuthenticatedPortefeuilleRoute: AuthenticatedPortefeuilleRoute,
