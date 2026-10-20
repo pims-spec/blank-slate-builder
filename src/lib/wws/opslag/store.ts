@@ -239,18 +239,24 @@ export async function slaWerkversieOp(store: TellingStore, o: OpslaanOpties): Pr
 
 /**
  * Versie vastleggen, zoals saveVersie() in wws-site.html:
- * - een ingevulde naam wordt ook de naam van de telling;
+ * - een ingevulde naam wordt ook de naam van de telling (niet met `hernoem: false`);
  * - eerst de telling opslaan (een versie hoort altijd bij een bestaande rij),
  *   met het nieuwe versienummer, dan de versie toevoegen.
  * Geeft de nieuwe editorstaat en de vastgelegde versie terug.
  */
 export async function legVersieVast(
   store: TellingStore,
-  o: OpslaanOpties & { naam: string },
+  o: OpslaanOpties & {
+    naam: string;
+    /** false: de naam is alleen de versienaam, de telling houdt haar naam (automatische versie) */
+    hernoem?: boolean;
+  },
 ): Promise<{ staat: TellingStaat; versie: Versie }> {
   const naam = o.naam.trim();
   const basis: TellingStaat =
-    naam && naam !== o.staat.meta.naam ? { ...o.staat, meta: { ...o.staat.meta, naam } } : o.staat;
+    o.hernoem !== false && naam && naam !== o.staat.meta.naam
+      ? { ...o.staat, meta: { ...o.staat.meta, naam } }
+      : o.staat;
   const v = maakVersie(basis, o.normen, naam, o.nu);
   const staat: TellingStaat = {
     ...basis,

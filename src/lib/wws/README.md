@@ -407,6 +407,24 @@ opvallen, zodat hij niet ongemerkt meetelt:
     ingeklapt. "Alles uitklappen / Alles inklappen" boven de ruimten.
   - Alleen-lezen: alles uitgeklapt, zonder knoppen. De stand wordt niet opgeslagen.
 
+### Automatisch een versie vóór "Toepassen" (`opslag/uitgangssituatie.ts`)
+
+In de bron gaat de situatie vóór een advies verloren als je na "Toepassen op telling" opslaat
+zonder eerst zelf een versie vast te leggen. De app legt die situatie nu eerst vast:
+
+- **Wanneer:** bij "Toepassen op telling" (verbeteradvies) en bij het toepassen van een
+  indelingsvariant. De kijkrol kan niet toepassen.
+- **Versienaam:** "Vóór advies vrije sector – 15 okt 2026" of "Vóór indelingsadvies – 15 okt
+  2026". De telling houdt haar eigen naam (`legVersieVast(..., { hernoem: false })`).
+- **Nog nooit opgeslagen:** eerst de telling opslaan, dan de versie.
+- **Niets gewijzigd sinds de laatste versie** (adres, eigenaar en invoer gelijk): geen dubbele
+  versie; de melding noemt de versie die als uitgangssituatie geldt.
+- **Opslaan mislukt:** het advies wordt niet toegepast, met een duidelijke foutmelding.
+- **Daarna:** het advies staat, zoals in de bron, in een niet-opgeslagen werkversie. Een melding
+  zegt "Uitgangssituatie bewaard als versie '…'". Met Versies vergelijken zie je vóór en na.
+- Tests: `uitgangssituatie.test.ts` en `TellingEditor.test.tsx` (eerste keer opslaan, ongewijzigd,
+  opslaan mislukt, kijkrol).
+
 ### Archief: versie kiezen (`archief.ts`, `Archief.tsx`)
 
 De bron toont per telling alleen het aantal versies ("geen versies", "1 versie", "3 versies").

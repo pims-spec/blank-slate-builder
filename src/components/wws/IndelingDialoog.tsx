@@ -112,7 +112,7 @@ interface Props {
     beeld: NieuwBeeld | null,
     /** beeld is de AI-afbeelding (anders het blokkenschema) */
     ai: boolean,
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 /**
@@ -244,7 +244,7 @@ function IndelingInhoud({
   async function pasToe(i: number, v: IndelingVariant) {
     const aiBeeld = ai[i]?.beeld;
     const beeld = await variantBeeld(aiBeeld, v, werkRef.current.rooms);
-    onToepassen(
+    await onToepassen(
       toepassen(werkRef.current.input, v),
       { klantId, pveId: pve ? pve.id : "" },
       v,

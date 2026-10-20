@@ -65,6 +65,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { weergaveAdres } from "@/lib/wws/opslag";
+import { bewaarUitgangssituatie, type AdviesSoort } from "@/lib/wws/opslag/uitgangssituatie";
 import { blobNaarBytes } from "@/lib/wws/plattegrond/beeld";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
@@ -482,11 +483,55 @@ export default function TellingEditor({
   }
 
   /**
+   * Vóór "Toepassen" (verbeteradvies of indelingsvariant): de huidige situatie vastleggen als
+   * versie (bewuste afwijking van de bron). Geeft de melding voor na het toepassen, of null als
+   * het opslaan mislukte — dan wordt het advies niet toegepast.
+   */
+  async function bewaarVoorToepassen(soort: AdviesSoort): Promise<string | null> {
+    if (alleenLezen || bezig) return null;
+    setBezig(true);
+    try {
+      const b = await metBeeld();
+      const r = await bewaarUitgangssituatie(tellingStore, {
+        id,
+        isNieuw: b.isNieuw,
+        staat: b.staat,
+        normen: NORMEN,
+        bewerker,
+        soort,
+        versies,
+      });
+      if (r.nieuw) {
+        setStaat(r.staat);
+        setVersies((vs) => [r.versie, ...vs]);
+        ruimOp(r.staat, [r.versie, ...versies]);
+        await naOpslaan();
+        return "Uitgangssituatie bewaard als versie '" + r.versie.notitie + "'.";
+      }
+      return (
+        "Niets gewijzigd sinds versie " +
+        r.versie.nr +
+        " '" +
+        r.versie.notitie +
+        "'; die geldt als uitgangssituatie."
+      );
+    } catch (e) {
+      toast.error(
+        "De huidige situatie kon niet als versie worden bewaard, daarom is het advies niet toegepast: " +
+          foutTekst(e),
+      );
+      return null;
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  /**
    * Indelingsvariant toepassen: zoals het verbeteradvies in de werkversie (niet opgeslagen) en
    * zonder stil invullen door het PvE — de variant is al met het gekozen PvE gemaakt. Eigenaar
    * en gebruikt PvE worden pas nu gekoppeld (annuleren heeft zo geen bijwerking).
    */
-  function indelingToepassen(
+  async function indelingToepassen(
     input: WwsInput,
     keuze: IndelingKeuze,
     nSlaap: number,
@@ -494,6 +539,8 @@ export default function TellingEditor({
     beeld: NieuwBeeld | null,
     ai: boolean,
   ) {
+    const bewaard = await bewaarVoorToepassen("indeling");
+    if (!bewaard) return;
     setStaat((s) => ({
       ...s,
       input,
@@ -520,6 +567,7 @@ export default function TellingEditor({
           : "") +
         " Sla de telling op, of leg een nieuwe versie vast.",
     );
+    toast.success(bewaard);
   }
 
   /**
@@ -673,7 +721,9 @@ export default function TellingEditor({
   }
 
   /** "Toepassen op telling": in de werkversie, nog niet opgeslagen */
-  function adviesToepassen(input: WwsInput, n: number, punten: number) {
+  async function adviesToepassen(input: WwsInput, n: number, punten: number) {
+    const bewaard = await bewaarVoorToepassen("vrije sector");
+    if (!bewaard) return;
     setStaat((s) => ({ ...s, input }));
     setDirty(true);
     setAdviesOpen(false);
@@ -685,6 +735,7 @@ export default function TellingEditor({
         punten +
         " punten). Sla de telling op, of leg een nieuwe versie vast.",
     );
+    toast.success(bewaard);
   }
 
   // ---------- PvE van de eigenaar ----------

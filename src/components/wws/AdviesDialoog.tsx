@@ -125,7 +125,7 @@ interface Props {
   /** Verduurzamingsadvies uploaden/verwijderen in de werkversie (zonder: alleen tonen) */
   onEnergieAdvies?: ((advies: EnergieAdvies | null) => void) | undefined;
   /** "Toepassen op telling": de nieuwe invoer, het aantal maatregelen en de punten daarna */
-  onToepassen: (input: WwsInput, n: number, punten: number) => void;
+  onToepassen: (input: WwsInput, n: number, punten: number) => void | Promise<void>;
   /** Admins kunnen de kosten als standaard voor iedereen opslaan */
   isAdmin?: boolean;
   /** Uit bij alleen-lezen (kijkrol, gedeelde telling) */
@@ -195,6 +195,7 @@ function AdviesInhoud({
   const [conceptUit, setConceptUit] = useState(inst.uit);
   const [margeTekst, setMargeTekst] = useState(String(inst.marge));
   const [skip, setSkip] = useState<Record<number, boolean>>({});
+  const [toepassenBezig, setToepassenBezig] = useState(false);
 
   const A = useMemo(() => berekenAdvies(input, NORMEN, inst), [input, inst, NORMEN]);
   const S = useMemo(() => selectieResultaat(input, NORMEN, A, skip), [input, A, skip, NORMEN]);
@@ -587,8 +588,20 @@ function AdviesInhoud({
             </>
           )}
           {magToepassen && (
-            <Button disabled={!S.n} onClick={() => onToepassen(S.input, S.n, S.R.totaal)}>
-              {S.n ? `Toepassen op telling (${S.n})` : "Toepassen op telling"}
+            <Button
+              disabled={!S.n || toepassenBezig}
+              onClick={() => {
+                setToepassenBezig(true);
+                void Promise.resolve(onToepassen(S.input, S.n, S.R.totaal)).finally(() =>
+                  setToepassenBezig(false),
+                );
+              }}
+            >
+              {toepassenBezig
+                ? "Uitgangssituatie bewaren…"
+                : S.n
+                  ? `Toepassen op telling (${S.n})`
+                  : "Toepassen op telling"}
             </Button>
           )}
         </DialogFooter>

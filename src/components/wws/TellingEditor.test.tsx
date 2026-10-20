@@ -11,6 +11,10 @@ import { rechtenVan, type AppRole } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
 const navigate = vi.fn();
+const toastMock = vi.hoisted(() => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), message: vi.fn() }),
+}));
+vi.mock("sonner", async (orig) => ({ ...(await orig<typeof import("sonner")>()), ...toastMock }));
 type Locatie = { pathname: string; search: string };
 const blokkade = vi.hoisted(() => ({
   fn: null as null | ((a: { current: Locatie; next: Locatie }) => boolean),
@@ -449,8 +453,13 @@ describe("TellingEditor", () => {
     renderEditor("t-pve");
     await screen.findByRole("button", { name: "Eigenaar: Amstel Wonen" });
     fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+    // eerst de uitgangssituatie als versie (en de werkversie opgeslagen), dan pas toepassen
+    expect(
+      await screen.findByRole("status", { name: "Opslagstatus" }, { timeout: 3000 }),
+    ).toHaveTextContent("Niet-opgeslagen wijzigingen");
+    expect(store.voegVersieToe).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
-    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(2));
     expect(opgeslagenInput()).toEqual(na);
     expect(JSON.stringify(opgeslagenInput())).not.toContain("uitPve");
   });
@@ -509,6 +518,80 @@ describe("TellingEditor", () => {
     expect(doc.input.overig[0].fac).toEqual(t.input.overig[0]!.fac);
   });
 
+  // ---------- automatisch een versie vóór toepassen ----------
+  describe("uitgangssituatie vóór toepassen", () => {
+    const toegepast = () => {
+      const na = structuredClone(tellingMetPve().input);
+      na.vertrekken[0]!.m2 = 20;
+      advies.input = na;
+      return na;
+    };
+    const status = () => screen.getByRole("status", { name: "Opslagstatus" });
+
+    it("legt eerst de huidige situatie vast als versie; de telling houdt haar naam", async () => {
+      metPve();
+      const voor = tellingMetPve().input;
+      toegepast();
+      renderEditor("t-pve");
+      await screen.findByRole("button", { name: "Eigenaar: Amstel Wonen" });
+      fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+      await waitFor(() => expect(status()).toHaveTextContent("Niet-opgeslagen wijzigingen"));
+      const [, versie] = store.voegVersieToe.mock.calls[0]!;
+      expect(versie.notitie).toMatch(/^Vóór advies vrije sector – \d{1,2} \w{3} \d{4}$/);
+      expect(versie.input).toEqual(voor);
+      expect(store.bewaar.mock.calls[0]![1].meta.naam).toBe("PvE-test");
+      expect(toastMock.toast.success).toHaveBeenCalledWith(
+        expect.stringMatching(/^Uitgangssituatie bewaard als versie 'Vóór advies vrije sector/),
+      );
+    });
+
+    it("ongewijzigd sinds de laatste versie: geen dubbele versie, wel toegepast", async () => {
+      metPve();
+      const t = tellingMetPve();
+      const v = maakVersie({ ...t, versieCount: 0, aantalVersies: 0, basedOn: null }, N, "Oud");
+      store.versies.mockResolvedValue([{ ...v, id: "v0001" }]);
+      store.haal.mockResolvedValue({ ...t, versieCount: 1, aantalVersies: 1 });
+      toegepast();
+      renderEditor("t-pve");
+      await screen.findByRole("button", { name: "Eigenaar: Amstel Wonen" });
+      fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+      await waitFor(() => expect(status()).toHaveTextContent("Niet-opgeslagen wijzigingen"));
+      expect(store.voegVersieToe).not.toHaveBeenCalled();
+      expect(store.bewaar).not.toHaveBeenCalled();
+      expect(toastMock.toast.success).toHaveBeenCalledWith(
+        "Niets gewijzigd sinds versie 1 'Oud'; die geldt als uitgangssituatie.",
+      );
+    });
+
+    it("opslaan mislukt: advies niet toegepast, duidelijke foutmelding", async () => {
+      metPve();
+      store.bewaar.mockRejectedValue(new Error("Failed to fetch"));
+      toegepast();
+      renderEditor("t-pve");
+      await screen.findByRole("button", { name: "Eigenaar: Amstel Wonen" });
+      fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+      await waitFor(() => expect(toastMock.toast.error).toHaveBeenCalledTimes(1));
+      expect(toastMock.toast.error.mock.calls[0]![0]).toMatch(
+        /^De huidige situatie kon niet als versie worden bewaard, daarom is het advies niet toegepast/,
+      );
+      expect(store.voegVersieToe).not.toHaveBeenCalled();
+      expect(status()).toHaveTextContent("Alles opgeslagen");
+      expect(screen.getAllByPlaceholderText("0,00")[0]).toHaveValue("12");
+    });
+
+    it("kijkrol: toepassen doet niets en slaat niets op", async () => {
+      store.haal.mockResolvedValue(tellingVanAnna());
+      advies.input = { ...tellingVanAnna().input, vertrekken: [] };
+      renderEditor("t-anna", "lezer-1", ["viewer"]);
+      await screen.findByRole("note", { name: "Alleen lezen" });
+      fireEvent.click(screen.getByRole("button", { name: "Advies toepassen (test)" }));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(store.bewaar).not.toHaveBeenCalled();
+      expect(store.voegVersieToe).not.toHaveBeenCalled();
+      expect(toastMock.toast.success).not.toHaveBeenCalled();
+    });
+  });
+
   // ---------- indelingsadvies ----------
   it("indelingsadvies: toepassen neemt de variant precies over, koppelt eigenaar en PvE pas dan", async () => {
     klantenStore.lijst.mockResolvedValue([{ id: "k1", naam: "Amstel Wonen", pves: [PVE] }]);
@@ -531,9 +614,10 @@ describe("TellingEditor", () => {
     expect(
       await screen.findByRole("status", { name: "Opslagstatus" }, { timeout: 3000 }),
     ).toHaveTextContent("Niet-opgeslagen wijzigingen");
+    expect(store.voegVersieToe.mock.calls[0]![1].notitie).toMatch(/^Vóór indelingsadvies – /);
     fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
-    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(1));
-    const doc = store.bewaar.mock.calls[0]![1];
+    await waitFor(() => expect(store.bewaar).toHaveBeenCalledTimes(2));
+    const doc = store.bewaar.mock.calls.at(-1)![1];
     expect(doc.input).toEqual(verwacht);
     expect(JSON.stringify(doc.input)).not.toMatch(/_ind(Vast|Nieuw)/);
     expect(doc.meta).toMatchObject({ klantId: "k1", pveId: "p1" });
