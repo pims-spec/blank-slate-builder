@@ -139,4 +139,70 @@ describe("WwsCalculator", () => {
       expect(screen.getByText("Inclusief opslagen")).toBeInTheDocument();
     });
   });
+  describe("voorzieningen in- en uitklappen", () => {
+    it("een nieuwe ruimte opent uitgeklapt; inklappen toont de samenvatting", () => {
+      render(<WwsCalculator />);
+      fireEvent.click(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]!);
+      fireEvent.change(screen.getByRole("combobox", { name: "Soort ruimte" }), {
+        target: { value: "keuken" },
+      });
+      const knop = screen.getByRole("button", { name: /^Keuken: aanrecht/ });
+      expect(knop).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("combobox", { name: "Lengte aanrecht" })).toBeInTheDocument();
+      fireEvent.click(knop);
+      expect(knop).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("combobox", { name: "Lengte aanrecht" })).toBeNull();
+    });
+
+    it("een bestaande telling opent ingeklapt, met PvE-markering; alles uit- en inklappen", () => {
+      metInvoer((i) => {
+        i.vertrekken = [
+          {
+            type: "keuken",
+            m2: 8,
+            verwarmd: true,
+            fac: {
+              kind: "keuken",
+              uitPve: true,
+              keuken: { lengte: "1-2", voorz: { afzuig: true, koelkast: true } },
+            },
+          },
+        ];
+        i.overig = [
+          {
+            type: "toilet",
+            m2: 1.2,
+            verwarmd: false,
+            fac: { kind: "toilet", toilet: { toilet: "hangend", fontein: false } },
+          },
+        ];
+      });
+      expect(
+        screen.getByRole("button", { name: /Keuken: aanrecht 1–2 m, 2 voorzieningen/ }),
+      ).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByText(/Overgenomen uit het standaard PvE/)).toBeInTheDocument();
+      expect(screen.queryByRole("combobox", { name: "Lengte aanrecht" })).toBeNull();
+
+      fireEvent.click(screen.getAllByRole("button", { name: "Alles uitklappen" })[0]!);
+      expect(screen.getByRole("combobox", { name: "Lengte aanrecht" })).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Toilet" })).toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole("button", { name: "Alles inklappen" })[0]!);
+      expect(screen.queryByRole("combobox", { name: "Toilet" })).toBeNull();
+    });
+
+    it("alleen-lezen: alles zichtbaar, zonder knoppen", () => {
+      const i = legeInput();
+      i.overig = [
+        {
+          type: "toilet",
+          m2: 1.2,
+          verwarmd: false,
+          fac: { kind: "toilet", toilet: { toilet: "staand", fontein: true } },
+        },
+      ];
+      render(<WwsCalculator input={i} setInput={() => {}} alleenLezen />);
+      expect(screen.getByRole("combobox", { name: "Toilet" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Alles uitklappen/ })).toBeNull();
+    });
+  });
 });

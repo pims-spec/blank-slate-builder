@@ -83,6 +83,18 @@ describe("huisstijl: WCAG AA-contrast van de tokens", () => {
       expect(contrast(t, voor, achter)).toBeGreaterThanOrEqual(4.5);
     });
 
+  for (const [naam, t] of [
+    ["licht", licht],
+    ["donker", donker],
+  ] as const)
+    it.each([
+      ["ruimte-rand", "card"],
+      ["ruimte-rand", "background"],
+      ["destructive", "card"],
+    ])(`${naam}: rand %s op %s haalt 3:1 (niet-tekstuele contrast)`, (voor, achter) => {
+      expect(contrast(t, voor, achter)).toBeGreaterThanOrEqual(3);
+    });
+
   it("wit op oranje zou niet voldoen (daarom donkere inkt op oranje)", () => {
     const wit = { wit: [1, 0, 0] as [number, number, number], ...licht };
     expect(contrast(wit, "wit", "orange")).toBeLessThan(4.5);

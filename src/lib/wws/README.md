@@ -395,6 +395,18 @@ opvallen, zodat hij niet ongemerkt meetelt:
 - de tekst "Kies het soort ruimte. Tot dan telt deze ruimte mee als …";
 - een melding in het samenvattingspaneel met het aantal ruimten zonder soort.
 
+### Ruimten en voorzieningen in de puntentelling (formulier)
+
+- **Duidelijkere rand om elke ruimte.** 2px in de kleur `--ruimte-rand` (licht en donker
+  minstens 3:1 tegen kaart en achtergrond, `contrast.test.ts`). Een ruimte zonder soort houdt
+  een rode, gestippelde rand.
+- **Voorzieningen in- en uitklappen** (bron: altijd uitgeklapt).
+  - Ingeklapt staat er een korte samenvatting (`voorzSamenvatting.ts`), bijv. "Keuken: aanrecht
+    1–2 m, 5 voorzieningen". De PvE-markering blijft zichtbaar.
+  - Een ruimte die je toevoegt of van soort wisselt opent uitgeklapt; een geladen telling opent
+    ingeklapt. "Alles uitklappen / Alles inklappen" boven de ruimten.
+  - Alleen-lezen: alles uitgeklapt, zonder knoppen. De stand wordt niet opgeslagen.
+
 ### Archief: versie kiezen (`archief.ts`, `Archief.tsx`)
 
 De bron toont per telling alleen het aantal versies ("geen versies", "1 versie", "3 versies").

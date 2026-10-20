@@ -1,4 +1,5 @@
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   BUITEN_SOORTEN,
   INDEX_KLASSEN,
@@ -36,6 +37,7 @@ import {
 } from "@/lib/wws/ruimteInvoer";
 import type { Maat } from "@/lib/wws/types";
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
+import { samenvattingVoorz } from "@/lib/wws/voorzSamenvatting";
 import {
   MINDER_DAN_40,
   exactTekst,
@@ -423,6 +425,37 @@ export default function WwsCalculator({
     });
   const res = useMemo(() => calc(inp, N), [inp, N]);
   const zonderType = zonderTypeMelding(aantalZonderType(inp));
+  // Voorzieningenpanelen: ingeklapt, behalve een ruimte die je net toevoegt of van soort wisselt.
+  // Sleutel "groep:index"; alleen weergave, wordt niet opgeslagen.
+  const [uitgeklapt, setUitgeklapt] = useState<Record<string, boolean>>({});
+  const zetUitgeklapt = (sleutel: string, open: boolean) =>
+    setUitgeklapt((u) => ({ ...u, [sleutel]: open }));
+  /** Na het verwijderen van ruimte i: de stand van de ruimten erna schuift één plek op */
+  const schuifUitgeklapt = (groep: "vertrekken" | "overig", i: number) =>
+    setUitgeklapt((u) => {
+      const n: Record<string, boolean> = {};
+      for (const [k, v] of Object.entries(u)) {
+        const [g, j] = k.split(":");
+        const idx = Number(j);
+        if (g !== groep || idx < i) n[k] = v;
+        else if (idx > i) n[g + ":" + (idx - 1)] = v;
+      }
+      return n;
+    });
+  const metFac = [
+    ...inp.vertrekken.map((r, i) => (r.fac ? "vertrekken:" + i : "")),
+    ...inp.overig.map((r, i) => (r.fac ? "overig:" + i : "")),
+  ].filter(Boolean);
+  const allesUitgeklapt = metFac.length > 0 && metFac.every((k) => uitgeklapt[k]);
+  const allesKnop = !alleenLezen && metFac.length > 0 && (
+    <button
+      type="button"
+      className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+      onClick={() => setUitgeklapt(Object.fromEntries(metFac.map((k) => [k, !allesUitgeklapt])))}
+    >
+      {allesUitgeklapt ? "Alles inklappen" : "Alles uitklappen"}
+    </button>
+  );
 
   /** Paneel met voorzieningen van een ruimte (keuken, badkamer, toilet, …) */
   const facPaneel = (fac: Fac, zetFac: (f: (x: Fac) => void) => void) => {
@@ -609,11 +642,13 @@ export default function WwsCalculator({
     const types = groep === "vertrekken" ? VERTREK_TYPES : OVERIG_TYPES;
     return (
       <>
+        {lijst.some((r) => r.fac) && <div className="flex justify-end">{allesKnop}</div>}
         {lijst.map((r, i) => (
           <div
             key={i}
             className={
-              "rounded-md border p-3 " + (r.type ? "border-border" : "border-destructive/60")
+              "rounded-lg border-2 bg-card p-3 shadow-sm " +
+              (r.type ? "border-ruimte-rand" : "border-dashed border-destructive")
             }
           >
             <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_88px_auto_auto_auto]">
@@ -622,14 +657,15 @@ export default function WwsCalculator({
                   value={r.type}
                   leeg="Kies soort ruimte…"
                   opties={types.map((t) => [t.k, t.l])}
-                  onChange={(v) =>
+                  onChange={(v) => {
+                    zetUitgeklapt(groep + ":" + i, true);
                     wijzig((d) => {
                       const x = d[groep][i]!;
                       x.type = v as never;
                       ensureFac(groep, x, false);
                       pasRuimteAan?.(groep, x);
-                    })
-                  }
+                    });
+                  }}
                 />
               </Veld>
               <Veld label="Naam (optioneel)">
@@ -680,11 +716,12 @@ export default function WwsCalculator({
               <button
                 type="button"
                 className={weg}
-                onClick={() =>
+                onClick={() => {
+                  schuifUitgeklapt(groep, i);
                   wijzig((d) => {
                     d[groep].splice(i, 1);
-                  })
-                }
+                  });
+                }}
               >
                 Verwijderen
               </button>
@@ -719,6 +756,27 @@ export default function WwsCalculator({
             )}
             {r.fac && (
               <div className="mt-3 space-y-3 border-t border-border pt-3">
+                {!alleenLezen && (
+                  <button
+                    type="button"
+                    className="flex min-h-10 w-full items-center gap-2 rounded-md px-1 text-left text-sm hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
+                    aria-expanded={!!uitgeklapt[groep + ":" + i]}
+                    aria-controls={"voorz-" + groep + "-" + i}
+                    onClick={() => zetUitgeklapt(groep + ":" + i, !uitgeklapt[groep + ":" + i])}
+                  >
+                    <ChevronDown
+                      aria-hidden
+                      className={
+                        "h-4 w-4 shrink-0 transition-transform " +
+                        (uitgeklapt[groep + ":" + i] ? "" : "-rotate-90")
+                      }
+                    />
+                    <span className="font-medium">{samenvattingVoorz(r.fac)}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {uitgeklapt[groep + ":" + i] ? "Inklappen" : "Uitklappen"}
+                    </span>
+                  </button>
+                )}
                 {r.fac.uitPve && (
                   <p
                     className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1 text-xs"
@@ -728,14 +786,18 @@ export default function WwsCalculator({
                     en pas aan waar nodig.
                   </p>
                 )}
-                {facPaneel(r.fac, (f) =>
-                  wijzig((d) => {
-                    const x = d[groep][i]!.fac;
-                    if (!x) return;
-                    f(x);
-                    // met de hand aangepast: geen PvE-markering meer (zoals in wws-site.html)
-                    delete x.uitPve;
-                  }),
+                {(alleenLezen || uitgeklapt[groep + ":" + i]) && (
+                  <div id={"voorz-" + groep + "-" + i} className="space-y-3">
+                    {facPaneel(r.fac, (f) =>
+                      wijzig((d) => {
+                        const x = d[groep][i]!.fac;
+                        if (!x) return;
+                        f(x);
+                        // met de hand aangepast: geen PvE-markering meer (zoals in wws-site.html)
+                        delete x.uitPve;
+                      }),
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -744,7 +806,8 @@ export default function WwsCalculator({
         <button
           type="button"
           className={knopCls}
-          onClick={() =>
+          onClick={() => {
+            zetUitgeklapt(groep + ":" + lijst.length, true);
             wijzig((d) => {
               if (groep === "vertrekken")
                 // zoals de bron (data-addroom): nog geen soort, vertrek verwarmd, overige niet
@@ -766,8 +829,8 @@ export default function WwsCalculator({
                 });
               const nieuw = d[groep][d[groep].length - 1]!;
               pasRuimteAan?.(groep, nieuw);
-            })
-          }
+            });
+          }}
         >
           {groep === "vertrekken" ? "Vertrek toevoegen" : "Ruimte toevoegen"}
         </button>
