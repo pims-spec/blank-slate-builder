@@ -1027,7 +1027,7 @@ export default function TellingEditor({
       {!alleenLezen && (
         <section
           aria-label="Plattegrond inlezen"
-          className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3"
+          className="mt-5 flex flex-wrap items-center gap-2 rounded-md border border-border p-3"
         >
           <PlattegrondKnoppen
             heeft={heeftPlattegrond(staat.input, nieuwBeeld)}
