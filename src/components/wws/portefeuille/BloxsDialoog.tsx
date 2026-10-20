@@ -131,9 +131,9 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
         const t = await bloxsFunctiesTesten();
         tel(t.aanvragen);
         if (weg) return;
-        if (!t.ok) return mislukt(t.fout, statusVan(t));
+        if (!t.ok) { mislukt(t.fout, statusVan(t)); return; }
         if (bestaand) {
-          if (!bestaand.bloxsEigenaarRef && !bestaand.bloxsComplexRef) return mislukt("onbekend");
+          if (!bestaand.bloxsEigenaarRef && !bestaand.bloxsComplexRef) { mislukt("onbekend"); return; }
           await haalObjecten(
             idUitTekst(bestaand.bloxsEigenaarRef ?? ""),
             bestaand.bloxsComplexRef ? idUitTekst(bestaand.bloxsComplexRef) : null,
@@ -145,7 +145,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
         const e = await bloxsEigenaren();
         tel(e.aanvragen);
         if (weg) return;
-        if (!e.ok) return mislukt(e.fout, statusVan(e));
+        if (!e.ok) { mislukt(e.fout, statusVan(e)); return; }
         setEigenaren(e.data);
         setFase("kiezen");
       } catch {
@@ -201,7 +201,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
     }
     const keuzes: InlaadKeuze[] = [];
     for (const e of selectie) {
-      if (stoppen.current) return mislukt("gestopt");
+      if (stoppen.current) { mislukt("gestopt"); return; }
       const alle = await haalObjecten(e.id, null, false, true);
       if (!alle) return;
       const k = kiesGohomeEigenaar(e, portefeuilles, klanten);
@@ -225,7 +225,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       // nooit een lege sync opslaan: dan zouden alle adressen als "niet meer in Bloxs" gelden
       setFout("Bloxs gaf geen objecten voor deze selectie. Er is niets opgeslagen.");
       setFase("fout");
-      return;
+      return null;
     }
     try {
       const bronEigenaar = keuze?.eigenaar ?? eigenaar;
@@ -267,8 +267,9 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
       setSamenvatting(resultaat);
       setFase("klaar");
       await onKlaar(id);
+      return { id, samenvatting: resultaat };
     } catch {
-      mislukt("onbekend");
+      return mislukt("onbekend");
     }
   }
 
