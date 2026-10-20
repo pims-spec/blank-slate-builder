@@ -234,3 +234,39 @@ export async function haalBagPortie(
   }
   return { resultaten };
 }
+
+/**
+ * Eén verblijfsobject op id (huurprijsindicator): oppervlakte, gebruiksdoel en het bouwjaar van
+ * het oudste pand. `stop` bij te veel verzoeken of een storing.
+ */
+export async function haalVerblijfsobject(
+  fetchFn: typeof fetch,
+  vboId: string,
+): Promise<
+  | { ok: true; oppervlakte: number | null; gebruiksdoel: string | null; bouwjaar: number | null }
+  | { ok: false; stop?: BagStop }
+> {
+  if (!VboId.safeParse(vboId).success) return { ok: false };
+  const r = await haal(fetchFn, vboUrl(vboId));
+  if (!r.ok) return "stop" in r ? { ok: false, stop: r.stop } : { ok: false };
+  const v = VboSchema.safeParse(r.json);
+  const p = v.success ? v.data.features[0]?.properties : undefined;
+  if (!p) return { ok: false };
+  let bouwjaar: number | null = null;
+  for (const href of (p["pand.href"] ?? []).filter((h) => h.startsWith(PAND_PREFIX))) {
+    const pand = await haal(fetchFn, href.split("?")[0] + "?f=json");
+    if (!pand.ok) {
+      if ("stop" in pand) return { ok: false, stop: pand.stop };
+      continue;
+    }
+    const d = PandSchema.safeParse(pand.json);
+    const j = d.success ? (d.data.properties.bouwjaar ?? null) : null;
+    if (j !== null && (bouwjaar === null || j < bouwjaar)) bouwjaar = j;
+  }
+  return {
+    ok: true,
+    oppervlakte: p.oppervlakte ?? null,
+    gebruiksdoel: p.gebruiksdoel?.trim().slice(0, 200) || null,
+    bouwjaar,
+  };
+}
