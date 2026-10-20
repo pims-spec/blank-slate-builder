@@ -103,7 +103,7 @@ describe("Bloxs: eigenaar in GoHome", () => {
 
   async function kiesEnHaal(naam: string) {
     const lijst = await screen.findByRole("list", { name: "Eigenaren" });
-    fireEvent.click(within(lijst).getByRole("button", { name: new RegExp(naam) }));
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: new RegExp(naam) }));
     fireEvent.click(screen.getByRole("button", { name: "Objecten ophalen" }));
     await screen.findByRole("button", { name: "Inladen" });
     return screen.getByLabelText("Eigenaar in GoHome (optioneel)") as HTMLSelectElement;
@@ -140,5 +140,45 @@ describe("Bloxs: eigenaar in GoHome", () => {
     await waitFor(() => expect(store.maak).toHaveBeenCalled());
     expect(klantenStore.voegToe).not.toHaveBeenCalled();
     expect(store.maak.mock.calls[0]![1]).toBeNull();
+  });
+
+  it("laadt twee geselecteerde eigenaren in afzonderlijke portefeuilles met hun eigen koppeling", async () => {
+    const onKlaar = toon();
+    const lijst = await screen.findByRole("list", { name: "Eigenaren" });
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Nieuwe Eigenaar" }));
+    fireEvent.change(screen.getByPlaceholderText("Zoek op naam of referentie"), { target: { value: "Heel Andere" } });
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Heel Andere Naam" }));
+    store.maak.mockResolvedValueOnce("p7").mockResolvedValueOnce("p8");
+    fireEvent.click(screen.getByRole("button", { name: "Objecten ophalen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Inladen" }));
+    await waitFor(() => expect(onKlaar).toHaveBeenCalledWith("p8"));
+    expect(store.maak).toHaveBeenNthCalledWith(1, "Nieuwe Eigenaar", "k9", { eigenaarRef: "7", complexRef: null });
+    expect(store.maak).toHaveBeenNthCalledWith(2, "Heel Andere Naam", "k1", { eigenaarRef: "8", complexRef: null });
+    expect(store.bloxsSyncOpslaan.mock.calls.map((c) => c[0])).toEqual(["p7", "p8"]);
+  });
+
+  it("een uitgevinkte eigenaar wordt niet opgehaald", async () => {
+    toon();
+    const lijst = await screen.findByRole("list", { name: "Eigenaren" });
+    const eerste = within(lijst).getByRole("checkbox", { name: "Nieuwe Eigenaar" });
+    fireEvent.click(eerste);
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Heel Andere Naam" }));
+    fireEvent.click(eerste);
+    fireEvent.click(screen.getByRole("button", { name: "Objecten ophalen" }));
+    await screen.findByRole("button", { name: "Inladen" });
+    expect(fn.bloxsObjectenPagina.mock.calls.map((c) => c[0].data.eigenaar)).toEqual([8, 8]);
+  });
+
+  it("stopt bij een mislukte tweede import en bewaart de eerste portefeuille", async () => {
+    const onKlaar = toon();
+    const lijst = await screen.findByRole("list", { name: "Eigenaren" });
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Nieuwe Eigenaar" }));
+    fireEvent.click(within(lijst).getByRole("checkbox", { name: "Heel Andere Naam" }));
+    store.bloxsSyncOpslaan.mockResolvedValueOnce({ vervallenObjecten: 0, gemarkeerd: 0, teruggekeerd: 0 }).mockRejectedValueOnce(new Error("Mislukt"));
+    fireEvent.click(screen.getByRole("button", { name: "Objecten ophalen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Inladen" }));
+    await waitFor(() => expect(onKlaar).toHaveBeenCalledWith("p1"));
+    expect(store.bloxsSyncOpslaan).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert").textContent).toContain("De hierboven vermelde portefeuilles zijn opgeslagen.");
   });
 });
