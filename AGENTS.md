@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Colleague email invitations use an admin-verified server function and Cloud Auth invitation links to a public activation page; assign access in the protected roles table, never in auth metadata, to prevent privilege escalation.
+- Bloxs multi-owner imports create a separate portfolio per owner and reuse the single-owner synchronization path, preserving owner references and existing GoHome mappings.

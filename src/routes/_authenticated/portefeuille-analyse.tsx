@@ -9,8 +9,12 @@ import { myAccessQuery } from "@/lib/access";
 export const Route = createFileRoute("/_authenticated/portefeuille-analyse")({
   head: () => ({
     meta: [
-      { title: "Portefeuille-analyse — GoHome WWS" },
+      { title: "Portefeuille-analyse — GoHome advice" },
       { name: "description", content: "Energielabels per portefeuille: verlopen, verouderd, EFG." },
+      { property: "og:title", content: "Portefeuille-analyse — GoHome advice" },
+      { property: "og:description", content: "Energielabels per portefeuille: verlopen, verouderd, EFG." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   loader: ({ context }) =>
