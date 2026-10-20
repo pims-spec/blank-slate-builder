@@ -434,6 +434,18 @@ Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
   meet je zelf; de aannames van de WWS-check gaan niet mee).
 - **Kijkrol:** geen opzoeken of nieuwe indicaties.
 
+### Opslaan (`huur/opslag.ts`, tabel `huurindicaties`, migratie 0013)
+
+- Een indicatie bewaart adres, eventueel de eigenaar, en in `data` (max. 200 kB) de woning, de
+  antwoorden, de uitkomst (markthuur, WWS-check, advies) en een **snapshot**: de gebruikte
+  bronregel, alle factoren en de normversie. Een opgeslagen indicatie wordt nooit opnieuw berekend;
+  zo blijft hij uitlegbaar als de tabel of de factoren veranderen.
+- "Opnieuw berekenen met huidige tabel" neemt de antwoorden over in een nieuwe, nog niet opgeslagen
+  indicatie.
+- RLS: lezen voor de eigenaar, admins en de kijkrol; maken met de schrijfrol; bijwerken (telling
+  koppelen) en verwijderen door de eigenaar of een admin; tweestapsverificatie verplicht.
+- "Maak een volledige puntentelling" koppelt de nieuwe telling aan de opgeslagen indicatie.
+
 ## Tweestapsverificatie (nieuw, niet in de bron)
 
 Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase

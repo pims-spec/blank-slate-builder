@@ -1,30 +1,31 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { eur, LABELS, SEGMENT_NAMEN } from "@/lib/wws";
 import {
-  berekenMarkthuur,
-  huurAdvies,
   huurNormen,
   HUUR_WONINGTYPEN,
   isInschatting,
   NIVEAU_NAMEN,
   standaardAntwoorden,
   WONINGTYPE_NAMEN,
-  wwsCheck,
+  type HuurAdvies,
   type HuurAntwoorden,
   type HuurWoning,
   type Markthuur,
+  type WwsCheck,
 } from "@/lib/wws/huur";
 import { zoekWoningVoorHuur } from "@/lib/wws/huur/huur.functions";
+import { maakHuurIndicatie, type HuurIndicatie } from "@/lib/wws/huur/opslag";
 import { huurFoutMelding, type HuurOpzoeking } from "@/lib/wws/huur/opzoeken";
 import { startTelling } from "@/lib/wws/huur/telling";
 import { maakTellingDoc, type Bewerker } from "@/lib/wws/opslag";
 import { useNormen } from "./NormenContext";
-import { tellingStore } from "./tellingStore";
+import EigenaarKeuze from "./EigenaarKeuze";
+import { huurIndicatiesQuery, huurStore, tellingStore } from "./tellingStore";
 
 const selectCls =
   "h-10 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring";
@@ -116,11 +117,16 @@ const effectTekst = (x: number) =>
 
 export interface HuurprijsIndicatorProps {
   magSchrijven: boolean;
+  isAdmin?: boolean;
   bewerker: Bewerker;
 }
 
 /** Huurprijsindicator: adres opzoeken, vragen, markthuur als bandbreedte en de WWS-check */
-export default function HuurprijsIndicator({ magSchrijven, bewerker }: HuurprijsIndicatorProps) {
+export default function HuurprijsIndicator({
+  magSchrijven,
+  isAdmin = false,
+  bewerker,
+}: HuurprijsIndicatorProps) {
   const N = useNormen();
   const H = useMemo(() => huurNormen(N.huurindicator), [N]);
   const navigate = useNavigate();
@@ -135,6 +141,11 @@ export default function HuurprijsIndicator({ magSchrijven, bewerker }: Huurprijs
   const [meldingen, setMeldingen] = useState<string[]>([]);
   const [keuzes, setKeuzes] = useState<string[]>([]);
   const [a, setA] = useState<HuurAntwoorden | null>(null);
+  /** Id van de opgeslagen indicatie bij de huidige antwoorden (null: niet opgeslagen) */
+  const [opgeslagenId, setOpgeslagenId] = useState<string | null>(null);
+  const [klantId, setKlantId] = useState("");
+  const [bekeken, setBekeken] = useState<HuurIndicatie | null>(null);
+  const { data: eerdere = [] } = useQuery(huurIndicatiesQuery());
 
   const zoeken = useMutation({
     mutationFn: (v: typeof adres) => zoekWoningVoorHuur({ data: v }) as Promise<HuurOpzoeking>,
@@ -148,6 +159,8 @@ export default function HuurprijsIndicator({ magSchrijven, bewerker }: Huurprijs
       setWoning(r.woning);
       setMeldingen(r.meldingen);
       setA(standaardAntwoorden(r.woning));
+      setOpgeslagenId(null);
+      setBekeken(null);
     },
     onError: () => toast.error(huurFoutMelding("geen_verbinding")),
   });
@@ -158,6 +171,8 @@ export default function HuurprijsIndicator({ magSchrijven, bewerker }: Huurprijs
       const id = crypto.randomUUID();
       const s = startTelling(woning, a, H, N, bewerker.naam);
       await tellingStore.maakAan(id, maakTellingDoc(s, N, bewerker));
+      // de opgeslagen indicatie verwijst naar de nieuwe telling
+      if (opgeslagenId) await huurStore.koppelTelling(opgeslagenId, id).catch(() => undefined);
       return id;
     },
     onSuccess: (id) => {
@@ -168,15 +183,39 @@ export default function HuurprijsIndicator({ magSchrijven, bewerker }: Huurprijs
     onError: () => toast.error("De telling kon niet worden aangemaakt. Probeer het opnieuw."),
   });
 
-  const zet = <K extends keyof HuurAntwoorden>(k: K, v: HuurAntwoorden[K]) =>
+  const zet = <K extends keyof HuurAntwoorden>(k: K, v: HuurAntwoorden[K]) => {
+    setOpgeslagenId(null);
     setA((x) => (x ? { ...x, [k]: v } : x));
+  };
 
-  const uitkomst = useMemo(() => {
-    if (!woning || !a) return null;
-    const m = berekenMarkthuur(woning, a, H, vandaag());
-    const c = wwsCheck(woning, a, H, N);
-    return { m, c, advies: huurAdvies(m.verwacht, c, N) };
-  }, [woning, a, H, N]);
+  const uitkomst = useMemo(
+    () => (woning && a ? maakHuurIndicatie(woning, a, H, N, bewerker.naam, vandaag()) : null),
+    [woning, a, H, N, bewerker.naam],
+  );
+
+  const opslaan = useMutation({
+    mutationFn: () => {
+      if (!uitkomst) throw new Error("geen indicatie");
+      return huurStore.bewaar(uitkomst, klantId || null);
+    },
+    onSuccess: (id) => {
+      setOpgeslagenId(id);
+      void qc.invalidateQueries({ queryKey: ["huurindicaties"] });
+      toast.success("Indicatie opgeslagen, met de gebruikte bronregel en factoren.");
+    },
+    onError: () => toast.error("Opslaan lukte niet. Probeer het opnieuw."),
+  });
+
+  const verwijderen = useMutation({
+    mutationFn: (id: string) => huurStore.verwijder(id),
+    onSuccess: (_x, id) => {
+      if (bekeken?.id === id) setBekeken(null);
+      if (opgeslagenId === id) setOpgeslagenId(null);
+      void qc.invalidateQueries({ queryKey: ["huurindicaties"] });
+      toast.success("Indicatie verwijderd.");
+    },
+    onError: () => toast.error("Verwijderen lukte niet."),
+  });
 
   const app = a && (a.woningtype === "appartement" || a.woningtype === "studio");
 
@@ -476,9 +515,32 @@ export default function HuurprijsIndicator({ magSchrijven, bewerker }: Huurprijs
             </section>
 
             <div className="space-y-4">
-              <MarkthuurKaart m={uitkomst.m} />
+              {magSchrijven && (
+                <section
+                  aria-label="Opslaan"
+                  className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"
+                >
+                  <div className="min-w-48 flex-1">
+                    <div className="mb-1 text-sm text-muted-foreground">Eigenaar (optioneel)</div>
+                    <EigenaarKeuze
+                      klantId={klantId}
+                      onKies={(k) => {
+                        setKlantId(k);
+                        setOpgeslagenId(null);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    disabled={opslaan.isPending || !!opgeslagenId}
+                    onClick={() => opslaan.mutate()}
+                  >
+                    {opgeslagenId ? "Opgeslagen" : opslaan.isPending ? "Opslaan…" : "Opslaan"}
+                  </Button>
+                </section>
+              )}
+              <MarkthuurKaart m={uitkomst.markthuur} />
               <WwsKaart
-                c={uitkomst.c}
+                c={uitkomst.wws}
                 advies={uitkomst.advies}
                 grens={N.grensMidden + 1}
                 kanTellen={magSchrijven}
@@ -488,13 +550,83 @@ export default function HuurprijsIndicator({ magSchrijven, bewerker }: Huurprijs
             </div>
           </div>
 
-          <FactorTabel m={uitkomst.m} />
-          <Bronnen m={uitkomst.m} />
+          <FactorTabel m={uitkomst.markthuur} />
+          <Bronnen m={uitkomst.markthuur} />
           <p className="text-xs text-muted-foreground" role="note">
             {DISCLAIMER}
           </p>
         </>
       )}
+
+      {bekeken && (
+        <BekekenIndicatie
+          i={bekeken}
+          onSluit={() => setBekeken(null)}
+          onOpnieuw={
+            magSchrijven
+              ? () => {
+                  setWoning(bekeken.data.woning);
+                  setA(bekeken.data.antwoorden);
+                  setMeldingen([]);
+                  setOpgeslagenId(null);
+                  setKlantId(bekeken.klantId ?? "");
+                  setBekeken(null);
+                  toast(
+                    "Antwoorden overgenomen; de indicatie is opnieuw berekend met de huidige tabel en factoren.",
+                  );
+                }
+              : undefined
+          }
+        />
+      )}
+
+      <section
+        aria-label="Eerdere indicaties"
+        className="rounded-xl border border-border bg-card p-4"
+      >
+        <h2 className="mb-2 font-semibold">Eerdere indicaties</h2>
+        {eerdere.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nog geen opgeslagen indicaties.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {eerdere.map((i) => {
+              const w = i.data.woning;
+              const magWeg = magSchrijven && (i.ownerId === bewerker.id || isAdmin);
+              return (
+                <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 text-sm">
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">
+                      {w.straat} {w.huisnummer}, {w.plaats}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {new Date(i.gemaaktOp).toLocaleDateString("nl-NL")} ·{" "}
+                      {i.ownerNaam ?? "onbekend"}
+                    </span>
+                  </span>
+                  <span className="tabular-nums">
+                    markt {euroHeel(i.data.markthuur.verwacht)} · advies{" "}
+                    <b>{euroHeel(i.data.advies.bedrag)}</b>
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => setBekeken(i)}>
+                    Bekijken
+                  </Button>
+                  {magWeg && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={"Verwijder indicatie " + w.straat + " " + w.huisnummer}
+                      disabled={verwijderen.isPending}
+                      onClick={() => verwijderen.mutate(i.id)}
+                    >
+                      Verwijderen
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
@@ -572,12 +704,12 @@ export function WwsKaart({
   bezig,
   onTelling,
 }: {
-  c: ReturnType<typeof wwsCheck>;
-  advies: ReturnType<typeof huurAdvies>;
+  c: Omit<WwsCheck, "invoer">;
+  advies: HuurAdvies;
   grens: number;
   kanTellen: boolean;
-  bezig: boolean;
-  onTelling: () => void;
+  bezig?: boolean;
+  onTelling?: () => void;
 }) {
   const vrij = c.segLaag === "hoog";
   return (
@@ -743,6 +875,61 @@ export function Bronnen({ m }: { m: Markthuur }) {
       <p className="mt-1 text-xs text-muted-foreground">
         Woninggegevens: PDOK Locatieserver en BAG (Kadaster), energielabel: EP-Online (RVO).
         Maximale huur: woningwaarderingsstelsel en huurprijstabel uit de normen van deze app.
+      </p>
+    </section>
+  );
+}
+
+/** Een opgeslagen indicatie, precies zoals toen berekend (met de bronregel en factoren van toen) */
+function BekekenIndicatie({
+  i,
+  onSluit,
+  onOpnieuw,
+}: {
+  i: HuurIndicatie;
+  onSluit: () => void;
+  onOpnieuw?: (() => void) | undefined;
+}) {
+  const d = i.data;
+  const w = d.woning;
+  return (
+    <section
+      aria-label="Opgeslagen indicatie"
+      className="space-y-4 rounded-xl border-2 border-primary/40 bg-card p-4"
+    >
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold">
+            {w.straat} {w.huisnummer}, {w.postcode.replace(/^(\d{4})/, "$1 ")} {w.plaats}
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Opgeslagen op {new Date(i.gemaaktOp).toLocaleString("nl-NL")} door{" "}
+            {i.ownerNaam ?? d.gemaaktDoor}. Berekend op {datumTekst(d.datum)} met de bronregel en
+            factoren van toen; latere wijzigingen in Normen veranderen deze indicatie niet.
+          </p>
+        </div>
+        {onOpnieuw && (
+          <Button variant="outline" size="sm" onClick={onOpnieuw}>
+            Opnieuw berekenen met huidige tabel
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={onSluit}>
+          Sluiten
+        </Button>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <MarkthuurKaart m={d.markthuur} />
+        <WwsKaart
+          c={d.wws}
+          advies={d.advies}
+          grens={d.snapshot.grensVrijeSector}
+          kanTellen={false}
+        />
+      </div>
+      <FactorTabel m={d.markthuur} />
+      <Bronnen m={d.markthuur} />
+      <p className="text-xs text-muted-foreground" role="note">
+        {DISCLAIMER}
       </p>
     </section>
   );

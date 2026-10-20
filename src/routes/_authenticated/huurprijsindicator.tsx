@@ -42,6 +42,7 @@ function HuurprijsIndicatorPage() {
         <NormenProvider normen={normen}>
           <HuurprijsIndicator
             magSchrijven={!!data.magSchrijven}
+            isAdmin={!!data.isAdmin}
             bewerker={{ id: user.id, naam: data.profile?.display_name || email, email }}
           />
         </NormenProvider>

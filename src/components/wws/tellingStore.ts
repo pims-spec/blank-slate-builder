@@ -8,6 +8,7 @@ import {
   maakKlantenStore,
   maakTellingStore,
 } from "@/lib/wws/opslag";
+import { maakHuurStore } from "@/lib/wws/huur/opslag";
 import { maakPortefeuilleStore } from "@/lib/wws/portefeuille/opslag";
 
 /** Terugval voor versies zonder vastgelegde normen; de app rekent met normenQuery() */
@@ -17,6 +18,14 @@ export const tellingStore = maakTellingStore(supabase, STANDAARD_NORMEN);
 export const instellingenStore = maakInstellingenStore(supabase);
 export const klantenStore = maakKlantenStore(supabase);
 export const delenStore = maakDelenStore(supabase);
+export const huurStore = maakHuurStore(supabase);
+
+/** Opgeslagen huurprijsindicaties (de nieuwste 200) */
+export const huurIndicatiesQuery = () =>
+  queryOptions({
+    queryKey: ["huurindicaties"],
+    queryFn: () => huurStore.lijst(),
+  });
 
 export const tellingenQuery = () =>
   queryOptions({
