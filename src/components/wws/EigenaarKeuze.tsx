@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export default function EigenaarKeuze({
   const { data: klanten = [] } = useQuery(klantenQuery());
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const zoekRef = useRef<HTMLInputElement>(null);
   const naam = klantNaam(klanten, klantId);
   const treffers = zoekKlanten(klanten, q);
   const nieuweNaam = q.trim();
@@ -61,19 +62,26 @@ export default function EigenaarKeuze({
           <Button
             type="button"
             variant="outline"
-            className="justify-between font-normal"
+            className="w-full min-w-0 justify-between gap-2 overflow-hidden font-normal"
             disabled={alleenLezen}
             aria-label={"Eigenaar: " + (naam || "geen")}
           >
-            <span className={naam ? "" : "text-muted-foreground"}>
+            <span className={"min-w-0 flex-1 truncate text-left" + (naam ? "" : " text-muted-foreground")}>
               {naam || "Kies een eigenaar…"}
             </span>
-            <span aria-hidden>▾</span>
+            <span aria-hidden className="shrink-0">▾</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="start">
           <Input
+            ref={zoekRef}
             autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && magToevoegen && nieuweNaam && !bestaatKlant(klanten, nieuweNaam) && !treffers.length) {
+                e.preventDefault();
+                toevoegen.mutate(nieuweNaam);
+              }
+            }}
             aria-label="Zoek een eigenaar"
             placeholder="Zoek of kies een eigenaar…"
             value={q}
@@ -104,16 +112,33 @@ export default function EigenaarKeuze({
             {!treffers.length && nieuweNaam && (
               <p className="px-2 py-1.5 text-xs text-muted-foreground">Geen eigenaar gevonden.</p>
             )}
-            {magToevoegen && nieuweNaam && !bestaatKlant(klanten, nieuweNaam) && (
-              <button
-                type="button"
-                className={optieCls + " text-primary"}
-                disabled={toevoegen.isPending}
-                onClick={() => toevoegen.mutate(nieuweNaam)}
-              >
-                + ‘{nieuweNaam}’ toevoegen als nieuwe eigenaar
-              </button>
-            )}
+          </div>
+          {magToevoegen && (
+            <div className="mt-2 border-t border-border pt-2">
+              {nieuweNaam && !bestaatKlant(klanten, nieuweNaam) ? (
+                <button
+                  type="button"
+                  className={optieCls + " text-primary"}
+                  disabled={toevoegen.isPending}
+                  onClick={() => toevoegen.mutate(nieuweNaam)}
+                >
+                  + ‘{nieuweNaam}’ toevoegen als nieuwe eigenaar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={optieCls + " text-primary"}
+                  onClick={() => zoekRef.current?.focus()}
+                >
+                  + Nieuwe eigenaar toevoegen
+                  <span className="block text-xs text-muted-foreground">
+                    Typ de naam hierboven en klik daarna op toevoegen.
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+          <div hidden>
           </div>
         </PopoverContent>
       </Popover>
