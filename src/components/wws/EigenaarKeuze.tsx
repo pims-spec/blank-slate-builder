@@ -61,14 +61,14 @@ export default function EigenaarKeuze({
           <Button
             type="button"
             variant="outline"
-            className="justify-between font-normal"
+            className="w-full min-w-0 justify-between gap-2 overflow-hidden font-normal"
             disabled={alleenLezen}
             aria-label={"Eigenaar: " + (naam || "geen")}
           >
-            <span className={naam ? "" : "text-muted-foreground"}>
+            <span className={"min-w-0 flex-1 truncate text-left" + (naam ? "" : " text-muted-foreground")}>
               {naam || "Kies een eigenaar…"}
             </span>
-            <span aria-hidden>▾</span>
+            <span aria-hidden className="shrink-0">▾</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="start">
