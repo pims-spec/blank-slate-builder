@@ -95,7 +95,7 @@ export function CollegaUitnodigen() {
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 disabled={mutation.isPending}
                 onClick={() => setOpen(false)}
               >

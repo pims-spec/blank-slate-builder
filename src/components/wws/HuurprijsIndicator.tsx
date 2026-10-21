@@ -254,7 +254,7 @@ export default function HuurprijsIndicator({
       </header>
 
       {!magSchrijven && (
-        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm" role="note">
+        <p className="rounded-lg bg-muted px-3 py-2 text-sm" role="note">
           Met de kijkrol kun je opgeslagen indicaties bekijken in het archief, maar geen nieuwe
           maken.
         </p>
@@ -265,10 +265,7 @@ export default function HuurprijsIndicator({
 
       {woning && a && uitkomst && (
         <>
-          <section
-            aria-label="Woning"
-            className="rounded-xl border-2 border-ruimte-rand bg-card p-4 text-sm"
-          >
+          <section aria-label="Woning" className="gh-card p-4 text-sm">
             <div className="font-medium">
               {woning.straat} {woning.huisnummer}, {woning.postcode.replace(/^(\d{4})/, "$1 ")}{" "}
               {woning.plaats}
@@ -541,8 +538,8 @@ export function MarkthuurKaart({ m }: { m: Markthuur }) {
           <div
             key={l}
             className={
-              "rounded-lg border p-2 " +
-              (l === "Verwacht" ? "border-primary bg-primary/5" : "border-border")
+              "rounded-lg p-2 " +
+              (l === "Verwacht" ? "bg-secondary text-secondary-foreground" : "bg-muted")
             }
           >
             <div className="text-xs text-muted-foreground">{l}</div>
@@ -625,7 +622,7 @@ export function WwsKaart({
         </p>
       ) : (
         !vrij && (
-          <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm" role="note">
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm" role="note">
             Onder {grens} punten geldt de wettelijke maximale huur.
           </p>
         )
@@ -638,7 +635,7 @@ export function WwsKaart({
             : `Ook met een hoge WOZ-waarde komt de woning naar verwachting niet op ${grens} punten.`}
         </p>
       )}
-      <div className="rounded-lg border-2 border-primary bg-primary/5 p-3">
+      <div className="rounded-lg bg-secondary p-3">
         <div className="text-xs font-medium uppercase tracking-wide text-primary">
           Advies huurprijs
         </div>

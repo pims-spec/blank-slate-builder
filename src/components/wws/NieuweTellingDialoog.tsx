@@ -80,7 +80,7 @@ function Inhoud({ onDoorgaan, onOverslaan }: Omit<Props, "open">) {
         {info}
       </p>
       <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onOverslaan}>
+        <Button type="button" variant="ghost" onClick={onOverslaan}>
           Overslaan voor nu
         </Button>
         <Button type="submit">Doorgaan</Button>

@@ -234,13 +234,13 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
       </section>
 
       <form
-        className="space-y-8"
+        className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
           setBevestig(true);
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="gh-card grid gap-4 p-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted-foreground">Laatst gecontroleerd op</span>
             <Input
@@ -667,7 +667,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
 
 function Sectie({ titel, children }: { titel: string; children: ReactNode }) {
   return (
-    <section>
+    <section className="gh-card p-4">
       <h2 className="mb-3 text-base font-semibold">{titel}</h2>
       {children}
     </section>

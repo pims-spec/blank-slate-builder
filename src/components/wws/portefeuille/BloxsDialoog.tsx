@@ -546,7 +546,7 @@ function Inhoud({ klanten, bestaand, portefeuilles, onKlaar, onOpenChange }: Pro
             Stoppen
           </Button>
         ) : (
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {fase === "klaar" ? "Sluiten" : "Annuleren"}
           </Button>
         )}

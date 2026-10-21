@@ -62,14 +62,20 @@ export default function EigenaarKeuze({
           <Button
             type="button"
             variant="outline"
-            className="w-full min-w-0 justify-between gap-2 overflow-hidden font-normal"
+            className="w-full min-w-0 justify-between gap-2 overflow-hidden border-transparent bg-muted font-normal hover:bg-muted"
             disabled={alleenLezen}
             aria-label={"Eigenaar: " + (naam || "geen")}
           >
-            <span className={"min-w-0 flex-1 truncate text-left" + (naam ? "" : " text-muted-foreground")}>
+            <span
+              className={
+                "min-w-0 flex-1 truncate text-left" + (naam ? "" : " text-muted-foreground")
+              }
+            >
               {naam || "Kies een eigenaar…"}
             </span>
-            <span aria-hidden className="shrink-0">▾</span>
+            <span aria-hidden className="shrink-0">
+              ▾
+            </span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="start">
@@ -77,7 +83,13 @@ export default function EigenaarKeuze({
             ref={zoekRef}
             autoFocus
             onKeyDown={(e) => {
-              if (e.key === "Enter" && magToevoegen && nieuweNaam && !bestaatKlant(klanten, nieuweNaam) && !treffers.length) {
+              if (
+                e.key === "Enter" &&
+                magToevoegen &&
+                nieuweNaam &&
+                !bestaatKlant(klanten, nieuweNaam) &&
+                !treffers.length
+              ) {
                 e.preventDefault();
                 toevoegen.mutate(nieuweNaam);
               }
@@ -138,8 +150,7 @@ export default function EigenaarKeuze({
               )}
             </div>
           )}
-          <div hidden>
-          </div>
+          <div hidden></div>
         </PopoverContent>
       </Popover>
     </div>

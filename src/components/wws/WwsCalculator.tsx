@@ -261,7 +261,7 @@ function Sectie({
   children: ReactNode;
 }) {
   return (
-    <section className="border-b border-border py-6">
+    <section className="gh-card mt-4 px-4 py-5">
       <h2 className="mb-4 flex items-baseline gap-3 text-base font-semibold">
         <span className="w-8 text-right text-sm font-normal tabular-nums text-muted-foreground">
           {rubriek}
@@ -294,7 +294,7 @@ function Voorzieningen({
   const groepen = [...new Set(lijst.filter((it) => it.g).map((it) => it.g!))];
   const groepNaam: Record<string, string> = { kook: "Kookplaat", oven: "Oven", kraan: "Kraan" };
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3">
+    <div className="space-y-3 rounded-xl bg-muted/60 p-3">
       <div>
         <div className="text-sm font-medium">Extra voorzieningen</div>
         {toelichting && <p className="text-xs text-muted-foreground">{toelichting}</p>}

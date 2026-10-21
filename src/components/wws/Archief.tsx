@@ -330,6 +330,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         <Filter label="Peildatum van">
           <Input
             type="date"
+            className="bg-card"
             value={filters.peilVan}
             onChange={(e) => zet("peilVan", e.target.value)}
           />
@@ -337,6 +338,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         <Filter label="tot en met">
           <Input
             type="date"
+            className="bg-card"
             value={filters.peilTot}
             onChange={(e) => zet("peilTot", e.target.value)}
           />

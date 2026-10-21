@@ -167,7 +167,7 @@ function Inhoud({ klanten, bestaand, onImporteer, onOpenChange }: Props) {
         </div>
       )}
       <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <Button variant="ghost" onClick={() => onOpenChange(false)}>
           Annuleren
         </Button>
         <Button

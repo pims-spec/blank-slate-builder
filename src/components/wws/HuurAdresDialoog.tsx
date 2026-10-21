@@ -126,7 +126,7 @@ function Inhoud({ onZoek, onSluit }: { onZoek: Props["onZoek"]; onSluit: () => v
         {info}
       </p>
       <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onSluit}>
+        <Button type="button" variant="ghost" onClick={onSluit}>
           Annuleren
         </Button>
         <Button type="submit" disabled={bezig}>
