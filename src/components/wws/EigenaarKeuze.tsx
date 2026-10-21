@@ -14,6 +14,8 @@ interface Props {
   alleenLezen?: boolean;
   /** Collega's mogen een nieuwe eigenaar toevoegen (de kijkrol niet) */
   magToevoegen?: boolean;
+  /** Label boven de keuze */
+  label?: string;
 }
 
 /**
@@ -25,6 +27,7 @@ export default function EigenaarKeuze({
   onKies,
   alleenLezen = false,
   magToevoegen = false,
+  label = "Eigenaar",
 }: Props) {
   const qc = useQueryClient();
   const { data: klanten = [] } = useQuery(klantenQuery());
@@ -56,7 +59,7 @@ export default function EigenaarKeuze({
 
   return (
     <div className="flex flex-col gap-1 text-sm">
-      <span className="text-muted-foreground">Eigenaar</span>
+      <span className="text-muted-foreground">{label}</span>
       <Popover open={open} onOpenChange={(o) => !alleenLezen && setOpen(o)}>
         <PopoverTrigger asChild>
           <Button

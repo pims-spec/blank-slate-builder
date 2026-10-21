@@ -466,8 +466,9 @@ export default function HuurprijsIndicator({
                   className="flex flex-wrap items-end gap-3 gh-card p-4"
                 >
                   <div className="min-w-48 flex-1">
-                    <div className="mb-1 text-sm text-muted-foreground">Eigenaar (optioneel)</div>
                     <EigenaarKeuze
+                      label="Eigenaar (optioneel)"
+                      magToevoegen
                       klantId={klantId}
                       onKies={(k) => {
                         setKlantId(k);
