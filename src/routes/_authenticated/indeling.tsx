@@ -31,8 +31,10 @@ function IndelingPage() {
         <IndelingStart />
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">
-          <div className="max-w-lg rounded-xl border border-border bg-card p-8">
-            <h1 className="font-display text-3xl text-foreground">Indelingsadvies</h1>
+          <div className="max-w-lg gh-card p-8">
+            <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+              Indelingsadvies
+            </h1>
             <p className="mt-4 text-muted-foreground">
               {data.heeftToegang
                 ? "Je hebt een kijkrol: een indelingsadvies starten is niet mogelijk. Je kunt het indelingsadvies wel bekijken vanuit een telling."

@@ -35,7 +35,9 @@ function ResetPassword() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4">
-        <h1 className="font-display text-4xl text-foreground">Nieuw wachtwoord</h1>
+        <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+          Nieuw wachtwoord
+        </h1>
         <div className="space-y-2">
           <Label htmlFor="pw">Wachtwoord</Label>
           <Input

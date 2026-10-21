@@ -62,7 +62,9 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+            Dashboard
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Overzicht van de portefeuille, live herberekend met de huidige normen.
           </p>
@@ -70,7 +72,7 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs text-muted-foreground">Eigenaar</span>
           <select
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-9 rounded-lg border border-transparent bg-muted px-2 text-sm"
             value={klantId}
             onChange={(e) => setKlantId(e.target.value)}
           >
@@ -88,10 +90,7 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
       </div>
 
       {versies.data?.limietBereikt && (
-        <p
-          role="alert"
-          className="mb-6 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm"
-        >
+        <p role="alert" className="mb-6 rounded-lg bg-warn px-3 py-2 text-sm">
           Let op: er zijn meer dan {DASHBOARD_VERSIE_LIMIET.toLocaleString("nl-NL")} opgeslagen
           versies. Alleen de eerste {DASHBOARD_VERSIE_LIMIET.toLocaleString("nl-NL")} zijn
           meegenomen, dus de trend en “al behaald” zijn onvolledig.
@@ -300,7 +299,7 @@ function DashboardInhoud({
 
 function Tegel({ waarde, label }: { waarde: ReactNode; label: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="gh-card p-4">
       <div className="text-2xl font-semibold tabular-nums">{waarde}</div>
       <div className="mt-1 text-xs text-muted-foreground">{label}</div>
     </div>
@@ -309,7 +308,7 @@ function Tegel({ waarde, label }: { waarde: ReactNode; label: string }) {
 
 function Kaart({ titel, children }: { titel: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4" aria-label={titel}>
+    <section className="gh-card p-4" aria-label={titel}>
       <h2 className="mb-3 text-sm font-semibold">{titel}</h2>
       {children}
     </section>
@@ -317,7 +316,7 @@ function Kaart({ titel, children }: { titel: string; children: ReactNode }) {
 }
 
 function Lijst({ children }: { children: ReactNode }) {
-  return <ul className="divide-y divide-border rounded-md border border-border">{children}</ul>;
+  return <ul className="divide-y divide-border rounded-lg border border-border">{children}</ul>;
 }
 
 function TellingRij({

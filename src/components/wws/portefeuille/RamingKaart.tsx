@@ -8,10 +8,7 @@ import { RAMING_UITLEG, type Raming } from "@/lib/wws/portefeuille/verduurzaming
  */
 export function RamingKaart({ raming: r, actie }: { raming: Raming; actie?: ReactNode }) {
   return (
-    <section
-      className="rounded-2xl border border-border bg-card p-4"
-      aria-label="Verduurzamingsraming"
-    >
+    <section className="gh-card p-4" aria-label="Verduurzamingsraming">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="font-semibold">Verduurzamingsraming</h3>
@@ -21,7 +18,7 @@ export function RamingKaart({ raming: r, actie }: { raming: Raming; actie?: Reac
       </div>
 
       {!r.ingesteld && (
-        <p className="mb-3 rounded-md border border-border bg-muted px-3 py-2 text-sm">
+        <p className="mb-3 rounded-lg border border-border bg-muted px-3 py-2 text-sm">
           Bedragen nog niet ingesteld in Normen; hieronder alleen de labelstappen.
         </p>
       )}

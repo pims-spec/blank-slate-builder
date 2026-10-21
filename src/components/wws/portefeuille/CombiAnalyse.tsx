@@ -101,16 +101,13 @@ export function CombiAnalyse({
 
   return (
     <div className="space-y-4">
-      <section
-        className="rounded-2xl border border-border bg-card p-4"
-        aria-label="Portefeuilles kiezen"
-      >
+      <section className="gh-card p-4" aria-label="Portefeuilles kiezen">
         <div className="flex flex-wrap items-end gap-3">
           {eigenarenMetPortefeuille.length > 0 && (
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-muted-foreground">Alle portefeuilles van eigenaar</span>
               <select
-                className="h-9 max-w-full rounded-xl border border-input bg-background px-2"
+                className="h-9 max-w-full rounded-lg border border-transparent bg-muted px-2"
                 value=""
                 onChange={(e) => {
                   const ids = portefeuilles
@@ -167,10 +164,7 @@ export function CombiAnalyse({
       ) : (
         <>
           {nogNiet.length > 0 && (
-            <section
-              className="rounded-2xl border border-border bg-card p-4 text-sm"
-              aria-label="Nog niet opgehaald"
-            >
+            <section className="gh-card p-4 text-sm" aria-label="Nog niet opgehaald">
               <p className="text-orange-ink">
                 Niet alle labels zijn opgehaald. Haal ze op in de portefeuille zelf:
               </p>
@@ -187,7 +181,7 @@ export function CombiAnalyse({
             </section>
           )}
 
-          <section className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
+          <section className="flex flex-wrap items-end gap-3 gh-card p-4">
             <label className="flex min-w-64 flex-1 flex-col gap-1 text-sm">
               <span className="text-muted-foreground">Naam van de analyse</span>
               <Input

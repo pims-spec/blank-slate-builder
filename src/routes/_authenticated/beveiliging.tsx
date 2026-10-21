@@ -57,17 +57,16 @@ function BeveiligingPagina() {
         magSchrijven={data.magSchrijven}
       />
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Beveiliging</h1>
+        <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+          Beveiliging
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Tweestapsverificatie is verplicht: na je wachtwoord vraagt GoHome advice een code uit een
           app op je telefoon. Koppel gerust een tweede apparaat, zodat je er niet afhankelijk bent
           van één telefoon.
         </p>
 
-        <section
-          className="mt-6 rounded-2xl border border-border bg-card p-4"
-          aria-label="Code-apps"
-        >
+        <section className="mt-6 gh-card p-4" aria-label="Code-apps">
           <h2 className="mb-2 font-semibold">Gekoppelde code-apps</h2>
           {!factoren ? (
             <p className="text-sm text-muted-foreground">Laden…</p>
@@ -101,7 +100,7 @@ function BeveiligingPagina() {
           )}
         </section>
 
-        <section className="mt-4 rounded-2xl border border-border bg-card p-4">
+        <section className="mt-4 gh-card p-4">
           {koppelen ? (
             <KoppelCodeApp
               onKlaar={() => {

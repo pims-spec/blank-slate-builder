@@ -159,7 +159,7 @@ export function CodeInvoeren({ onKlaar }: { onKlaar: () => void }) {
           <Label htmlFor="factor">Apparaat</Label>
           <select
             id="factor"
-            className="h-9 max-w-full rounded-xl border border-input bg-background px-2 text-sm"
+            className="h-9 max-w-full rounded-lg border border-transparent bg-muted px-2 text-sm"
             value={gekozen}
             onChange={(e) => setGekozen(e.target.value)}
           >

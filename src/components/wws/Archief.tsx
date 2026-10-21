@@ -41,7 +41,7 @@ const datumTijd = (iso: string) =>
   new Date(iso).toLocaleString("nl-NL", { dateStyle: "medium", timeStyle: "short" });
 
 const veldCls =
-  "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-9 rounded-lg border border-transparent bg-muted px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface Props {
   rechten: Rechten;
@@ -201,7 +201,9 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Archief</h1>
+          <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+            Archief
+          </h1>
           {!voorIndeling && tabs}
           {voorIndeling && (
             <p className="mt-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
@@ -359,7 +361,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
           Niets gevonden{zoek.trim() && <> voor ‘{zoek}’</>} met deze zoekopdracht of filters.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-x-auto gh-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-muted-foreground">
               <tr>
@@ -426,7 +428,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() => teVerwijderen && verwijder.mutate(teVerwijderen.t.id)}
             >
               Verwijderen

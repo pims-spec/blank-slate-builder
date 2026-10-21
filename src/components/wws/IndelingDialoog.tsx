@@ -57,7 +57,7 @@ const STAPPEN = [
 type Stap = (typeof STAPPEN)[number][0] | "plattegrond";
 
 const selCls =
-  "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-9 rounded-lg border border-transparent bg-muted px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /** Ontbreekt het energielabel (of index/bouwjaar)? Dan kloppen de puntentotalen niet — energieOntbreekt() */
 function energieOntbreekt(E: WwsInput["energie"]): boolean {
@@ -283,10 +283,8 @@ function IndelingInhoud({
             <li
               key={k}
               aria-current={stap === k ? "step" : undefined}
-              className={`rounded-full border px-3 py-1 ${
-                stap === k
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border text-muted-foreground"
+              className={`rounded-lg px-3 py-1 font-semibold ${
+                stap === k ? "bg-secondary text-secondary-foreground" : "text-muted-foreground"
               }`}
             >
               {i + 1}. {l}
@@ -300,7 +298,7 @@ function IndelingInhoud({
           {stap1}
           {energieMist && (
             // energieWaarschuwing in renderIndelingEigenaar()
-            <p className="text-sm text-amber-700 dark:text-amber-300" role="status">
+            <p className="text-sm text-warn-foreground" role="status">
               Nog niet volledig ingevuld — zonder energielabel/bouwjaar kloppen de puntentotalen van
               de varianten in de volgende stap niet.
             </p>
@@ -386,7 +384,7 @@ function IndelingInhoud({
             />
           )}
           {rooms.length ? (
-            <ul className="divide-y divide-border rounded-md border border-border">
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {rooms.map((r, i) => {
                 const label =
                   (r.naam && r.naam.trim()) ||
@@ -502,7 +500,7 @@ function Resultaten({
         ← Vorige stap
       </Button>
       {energieMist && (
-        <p className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm">
+        <p className="rounded-lg bg-warn px-3 py-2 text-sm">
           Er is nog geen (geldig) energielabel, energie-index of bouwjaar ingevuld — de getoonde
           puntentotalen en segmenten zijn hierdoor nog niet correct.
         </p>
@@ -552,7 +550,7 @@ function Resultaten({
                 <Schema v={v} />
                 {v.toiletToegevoegd && (
                   <p
-                    className="rounded-md border border-border bg-muted px-2 py-1 text-xs"
+                    className="rounded-lg border border-border bg-muted px-2 py-1 text-xs"
                     role="note"
                   >
                     Toilet toegevoegd aan de badkamer: deze variant had verder nergens een toilet.
@@ -622,7 +620,7 @@ function Schema({ v }: { v: IndelingVariant }) {
     <div>
       <svg
         viewBox={`0 0 ${SW} ${SH}`}
-        className="h-auto w-full rounded-md border border-border bg-background"
+        className="h-auto w-full rounded-lg border border-border bg-background"
         role="img"
         aria-label={
           "Schematische indeling: " + bl.map((b) => `${b.label} ${fmt(b.m2)} m²`).join(", ")
@@ -711,11 +709,11 @@ function AiAfbeelding({ staat }: { staat: AiStaat | undefined }) {
         <img
           src={naarDataUrl(staat.beeld.data, staat.beeld.type)}
           alt="Door AI gegenereerde plattegrond van deze variant"
-          className="w-full rounded-md border border-border"
+          className="w-full rounded-lg border border-border"
         />
       )}
       {staat.fout && (
-        <p className="rounded-md border border-border bg-muted px-2 py-1 text-xs" role="status">
+        <p className="rounded-lg border border-border bg-muted px-2 py-1 text-xs" role="status">
           {staat.fout}
         </p>
       )}

@@ -72,8 +72,10 @@ function ArchiefPage() {
         </NormenProvider>
       ) : (
         <main className="mx-auto max-w-5xl px-6 py-16">
-          <div className="max-w-lg rounded-xl border border-border bg-card p-8">
-            <h1 className="font-display text-3xl text-foreground">Wachten op toegang</h1>
+          <div className="max-w-lg gh-card p-8">
+            <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+              Wachten op toegang
+            </h1>
             <p className="mt-4 text-muted-foreground">
               Een beheerder moet je nog toegang geven voordat je het archief kunt gebruiken.
             </p>
@@ -92,17 +94,21 @@ function ArchiefTabs({ actief }: { actief: "tellingen" | "analyses" | "huur" }) 
       role="tab"
       aria-selected={actief === id}
       className={
-        "rounded-full px-3 py-1 text-sm " +
+        "gh-press rounded-md px-3 py-1 text-sm font-semibold " +
         (actief === id
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground")
+          ? "bg-card text-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground")
       }
     >
       {label}
     </Link>
   );
   return (
-    <div role="tablist" aria-label="Archief" className="mt-2 flex flex-wrap gap-1">
+    <div
+      role="tablist"
+      aria-label="Archief"
+      className="mt-2 inline-flex flex-wrap gap-0.5 rounded-lg bg-foreground/[0.06] p-0.5"
+    >
       {tab("tellingen", "Tellingen")}
       {tab("analyses", "Portefeuille-analyses")}
       {tab("huur", "Huurprijsindicaties")}

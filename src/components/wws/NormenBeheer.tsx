@@ -173,7 +173,9 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-6 py-10">
       <div>
-        <h1 className="font-display text-4xl text-foreground">Normen en parameters</h1>
+        <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+          Normen en parameters
+        </h1>
         <p className="mt-2 max-w-prose text-sm text-muted-foreground">
           Deze waarden komen uit het Beleidsboek Waarderingsstelsel zelfstandige woonruimte van de
           Huurcommissie (geldend per 1 juli 2026) en de huurprijstabel per 1 januari 2026. Pas ze
@@ -183,9 +185,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
       </div>
 
       <section
-        className={`rounded-lg border p-4 text-sm ${
-          status.nodig ? "border-amber-500/50 bg-amber-500/10" : "border-border bg-card"
-        }`}
+        className={`rounded-xl p-4 text-sm ${status.nodig ? "bg-warn" : "gh-card"}`}
         aria-label="Controle van de normen"
       >
         {status.nodig ? (
@@ -377,7 +377,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
                     <li key={k} className="flex items-center justify-between gap-3 text-sm">
                       <span className="min-w-0">{l}</span>
                       <select
-                        className="h-8 shrink-0 rounded-xl border border-input bg-background px-2 text-sm"
+                        className="h-8 shrink-0 rounded-lg border border-transparent bg-muted px-2 text-sm"
                         aria-label={"Niveau: " + l}
                         value={niveaus[k] ?? "gemiddeld"}
                         onChange={(e) =>
@@ -487,7 +487,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
               EFG-regels: woningen zonder geregistreerd label
             </span>
             <select
-              className="h-9 rounded-xl border border-input bg-background px-2 text-sm"
+              className="h-9 rounded-lg border border-transparent bg-muted px-2 text-sm"
               value={pf.efg.geenLabel}
               onChange={(e) =>
                 setPf({ ...pf, efg: { ...pf.efg, geenLabel: e.target.value as GeenLabelEfg } })
@@ -499,7 +499,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
             </select>
           </label>
           <p
-            className="mt-3 rounded-md border border-border bg-muted px-3 py-2 text-xs"
+            className="mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs"
             aria-live="polite"
           >
             Omschrijving in de analyse: {efgOmschrijving(portefeuilleNormen(pf).efg)}
@@ -517,7 +517,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
             lage en een hoge prijs ontstaat een bandbreedte. Zonder bedragen toont de analyse alleen
             de labelstappen.
           </p>
-          <p className="mb-3 rounded-md border border-border bg-muted px-3 py-2 text-xs">
+          <p className="mb-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs">
             {RAMING_BRON}
           </p>
           <div className="grid max-w-md grid-cols-2 gap-3">
@@ -579,7 +579,7 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
                   </td>
                   <td className="py-1">
                     <select
-                      className="h-9 rounded-xl border border-input bg-background px-2 text-sm"
+                      className="h-9 rounded-lg border border-transparent bg-muted px-2 text-sm"
                       aria-label={"Aangenomen label " + BOUWJAAR_NAMEN[k]}
                       value={pf.raming.aangenomen[k]}
                       onChange={(e) =>

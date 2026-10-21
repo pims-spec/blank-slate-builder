@@ -141,7 +141,7 @@ export function LabelGrafiek({
         </svg>
         {actief !== null && (
           <div
-            className="pointer-events-none absolute top-0 rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow"
+            className="pointer-events-none absolute top-0 rounded-lg border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow"
             style={{ left: `calc(${((actief + 0.5) / data.length) * 100}% - 60px)`, width: 120 }}
             role="status"
           >

@@ -60,7 +60,7 @@ const vinkCls = "size-4 shrink-0 accent-primary";
 function Badge({ h, titel }: { h: Haalbaarheid; titel?: string | undefined }) {
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${H_KLEUR[h]}`}
+      className={`inline-block rounded-lg px-2 py-0.5 text-[11px] font-medium ${H_KLEUR[h]}`}
       title={titel}
     >
       {H_LABEL[h]}
@@ -71,7 +71,7 @@ function Badge({ h, titel }: { h: Haalbaarheid; titel?: string | undefined }) {
 function Chip({ children, eigen = false }: { children: ReactNode; eigen?: boolean }) {
   return (
     <span
-      className={`mr-1 mt-1 inline-block rounded-full border px-2 py-0.5 text-xs ${
+      className={`mr-1 mt-1 inline-block rounded-lg border px-2 py-0.5 text-xs ${
         eigen ? "border-primary text-primary" : "border-border text-muted-foreground"
       }`}
     >
@@ -281,7 +281,7 @@ function AdviesInhoud({
           titel="Met selectie"
           waarde={S.R.totaal}
           sub="punten"
-          kleur={gehaald ? "text-emerald-600" : vrij ? "text-amber-600" : ""}
+          kleur={gehaald ? "text-emerald-600" : vrij ? "text-orange-ink" : ""}
         />
         <Kpi titel="Kosten selectie" waarde={eur(S.kosten)} sub="indicatie" klein />
       </div>
@@ -319,7 +319,7 @@ function AdviesInhoud({
           </>
         ) : vrij ? (
           <>
-            <b className="text-amber-600">Vrije sector</b>, maar nog {A.doel - S.R.totaal} punten
+            <b className="text-orange-ink">Vrije sector</b>, maar nog {A.doel - S.R.totaal} punten
             onder het doel.
           </>
         ) : (
@@ -351,7 +351,7 @@ function AdviesInhoud({
           {beginVraag && (
             <div
               role="note"
-              className="flex flex-wrap items-center gap-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm"
+              className="flex flex-wrap items-center gap-3 rounded-lg bg-warn px-3 py-2 text-sm"
             >
               <span className="min-w-0 flex-1">
                 Het energieadvies gaat uit van label {beginVraag.advies.label}, EP-Online van{" "}
@@ -374,7 +374,7 @@ function AdviesInhoud({
           )}
           {A.stappen.length > 0 && (
             <>
-              <ul className="divide-y divide-border rounded-md border border-border">
+              <ul className="divide-y divide-border rounded-lg border border-border">
                 {A.stappen.map((s, k) => (
                   <li key={k}>
                     <label
@@ -431,7 +431,7 @@ function AdviesInhoud({
                     {lijst.length} maatregel{lijst.length === 1 ? "" : "en"}
                   </span>
                 </div>
-                <ul className="divide-y divide-border rounded-md border border-border">
+                <ul className="divide-y divide-border rounded-lg border border-border">
                   {lijst.map((s) => {
                     const id = s.key + "|" + s.o;
                     return (
@@ -522,7 +522,7 @@ function AdviesInhoud({
             <p className="text-xs text-muted-foreground">
               Vink uit wat bouwkundig niet kan of niet gewenst is en vul je eigen kosten in.
             </p>
-            <div className="mt-2 overflow-x-auto rounded-md border border-border">
+            <div className="mt-2 overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                   <tr>

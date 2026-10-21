@@ -75,7 +75,7 @@ export function BloxsBeheer() {
   }, [structuur, zoek]);
 
   return (
-    <div className="mt-6 rounded-xl border border-border bg-card p-4" aria-label="Bloxs OData-feed">
+    <div className="mt-6 gh-card p-4" aria-label="Bloxs OData-feed">
       <h3 className="font-semibold text-foreground">Bloxs OData-feed</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Alleen de structuur (namen van entiteiten en velden) en per entiteit of er toegang is (vraag

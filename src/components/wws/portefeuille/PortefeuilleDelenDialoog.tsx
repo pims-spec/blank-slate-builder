@@ -78,7 +78,7 @@ export function PortefeuilleDelenDialoog({
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-muted-foreground">Portefeuille</span>
                 <select
-                  className="h-9 max-w-full rounded-xl border border-input bg-background px-2"
+                  className="h-9 max-w-full rounded-lg border border-transparent bg-muted px-2"
                   value={p.id}
                   onChange={(e) => setGekozen(e.target.value)}
                 >

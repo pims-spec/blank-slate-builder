@@ -61,7 +61,7 @@ function Dashboard() {
               </>
             )}
             {controle?.nodig && (
-              <div className="mt-10 max-w-lg rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm">
+              <div className="mt-10 max-w-lg rounded-xl bg-warn p-4 text-sm">
                 <p className="font-medium">Tijd voor de maandelijkse controle van de normen</p>
                 <p className="mt-1">{controle.reden}</p>
                 <Button asChild variant="outline" size="sm" className="mt-3">
@@ -71,8 +71,10 @@ function Dashboard() {
             )}
           </>
         ) : (
-          <div className="max-w-lg rounded-xl border border-border bg-card p-8">
-            <h1 className="font-display text-3xl text-foreground">Wachten op toegang</h1>
+          <div className="max-w-lg gh-card p-8">
+            <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+              Wachten op toegang
+            </h1>
             <p className="mt-4 text-muted-foreground">
               Je account ({user.email}) is aangemaakt. Een beheerder moet je nog toegang geven.
             </p>

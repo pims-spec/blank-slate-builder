@@ -112,7 +112,9 @@ export function ArchiefAnalyses({
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Archief</h1>
+          <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+            Archief
+          </h1>
           {tabs}
         </div>
         <Input
@@ -133,7 +135,7 @@ export function ArchiefAnalyses({
           {data.length ? "Geen analyses gevonden." : "Nog geen opgeslagen portefeuille-analyses."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto gh-card">
           <table className="w-full text-sm" aria-label="Portefeuille-analyses">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b border-border">
@@ -261,7 +263,7 @@ export function ArchiefAnalyses({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() => weg && void verwijder(weg)}
             >
               Verwijderen

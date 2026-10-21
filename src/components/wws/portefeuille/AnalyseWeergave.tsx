@@ -12,7 +12,7 @@ const tijd = (iso: string | null) =>
 
 function Kaart({ titel, children }: { titel: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-4" aria-label={titel}>
+    <section className="gh-card p-4" aria-label={titel}>
       <h3 className="mb-3 font-semibold">{titel}</h3>
       {children}
     </section>

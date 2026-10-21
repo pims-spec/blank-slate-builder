@@ -8,14 +8,16 @@ import { Woordmerk } from "@/components/Woordmerk";
 import { wachtwoordFout } from "@/lib/wachtwoord";
 
 export const Route = createFileRoute("/uitnodiging")({
-  head: () => ({ meta: [
-    { title: "Uitnodiging accepteren — GoHome advice" },
-    { name: "description", content: "Activeer je account voor GoHome advice." },
-    { property: "og:title", content: "Uitnodiging accepteren — GoHome advice" },
-    { property: "og:description", content: "Activeer je account voor GoHome advice." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary" },
-  ] }),
+  head: () => ({
+    meta: [
+      { title: "Uitnodiging accepteren — GoHome advice" },
+      { name: "description", content: "Activeer je account voor GoHome advice." },
+      { property: "og:title", content: "Uitnodiging accepteren — GoHome advice" },
+      { property: "og:description", content: "Activeer je account voor GoHome advice." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Uitnodiging,
 });
 
@@ -31,33 +33,88 @@ function Uitnodiging() {
     void supabase.auth.getUser().then(({ data }) => {
       if (active) setStatus(data.user ? "ready" : "invalid");
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (password !== confirmation) { setError("De wachtwoorden komen niet overeen."); return; }
+    if (password !== confirmation) {
+      setError("De wachtwoorden komen niet overeen.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) { setError(wachtwoordFout(updateError)); return; }
+      if (updateError) {
+        setError(wachtwoordFout(updateError));
+        return;
+      }
       await navigate({ to: "/dashboard", replace: true });
-    } catch { setError("Activeren is niet gelukt. Probeer opnieuw."); }
-    finally { setBusy(false); }
+    } catch {
+      setError("Activeren is niet gelukt. Probeer opnieuw.");
+    } finally {
+      setBusy(false);
+    }
   }
-  return <main className="flex min-h-screen items-center justify-center bg-background px-6">
-    <div className="w-full max-w-sm space-y-6">
-      <Woordmerk className="text-lg" />
-      <h1 className="font-display text-3xl text-foreground">Uitnodiging accepteren</h1>
-      {status === "loading" ? <p className="text-muted-foreground">Uitnodiging controleren…</p> : status === "invalid" ? <>
-        <p role="alert" className="text-muted-foreground">Deze uitnodiging is ongeldig of verlopen. Vraag je beheerder om hulp.</p>
-        <Button asChild variant="outline"><Link to="/auth">Naar inloggen</Link></Button>
-      </> : <form onSubmit={submit} className="space-y-4">
-        <div className="space-y-2"><Label htmlFor="invite-password">Wachtwoord</Label><Input id="invite-password" type="password" autoComplete="new-password" minLength={6} required disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} /></div>
-        <div className="space-y-2"><Label htmlFor="invite-confirmation">Herhaal wachtwoord</Label><Input id="invite-confirmation" type="password" autoComplete="new-password" minLength={6} required disabled={busy} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button className="w-full" disabled={busy}>{busy ? "Activeren…" : "Account activeren"}</Button>
-      </form>}
-    </div>
-  </main>;
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background px-6">
+      <div className="w-full max-w-sm space-y-6">
+        <Woordmerk className="text-lg" />
+        <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+          Uitnodiging accepteren
+        </h1>
+        {status === "loading" ? (
+          <p className="text-muted-foreground">Uitnodiging controleren…</p>
+        ) : status === "invalid" ? (
+          <>
+            <p role="alert" className="text-muted-foreground">
+              Deze uitnodiging is ongeldig of verlopen. Vraag je beheerder om hulp.
+            </p>
+            <Button asChild variant="outline">
+              <Link to="/auth">Naar inloggen</Link>
+            </Button>
+          </>
+        ) : (
+          <form onSubmit={submit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-password">Wachtwoord</Label>
+              <Input
+                id="invite-password"
+                type="password"
+                autoComplete="new-password"
+                minLength={6}
+                required
+                disabled={busy}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-confirmation">Herhaal wachtwoord</Label>
+              <Input
+                id="invite-confirmation"
+                type="password"
+                autoComplete="new-password"
+                minLength={6}
+                required
+                disabled={busy}
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+              />
+            </div>
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <Button className="w-full" disabled={busy}>
+              {busy ? "Activeren…" : "Account activeren"}
+            </Button>
+          </form>
+        )}
+      </div>
+    </main>
+  );
 }

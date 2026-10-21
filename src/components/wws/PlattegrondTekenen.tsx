@@ -36,7 +36,7 @@ const STATUS_CLS: Record<IndelingStatus, string> = {
   negeren: "border-red-500 bg-red-500/15 line-through opacity-70",
 };
 const veldCls =
-  "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-9 rounded-lg border border-transparent bg-muted px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 type Drag =
   | { mode: "move"; i: number; startX: number; startY: number; start: Bbox; rect: DOMRect }
@@ -225,7 +225,7 @@ export default function PlattegrondTekenen({
         deel van de tekening om een nieuwe ruimte in te tekenen.
       </p>
       <div
-        className="relative max-w-full touch-none select-none rounded-md border border-border bg-white"
+        className="relative max-w-full touch-none select-none rounded-lg border border-border bg-white"
         onPointerDown={start}
         aria-label="Plattegrond met ruimten"
       >
@@ -333,7 +333,7 @@ export default function PlattegrondTekenen({
       )}
       {nieuw && (
         <form
-          className="space-y-3 rounded-md border border-border p-3"
+          className="space-y-3 rounded-lg border border-border p-3"
           aria-label="Nieuwe ruimte op de plattegrond"
           onSubmit={(e) => {
             e.preventDefault();

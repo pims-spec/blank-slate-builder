@@ -85,7 +85,9 @@ function AuthPage() {
       {/* .authcard in wws-site.html: één kaart met de inlogvelden */}
       <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-8 shadow-[0_8px_24px_color-mix(in_oklab,var(--color-primary)_8%,transparent)]">
         <Woordmerk className="text-lg" />
-        <h1 className="mt-8 font-display text-3xl text-foreground">{title}</h1>
+        <h1 className="mt-8 font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+          {title}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">GoHome WWS-puntentelling</p>
         {mode !== "forgot" && (
           <>

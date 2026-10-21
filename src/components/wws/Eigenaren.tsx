@@ -68,7 +68,9 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-display text-4xl text-foreground">Eigenaren</h1>
+      <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+        Eigenaren
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         De eigenaren of opdrachtgevers waaraan je een telling kunt koppelen.
         {rechten.isAdmin
@@ -110,7 +112,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
       ) : !klanten.length ? (
         <p className="mt-6 text-muted-foreground">Nog geen eigenaren toegevoegd.</p>
       ) : (
-        <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
+        <ul className="mt-6 divide-y divide-border gh-card">
           {klanten.map((k) => (
             <li key={k.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               {bewerk?.id === k.id ? (
@@ -194,7 +196,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() => teVerwijderen && verwijderen.mutate(teVerwijderen.id)}
             >
               Verwijderen
@@ -210,7 +212,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
 function PveBadge({ n }: { n: number }) {
   if (!n) return null;
   return (
-    <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs font-normal text-muted-foreground">
+    <span className="ml-2 rounded-lg border border-border px-2 py-0.5 text-xs font-normal text-muted-foreground">
       {n === 1 ? "PvE ingesteld" : n + " PvE's ingesteld"}
     </span>
   );

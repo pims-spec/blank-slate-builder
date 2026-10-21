@@ -91,7 +91,7 @@ export default function EnergieAdviesBlok({ advies, meta, magBewerken, onZet }: 
     <section className="space-y-2 text-sm" aria-label="Verduurzamingsadvies">
       <h3 className="font-semibold">Verduurzamingsadvies uploaden</h3>
       {advies ? (
-        <div className="rounded-md border border-emerald-600/30 bg-emerald-600/10 px-3 py-2">
+        <div className="rounded-lg border border-emerald-600/30 bg-emerald-600/10 px-3 py-2">
           <b>Geüpload: {advies.bestand || "advies"}</b>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {advies.geuploadOp &&

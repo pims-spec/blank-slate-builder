@@ -37,7 +37,7 @@ const BRON_KLEUR: Record<string, string> = {
   ingeschat: "bg-orange text-orange-foreground",
 };
 const veldCls =
-  "rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "rounded-lg border border-transparent bg-muted px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface Props {
   open: boolean;
@@ -203,7 +203,7 @@ export function PlattegrondInlezen({
         <img
           src={voorbeeld}
           alt="Voorbeeld plattegrond"
-          className="max-h-64 max-w-full rounded-md border border-border bg-white"
+          className="max-h-64 max-w-full rounded-lg border border-border bg-white"
         />
       )}
       <div className="flex flex-wrap items-center gap-3">
@@ -289,7 +289,7 @@ export function PlattegrondInlezen({
                       </td>
                       <td className="p-1">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] ${BRON_KLEUR[r.bron] ?? "bg-muted text-foreground"}`}
+                          className={`rounded-lg px-2 py-0.5 text-[11px] ${BRON_KLEUR[r.bron] ?? "bg-muted text-foreground"}`}
                         >
                           {r.bron}
                         </span>
@@ -337,7 +337,7 @@ export function PlattegrondInlezen({
             )}
           </div>
           {R.nameten.length > 0 && (
-            <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2">
+            <div className="rounded-lg bg-warn px-3 py-2">
               <b>Ter plekke nameten of controleren:</b>
               <ul className="list-inside list-disc">
                 {R.nameten.map((n, i) => (

@@ -33,12 +33,13 @@ const ICONEN: Record<MenuIcoon, LucideIcon> = {
   beveiliging: ShieldCheck,
 };
 
-// .smitem in wws-site.html; op telefoon (≤ 720px) alleen het icoon
+// Navigatie zoals in GoHome UI: stille grijze items, het actieve item in Frost; op telefoon
+// (≤ 720px) alleen het icoon
 const itemCls =
-  "group flex items-center gap-2.5 rounded-xl p-2.5 text-[13.5px] font-semibold whitespace-nowrap text-foreground hover:bg-secondary max-[720px]:justify-center max-[720px]:px-0";
-const actiefCls = "bg-primary text-primary-foreground hover:bg-primary";
+  "gh-press group flex min-h-9 items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13.5px] font-medium whitespace-nowrap text-stil hover:bg-foreground/[0.05] hover:text-foreground max-[720px]:justify-center max-[720px]:px-0";
+const actiefCls = "bg-secondary font-semibold text-foreground hover:bg-secondary";
 const icoonCls =
-  "grid size-7 flex-none place-items-center rounded-[9px] bg-secondary text-primary group-data-[status=active]:bg-primary-foreground/20 group-data-[status=active]:text-primary-foreground";
+  "grid size-6 flex-none place-items-center text-stil group-data-[status=active]:text-primary";
 const labelCls = "max-[720px]:sr-only";
 
 function Item({ o }: { o: MenuOnderdeel }) {
@@ -51,7 +52,7 @@ function Item({ o }: { o: MenuOnderdeel }) {
       title={o.label}
     >
       <span className={icoonCls} aria-hidden="true">
-        <Icoon className="size-[18px]" strokeWidth={2} />
+        <Icoon className="size-5" strokeWidth={1.75} />
       </span>
       <span className={labelCls}>{o.label}</span>
     </Link>
@@ -59,8 +60,8 @@ function Item({ o }: { o: MenuOnderdeel }) {
 }
 
 /**
- * Zijmenu van de app — .sidemenu in wws-site.html: breed (212px) op een computer, een
- * icoonbalk (64px) op een telefoon. De pagina zelf schuift op met `zijmenuRuimte`.
+ * Zijmenu van de app: een zwevend glaspaneel (GoHome UI → Materials), breed (212px) op een
+ * computer, een icoonbalk (56px) op een telefoon. De pagina zelf schuift op met `zijmenuRuimte`.
  */
 export function Zijmenu(r: MenuRechten) {
   const queryClient = useQueryClient();
@@ -75,11 +76,11 @@ export function Zijmenu(r: MenuRechten) {
   return (
     <nav
       aria-label="Hoofdmenu"
-      className="fixed inset-y-0 left-0 z-40 flex w-[212px] flex-col overflow-y-auto border-r border-border bg-card px-2.5 py-4 max-[720px]:w-16"
+      className="gh-glass fixed top-2.5 bottom-2.5 left-2.5 z-40 flex w-[212px] flex-col overflow-y-auto rounded-xl px-2 py-3 max-[720px]:w-14 max-[720px]:px-1.5"
     >
       <Link
         to="/dashboard"
-        className="mb-1.5 border-b border-border px-2 pt-1 pb-4 max-[720px]:px-0 max-[720px]:text-center"
+        className="mb-2 rounded-lg px-2 pt-1 pb-3 max-[720px]:px-0 max-[720px]:text-center"
         aria-label="GoHome advice, naar het overzicht"
       >
         <span className="max-[720px]:hidden">
@@ -100,7 +101,7 @@ export function Zijmenu(r: MenuRechten) {
         ))}
         <button type="button" className={itemCls} onClick={signOut} title="Uitloggen">
           <span className={icoonCls} aria-hidden="true">
-            <LogOut className="size-[18px]" strokeWidth={2} />
+            <LogOut className="size-5" strokeWidth={1.75} />
           </span>
           <span className={labelCls}>Uitloggen</span>
         </button>
@@ -110,4 +111,4 @@ export function Zijmenu(r: MenuRechten) {
 }
 
 /** Ruimte voor het zijmenu (op elke pagina met het menu) */
-export const zijmenuRuimte = "pl-[212px] max-[720px]:pl-16";
+export const zijmenuRuimte = "pl-[222px] max-[720px]:pl-[66px]";

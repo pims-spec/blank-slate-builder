@@ -66,13 +66,13 @@ export default function EnergielabelOphalen({ meta, pasToe }: Props) {
         {bezig ? "Bezig met opzoeken…" : "Energielabel automatisch ophalen (EP-Online)"}
       </Button>
       {fout && (
-        <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm" role="status">
+        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm" role="status">
           {fout}
         </p>
       )}
       {label && (
         <div className="space-y-2 text-sm" role="status" aria-label="Resultaat EP-Online">
-          <p className="rounded-md border border-emerald-600/30 bg-emerald-600/10 px-3 py-2">
+          <p className="rounded-lg border border-emerald-600/30 bg-emerald-600/10 px-3 py-2">
             {klasse ? (
               <>
                 Label <b>{String(klasse)}</b>
@@ -82,7 +82,7 @@ export default function EnergielabelOphalen({ meta, pasToe }: Props) {
             )}
             {datum ? ", registratiedatum " + datum : ""}
           </p>
-          <div className="rounded-md border border-emerald-600/30 bg-emerald-600/10 px-3 py-2">
+          <div className="rounded-lg border border-emerald-600/30 bg-emerald-600/10 px-3 py-2">
             Overgenomen als <b>{SOORT_NAAM[epBepaalSoort(label).soort]}</b>{" "}
             <Button
               type="button"

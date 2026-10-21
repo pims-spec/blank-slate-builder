@@ -88,7 +88,7 @@ function Inhoud({ klanten, bestaand, onImporteer, onOpenChange }: Props) {
           <label className="flex flex-col gap-1">
             <span className="text-muted-foreground">Eigenaar (optioneel)</span>
             <select
-              className="h-9 rounded-xl border border-input bg-background px-2"
+              className="h-9 rounded-lg border border-transparent bg-muted px-2"
               value={klantId}
               onChange={(e) => setKlantId(e.target.value)}
             >

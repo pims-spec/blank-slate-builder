@@ -57,7 +57,7 @@ export default function PveToepassenDialoog({
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted-foreground">Welk PvE wil je toepassen?</span>
             <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 rounded-lg border border-transparent bg-muted px-2 text-sm"
               value={keuze}
               onChange={(e) => setKeuze(e.target.value)}
             >

@@ -390,7 +390,9 @@ export default function PortefeuilleAnalyse({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 max-[720px]:px-3">
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Portefeuille-analyse</h1>
+        <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+          Portefeuille-analyse
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Energielabels per portefeuille: welke labels verlopen binnenkort, zijn verouderd of
           ontbreken, en welke woningen vallen onder de EFG-regels.
@@ -398,7 +400,11 @@ export default function PortefeuilleAnalyse({
       </div>
 
       {portefeuilles.length >= 2 && (
-        <div role="tablist" aria-label="Soort analyse" className="mb-4 flex flex-wrap gap-1">
+        <div
+          role="tablist"
+          aria-label="Soort analyse"
+          className="mb-4 inline-flex flex-wrap gap-0.5 rounded-lg bg-foreground/[0.06] p-0.5"
+        >
           {(
             [
               ["een", "Eén portefeuille"],
@@ -413,10 +419,10 @@ export default function PortefeuilleAnalyse({
               disabled={bezig}
               onClick={() => setModus(m)}
               className={
-                "rounded-full px-3 py-1 text-sm " +
+                "gh-press rounded-md px-3 py-1 text-sm font-semibold " +
                 (modus === m
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground")
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground")
               }
             >
               {label}
@@ -439,15 +445,12 @@ export default function PortefeuilleAnalyse({
         />
       ) : (
         <>
-          <section
-            className="mb-4 rounded-2xl border border-border bg-card p-4"
-            aria-label="Portefeuille kiezen en beheren"
-          >
+          <section className="mb-4 gh-card p-4" aria-label="Portefeuille kiezen en beheren">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
               <label className="flex min-w-0 flex-col gap-1 text-sm">
                 <span className="text-muted-foreground">Portefeuille</span>
                 <select
-                  className="h-9 w-full rounded-xl border border-input bg-background px-2"
+                  className="h-9 w-full rounded-lg border border-transparent bg-muted px-2"
                   value={p?.id ?? ""}
                   onChange={(e) => {
                     setGekozen(e.target.value);
@@ -571,10 +574,7 @@ export default function PortefeuilleAnalyse({
           ) : (
             <div className="space-y-4">
               {/* ---------- ophalen ---------- */}
-              <section
-                className="rounded-2xl border border-border bg-card p-4"
-                aria-label="Energielabels ophalen"
-              >
+              <section className="gh-card p-4" aria-label="Energielabels ophalen">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                   <span>
                     <b>{adressen.length}</b> adressen ·{" "}
@@ -606,7 +606,7 @@ export default function PortefeuilleAnalyse({
                           </Button>
                           <select
                             aria-label="Opnieuw ophalen: welke adressen"
-                            className="h-9 max-w-full rounded-xl border border-input bg-background px-2"
+                            className="h-9 max-w-full rounded-lg border border-transparent bg-muted px-2"
                             value={opnieuw}
                             onChange={(e) => setOpnieuw(e.target.value as OpnieuwKeuze)}
                           >
@@ -728,10 +728,7 @@ export default function PortefeuilleAnalyse({
               </section>
 
               {/* ---------- analyse ---------- */}
-              <section
-                className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
-                aria-label="Analyse"
-              >
+              <section className="flex flex-wrap items-end gap-3 gh-card p-4" aria-label="Analyse">
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-muted-foreground">Analysedatum</span>
                   <Input
@@ -806,10 +803,7 @@ export default function PortefeuilleAnalyse({
               )}
 
               {/* ---------- opgeslagen analyses ---------- */}
-              <section
-                className="rounded-2xl border border-border bg-card p-4"
-                aria-label="Opgeslagen analyses"
-              >
+              <section className="gh-card p-4" aria-label="Opgeslagen analyses">
                 <h3 className="mb-2 font-semibold">Opgeslagen analyses</h3>
                 {analysesQ.data?.length ? (
                   <ul className="divide-y divide-border text-sm">
@@ -900,7 +894,7 @@ export default function PortefeuilleAnalyse({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() => void verwijderPortefeuille()}
             >
               Verwijderen

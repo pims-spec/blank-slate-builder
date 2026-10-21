@@ -105,7 +105,7 @@ export default function PveBeheer({ klant }: { klant: Klant }) {
               ) : (
                 <>
                   <span className="flex-1 font-medium">{p.naam}</span>
-                  <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  <span className="rounded-lg border border-border px-2 py-0.5 text-xs text-muted-foreground">
                     {pveActief(p) ? "Actief" : "Nog niets ingesteld"}
                   </span>
                   <Button size="sm" variant="ghost" onClick={() => setBewerk({ pve: p })}>
@@ -159,7 +159,7 @@ export default function PveBeheer({ klant }: { klant: Klant }) {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() =>
                 teVerwijderen &&
                 opslaan.mutate(

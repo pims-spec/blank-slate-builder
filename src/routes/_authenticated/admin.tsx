@@ -110,14 +110,16 @@ function Admin() {
       <Zijmenu isAdmin magSchrijven />
       <main className="mx-auto max-w-5xl px-6 py-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="font-display text-4xl text-foreground">Gebruikers</h1>
+          <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+            Gebruikers
+          </h1>
           <CollegaUitnodigen />
         </div>
         <p className="mt-2 text-muted-foreground">
           Nieuwe aanmeldingen hebben pas toegang nadat jij ze een rol geeft. Een lezer kan alles
           bekijken, maar niets aanmaken, wijzigen of verwijderen.
         </p>
-        <ul className="mt-8 divide-y divide-border rounded-xl border border-border bg-card">
+        <ul className="mt-8 divide-y divide-border gh-card">
           {users.map((u) => (
             <li key={u.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div>
@@ -135,7 +137,7 @@ function Admin() {
                 <label className="flex items-center gap-2 text-sm">
                   <span className="sr-only">Rol van {u.display_name || u.email}</span>
                   <select
-                    className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="rounded-lg border border-transparent bg-muted px-2.5 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={u.rol ?? ""}
                     disabled={zetRol.isPending}
                     onChange={(e) => {
@@ -249,7 +251,7 @@ function ServerStatus() {
       ) : isError || !data ? (
         <p className="mt-4 text-sm text-destructive">Controleren lukte niet.</p>
       ) : (
-        <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-card">
+        <ul className="mt-4 divide-y divide-border gh-card">
           {Object.entries(data.sleutels).map(([naam, aanwezig]) => (
             <li key={naam} className="flex items-center justify-between gap-4 p-4">
               <code className="text-sm">{naam}</code>

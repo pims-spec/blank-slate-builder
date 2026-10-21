@@ -918,7 +918,7 @@ export default function TellingEditor({
     <section className="space-y-4 border-b border-border py-6" aria-label="Telling">
       {alleenLezen ? (
         <p
-          className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-muted px-3 py-2 text-sm"
           role="note"
           aria-label="Alleen lezen"
         >
@@ -928,18 +928,14 @@ export default function TellingEditor({
         </p>
       ) : (
         vanCollega && (
-          <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
+          <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">
             Telling van {eigenaar.naam ?? "een collega"}. Wijzigingen worden in deze telling
             opgeslagen; de eigenaar blijft dezelfde.
           </p>
         )
       )}
       {/* Eén compacte kaart "Woning", zoals .metaform in de bron: 5 kolommen, 2 rijen */}
-      <fieldset
-        disabled={alleenLezen}
-        className="m-0 min-w-0 rounded-2xl border border-border bg-card p-4"
-        aria-label="Woning"
-      >
+      <fieldset disabled={alleenLezen} className="m-0 min-w-0 gh-card p-4" aria-label="Woning">
         <h3 className="mb-2 font-semibold">Woning</h3>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
           <MetaVeld
@@ -1027,7 +1023,7 @@ export default function TellingEditor({
       {!alleenLezen && (
         <section
           aria-label="Plattegrond inlezen"
-          className="mt-5 flex flex-wrap items-center gap-2 rounded-md border border-border p-3"
+          className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-border p-3"
         >
           <PlattegrondKnoppen
             heeft={heeftPlattegrond(staat.input, nieuwBeeld)}
@@ -1056,7 +1052,7 @@ export default function TellingEditor({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() => void verwijderTelling()}
             >
               Verwijderen
@@ -1105,7 +1101,7 @@ export default function TellingEditor({
   const kop = (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
       <div className="min-w-0">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">
+        <h1 className="truncate font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
           {m.naam || weergaveAdres(m) || "Nieuwe telling"}
         </h1>
         <span className="text-sm text-muted-foreground" role="status" aria-label="Opslagstatus">
@@ -1205,7 +1201,7 @@ export default function TellingEditor({
             werkInput={staat.input}
             normen={NORMEN}
           />
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-lg border border-border text-sm">
             {versies.map((v) => (
               <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                 <span className="w-8 tabular-nums text-muted-foreground">{v.nr}</span>
@@ -1298,7 +1294,7 @@ export default function TellingEditor({
           <>
             {uitgangspuntTekst(staat.input) && (
               <p
-                className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs"
+                className="rounded-lg bg-warn px-3 py-2 text-xs"
                 role="note"
                 aria-label="Uitgangspunt verbeteradvies"
               >
@@ -1443,7 +1439,7 @@ function OpzoekLink({ meta, soort }: { meta: TellingMeta; soort: LinkSoort }) {
         )}
       </span>
       <a
-        className="rounded-md border border-input px-3 py-1 hover:bg-muted"
+        className="rounded-lg border border-border px-3 py-1 hover:bg-muted"
         href={OPZOEK_LINKS[soort].url}
         target="_blank"
         rel="noopener noreferrer"
@@ -1514,10 +1510,10 @@ function PlattegrondBlok({ input, nieuw }: { input: WwsInput; nieuw: NieuwBeeld 
           <img
             src={url}
             alt="Plattegrond van deze telling"
-            className="max-h-40 max-w-xs rounded-md border border-border bg-white"
+            className="max-h-40 max-w-xs rounded-lg border border-border bg-white"
           />
         ) : (
-          <div className="flex h-24 w-40 items-center justify-center rounded-md border border-border text-xs text-muted-foreground">
+          <div className="flex h-24 w-40 items-center justify-center rounded-lg border border-border text-xs text-muted-foreground">
             {laden ? "Plattegrond laden…" : fout ? "Plattegrond niet te laden" : ""}
           </div>
         )}

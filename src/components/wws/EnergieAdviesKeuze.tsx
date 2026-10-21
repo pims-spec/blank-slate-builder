@@ -86,7 +86,7 @@ export default function EnergieAdviesKeuze({ input, normen, magBewerken, bewerke
             <div
               role="group"
               aria-label="Controlevraag beginlabel"
-              className="space-y-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3"
+              className="space-y-3 rounded-xl bg-warn p-3"
             >
               <p>{beginlabelVraag(v)}</p>
               <p className="text-xs text-muted-foreground">

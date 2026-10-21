@@ -88,7 +88,9 @@ export function HuurIndicatiesArchief({
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Archief</h1>
+          <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+            Archief
+          </h1>
           {tabs}
           <p className="mt-1 text-sm text-muted-foreground">
             Opgeslagen huurprijsindicaties, precies zoals ze toen zijn berekend.
@@ -121,7 +123,7 @@ export function HuurIndicatiesArchief({
         />
       )}
 
-      <section aria-label="Huurprijsindicaties" className="rounded-xl border border-border bg-card">
+      <section aria-label="Huurprijsindicaties" className="gh-card">
         {isPending ? (
           <p className="p-4 text-sm text-muted-foreground">Laden…</p>
         ) : error ? (
@@ -213,6 +215,7 @@ export function HuurIndicatiesArchief({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
+              className="bg-orange text-orange-foreground shadow-none hover:brightness-105"
               onClick={() => {
                 if (teVerwijderen) verwijderen.mutate(teVerwijderen.id);
                 setTeVerwijderen(null);
@@ -248,7 +251,7 @@ function BekekenIndicatie({
   return (
     <section
       aria-label="Opgeslagen indicatie"
-      className="space-y-4 rounded-xl border-2 border-primary/40 bg-card p-4"
+      className="space-y-4 gh-card ring-2 ring-primary/40 p-4"
     >
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">

@@ -44,7 +44,7 @@ function TweestapsPagina() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-6">
+      <div className="w-full max-w-md space-y-6 gh-card p-6">
         <Woordmerk />
         <div>
           <h1 className="text-xl font-semibold">

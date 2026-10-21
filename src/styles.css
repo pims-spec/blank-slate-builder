@@ -33,8 +33,7 @@
   --font-display:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial,
     sans-serif;
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   /* Schaduw is de rand (GoHome UI → Elevation) */
   --shadow-card: var(--gh-shadow-card);
   --shadow-popover: var(--gh-shadow-popover);
@@ -103,12 +102,14 @@
   --card-foreground: oklch(0.2316 0.0038 286.1);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.2316 0.0038 286.1);
-  --primary: oklch(0.5369 0.2625 279.01); /* #5B41FF primary.main */
+  /* primary.main */
+  --primary: oklch(0.5369 0.2625 279.01); /* #5B41FF */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.9573 0.0204 276.96); /* #EDF0FF primary.light (Frost) */
   --secondary-foreground: oklch(0.4347 0.2326 276.38); /* #3D28CC primary.dark (Dusk) */
   --muted: oklch(0.9626 0.0066 286.27); /* #F2F2F7 velden en wells */
-  --muted-foreground: oklch(0.551 0.0234 264.36); /* #6b7280 text.secondary */
+  /* text.secondary is #6b7280; een tint donkerder zodat het ook op het grijze vlak 4,5:1 haalt */
+  --muted-foreground: oklch(0.5229 0.0222 262.92); /* #636A77 */
   --accent: oklch(0.9573 0.0204 276.96); /* #EDF0FF */
   --accent-foreground: oklch(0.2316 0.0038 286.1);
   /* Verwijderen en overslaan zijn papaya (gids: knoppen); foutmeldingen in Ember voor contrast */
@@ -119,8 +120,10 @@
   --border: oklch(0.3588 0.012 285.78 / 0.12);
   --input: oklch(0.3588 0.012 285.78 / 0.12);
   --ring: oklch(0.5369 0.2625 279.01);
-  --orange: oklch(0.7285 0.1776 44.71); /* #FF7C3A secondary.main (Papaya) */
-  --orange-foreground: oklch(1 0 0);
+  /* secondary.main (Papaya) */
+  --orange: oklch(0.7285 0.1776 44.71); /* #FF7C3A */
+  /* wit op papaya haalt geen 4,5:1; daarom inkt op papaya */
+  --orange-foreground: oklch(0.2316 0.0038 286.1);
   --orange-ink: oklch(0.5534 0.1739 38.4); /* #C2410C */
   --warn: oklch(0.9737 0.0237 79.75); /* #FFF5E5 secondary.light (Wash) */
   --warn-foreground: oklch(0.5534 0.1739 38.4); /* #C2410C */
@@ -135,8 +138,8 @@
   --seg-laag: oklch(0.6256 0.1933 23.03); /* #E5484D */
   --seg-midden: oklch(0.7285 0.1776 44.71); /* #FF7C3A */
   --seg-hoog: oklch(0.6406 0.1329 157.68); /* #30A46C */
-  --seg-foreground: oklch(0.2316 0.0038 286.1);
-  --sidebar: oklch(1 0 0 / 0.46); /* canvas.liquidGlass */
+  --seg-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A: haalt 4,5:1 op rood */
+  --sidebar: oklch(1 0 0); /* canvas.liquidGlass: wit, in .gh-glass op 46% dekking */
   --sidebar-foreground: oklch(0.2316 0.0038 286.1);
   --sidebar-primary: oklch(0.5369 0.2625 279.01);
   --sidebar-primary-foreground: oklch(1 0 0);
@@ -167,7 +170,7 @@
     --popover: oklch(0.2939 0.0036 286.18); /* #2C2C2E */
     --popover-foreground: oklch(0.9707 0.0027 286.35);
     --primary: oklch(0.6557 0.1931 286.22); /* #8B78FF */
-    --primary-foreground: oklch(1 0 0);
+    --primary-foreground: oklch(0.2316 0.0038 286.1);
     --secondary: oklch(0.2692 0.0548 289.85); /* #26213F */
     --secondary-foreground: oklch(0.9707 0.0027 286.35);
     --muted: oklch(0.2939 0.0036 286.18); /* #2C2C2E */
@@ -195,11 +198,11 @@
     --seg-laag: oklch(0.7122 0.1809 21.66); /* #FF6B6E */
     --seg-midden: oklch(0.78 0.1406 48.72); /* #FF9A62 */
     --seg-hoog: oklch(0.735 0.1362 159.28); /* #4CC38A */
-    --seg-foreground: oklch(0.2316 0.0038 286.1);
-    --sidebar: oklch(0.2273 0.0038 286.09 / 0.6);
+    --seg-foreground: oklch(0.1549 0.0337 281.74);
+    --sidebar: oklch(0.2273 0.0038 286.09);
     --sidebar-foreground: oklch(0.9707 0.0027 286.35);
     --sidebar-primary: oklch(0.6557 0.1931 286.22);
-    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-primary-foreground: oklch(0.2316 0.0038 286.1);
     --sidebar-accent: oklch(0.2692 0.0548 289.85);
     --sidebar-accent-foreground: oklch(0.9707 0.0027 286.35);
     --sidebar-border: oklch(0.943 0.0134 286.14 / 0.14);
@@ -245,6 +248,15 @@
   h3 {
     font-family: var(--font-display);
   }
+
+  /* Tabelkoppen: klein, halfvet, hoofdletters, stil (GoHome UI → Tables) */
+  thead th {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
 }
 
 @layer components {
@@ -281,7 +293,7 @@
 
 /* Glas: alleen voor chrome (zijmenu, werkbalk), nooit voor inhoud */
 @utility gh-glass {
-  background-color: var(--color-sidebar);
+  background-color: color-mix(in oklab, var(--color-sidebar) 46%, transparent);
   box-shadow: var(--gh-shadow-glass);
   -webkit-backdrop-filter: blur(40px) saturate(1.9);
   backdrop-filter: blur(40px) saturate(1.9);

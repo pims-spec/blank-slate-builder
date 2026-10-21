@@ -13,7 +13,7 @@ import {
   type Woningsoort,
 } from "@/lib/wws/huur";
 
-const selectCls = "h-9 rounded-xl border border-input bg-background px-2 text-sm";
+const selectCls = "h-9 rounded-lg border border-transparent bg-muted px-2 text-sm";
 
 /** Labels voor de waarden per factorgroep */
 const WAARDE_NAMEN: Record<string, string> = {
@@ -56,7 +56,7 @@ const GROEP_NAMEN: Record<keyof HuurNormen["factoren"], string> = {
 
 function Inschatting({ bron }: { bron: string }) {
   return isInschatting(bron) ? (
-    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+    <span className="rounded-lg bg-warn px-2 py-0.5 text-xs font-medium text-warn-foreground">
       GoHome-inschatting
     </span>
   ) : null;

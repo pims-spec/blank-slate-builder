@@ -25,7 +25,7 @@ interface Props {
 }
 
 const selCls =
-  "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-9 rounded-lg border border-transparent bg-muted px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const vinkCls = "size-4 accent-primary";
 
 /**
@@ -242,7 +242,7 @@ function Onderdeel({
   children: ReactNode;
 }) {
   return (
-    <fieldset className="space-y-3 rounded-md border border-border p-3">
+    <fieldset className="space-y-3 rounded-lg border border-border p-3">
       <label className="flex items-center gap-2 text-sm font-medium">
         <input
           type="checkbox"
@@ -366,7 +366,7 @@ function IndelingWensen({
     );
   };
   return (
-    <fieldset className="space-y-3 rounded-md border border-border p-3">
+    <fieldset className="space-y-3 rounded-lg border border-border p-3">
       <legend className="px-1 text-sm font-medium">
         Indelingswensen (voor het indelingsadvies)
       </legend>

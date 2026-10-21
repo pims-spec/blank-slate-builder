@@ -50,9 +50,9 @@ import Uitleg from "./Uitleg";
 
 // ---------- bouwstenen ----------
 const inputCls =
-  "w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm tabular-nums focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "w-full rounded-lg border border-transparent bg-muted px-2.5 py-1.5 text-sm tabular-nums focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const knopCls =
-  "rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const weg = "self-end px-2 py-1.5 text-sm text-muted-foreground hover:text-destructive";
 
 function Veld({
@@ -205,7 +205,7 @@ function Keuze({
   return (
     <select
       className={
-        inputCls + (nogLeeg ? " border-dashed border-destructive text-muted-foreground" : "")
+        inputCls + (nogLeeg ? " border-dashed !border-destructive text-muted-foreground" : "")
       }
       value={value}
       aria-invalid={nogLeeg || undefined}
@@ -647,7 +647,7 @@ export default function WwsCalculator({
           <div
             key={i}
             className={
-              "rounded-lg border-2 bg-card p-3 shadow-sm " +
+              "rounded-xl border-2 bg-card p-3 " +
               (r.type ? "border-ruimte-rand" : "border-dashed border-destructive")
             }
           >
@@ -778,10 +778,7 @@ export default function WwsCalculator({
                   </button>
                 )}
                 {r.fac.uitPve && (
-                  <p
-                    className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1 text-xs"
-                    role="note"
-                  >
+                  <p className="rounded-lg bg-warn px-2 py-1 text-xs" role="note">
                     Overgenomen uit het standaard PvE van deze eigenaar. Controleer dit ter plekke
                     en pas aan waar nodig.
                   </p>
@@ -845,7 +842,7 @@ export default function WwsCalculator({
       <div>
         {kop ?? (
           <header className="mb-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
               Puntentelling zelfstandige woonruimte
             </h1>
             <p className="mt-1 max-w-prose text-sm text-muted-foreground">
@@ -1326,7 +1323,7 @@ export default function WwsCalculator({
 
       {/* ---------- resultaat ---------- */}
       <aside className="lg:sticky lg:top-6 lg:self-start">
-        <div className="rounded-lg border border-border bg-card p-5 text-card-foreground">
+        <div className="gh-card p-5 text-card-foreground">
           <div className="flex items-baseline justify-between">
             <span className="text-5xl font-semibold tabular-nums tracking-tight">{res.totaal}</span>
             <span className="text-sm text-muted-foreground">punten</span>
@@ -1336,7 +1333,7 @@ export default function WwsCalculator({
           <p className="mt-3">
             <span
               className={
-                "inline-block rounded-full px-3 py-0.5 text-sm font-medium text-seg-foreground " +
+                "inline-block rounded-lg px-3 py-0.5 text-sm font-medium text-seg-foreground " +
                 SEG_KLEUR[res.seg]
               }
             >
@@ -1380,7 +1377,7 @@ export default function WwsCalculator({
 
           {res.warn.length > 0 && (
             <ul
-              className="mt-4 list-disc space-y-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 py-3 pl-7 pr-3 text-sm"
+              className="mt-4 list-disc space-y-1.5 rounded-lg bg-warn py-3 pl-7 pr-3 text-sm"
               role="status"
             >
               {res.warn.map((w, k) => (
@@ -1497,8 +1494,8 @@ export function EnergieVelden({
             className={
               "relative flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 rounded-xl border-[1.5px] px-3.5 py-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary " +
               (E.soort === k
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background hover:border-primary") +
+                ? "border-primary bg-secondary text-foreground"
+                : "border-transparent bg-muted hover:border-primary/50") +
               // alleen-lezen (fieldset disabled): niet klikbaar ogen
               " has-[:disabled]:cursor-default has-[:disabled]:hover:border-border"
             }
@@ -1516,9 +1513,7 @@ export function EnergieVelden({
               }
             />
             <span className="text-sm font-semibold">{titel}</span>
-            <span className={"text-xs " + (E.soort === k ? "opacity-80" : "text-muted-foreground")}>
-              {sub}
-            </span>
+            <span className="text-xs text-muted-foreground">{sub}</span>
           </label>
         ))}
       </div>

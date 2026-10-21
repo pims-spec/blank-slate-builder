@@ -32,7 +32,7 @@ import { huurIndicatiesQuery, huurStore, klantenQuery, tellingStore } from "./te
 import { useDownload } from "./useDownload";
 
 const selectCls =
-  "h-10 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring";
+  "h-10 w-full rounded-lg border border-transparent bg-muted px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring";
 
 export const DISCLAIMER = HUUR_DISCLAIMER;
 
@@ -233,7 +233,9 @@ export default function HuurprijsIndicator({
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Huurprijsindicator</h1>
+          <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+            Huurprijsindicator
+          </h1>
           <p className="mt-1 max-w-prose text-sm text-muted-foreground">
             Een indicatieve markthuur (laag – verwacht – hoog) voor één adres, met een check op de
             wettelijke maximale huur volgens het WWS. Geen taxatie. Opgeslagen indicaties staan in
@@ -252,7 +254,7 @@ export default function HuurprijsIndicator({
       </header>
 
       {!magSchrijven && (
-        <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm" role="note">
+        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm" role="note">
           Met de kijkrol kun je opgeslagen indicaties bekijken in het archief, maar geen nieuwe
           maken.
         </p>
@@ -284,17 +286,14 @@ export default function HuurprijsIndicator({
                 : "geen label"}
             </div>
             {meldingen.map((m) => (
-              <p key={m} className="mt-1 text-xs text-amber-700 dark:text-amber-300" role="note">
+              <p key={m} className="mt-1 text-xs text-warn-foreground" role="note">
                 {m}
               </p>
             ))}
           </section>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <section
-              aria-label="Vragen"
-              className="space-y-4 rounded-xl border border-border bg-card p-4"
-            >
+            <section aria-label="Vragen" className="space-y-4 gh-card p-4">
               <h2 className="font-semibold">Vragen</h2>
               <Vraag nr={1} titel="Woningtype" waarom={WAAROM.woningtype}>
                 <Keuze
@@ -467,7 +466,7 @@ export default function HuurprijsIndicator({
               {magSchrijven && (
                 <section
                   aria-label="Opslaan"
-                  className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"
+                  className="flex flex-wrap items-end gap-3 gh-card p-4"
                 >
                   <div className="min-w-48 flex-1">
                     <div className="mb-1 text-sm text-muted-foreground">Eigenaar (optioneel)</div>
@@ -529,10 +528,7 @@ const KLEUR_BETROUWBAARHEID = {
 
 export function MarkthuurKaart({ m }: { m: Markthuur }) {
   return (
-    <section
-      aria-label="Indicatie markthuur"
-      className="space-y-3 rounded-xl border border-border bg-card p-4"
-    >
+    <section aria-label="Indicatie markthuur" className="space-y-3 gh-card p-4">
       <h2 className="font-semibold">Indicatie markthuur (kale huur per maand)</h2>
       <div className="grid grid-cols-3 gap-2 text-center">
         {(
@@ -562,7 +558,7 @@ export function MarkthuurKaart({ m }: { m: Markthuur }) {
         <span className="tabular-nums">{eur(m.prijsM2)} per m²</span>
         <span
           className={
-            "rounded-full px-2 py-0.5 text-xs font-medium " +
+            "rounded-lg px-2 py-0.5 text-xs font-medium " +
             KLEUR_BETROUWBAARHEID[m.betrouwbaarheid.niveau]
           }
         >
@@ -575,10 +571,7 @@ export function MarkthuurKaart({ m }: { m: Markthuur }) {
         ))}
       </ul>
       {m.meubelNotitie && (
-        <p
-          className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1 text-xs"
-          role="note"
-        >
+        <p className="rounded-lg bg-warn px-2 py-1 text-xs" role="note">
           {m.meubelNotitie}
         </p>
       )}
@@ -603,10 +596,7 @@ export function WwsKaart({
 }) {
   const vrij = c.segLaag === "hoog";
   return (
-    <section
-      aria-label="WWS-check"
-      className="space-y-3 rounded-xl border border-border bg-card p-4"
-    >
+    <section aria-label="WWS-check" className="space-y-3 gh-card p-4">
       <h2 className="font-semibold">WWS-check (globaal)</h2>
       <p className="text-sm">
         Naar verwachting{" "}
@@ -630,15 +620,12 @@ export function WwsKaart({
         )}
       </p>
       {c.grensgeval ? (
-        <p
-          className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-sm font-medium"
-          role="alert"
-        >
+        <p className="rounded-lg bg-warn px-3 py-2 text-sm font-medium" role="alert">
           Grensgeval: volledige telling nodig.
         </p>
       ) : (
         !vrij && (
-          <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm" role="note">
+          <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm" role="note">
             Onder {grens} punten geldt de wettelijke maximale huur.
           </p>
         )
@@ -673,10 +660,7 @@ export function WwsKaart({
 
 export function FactorTabel({ m }: { m: Markthuur }) {
   return (
-    <section
-      aria-label="Invloed per factor"
-      className="rounded-xl border border-border bg-card p-4"
-    >
+    <section aria-label="Invloed per factor" className="gh-card p-4">
       <h2 className="mb-2 font-semibold">Invloed per factor</h2>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-left text-sm">
@@ -709,7 +693,7 @@ export function FactorTabel({ m }: { m: Markthuur }) {
                 <td className="py-1 pr-3 text-right tabular-nums">{effectTekst(f.effect)}</td>
                 <td className="py-1 text-xs">
                   {isInschatting(f.bron) ? (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-800 dark:text-amber-300">
+                    <span className="rounded-lg bg-warn px-2 py-0.5 font-medium text-warn-foreground">
                       GoHome-inschatting
                     </span>
                   ) : (
@@ -740,7 +724,7 @@ export function FactorTabel({ m }: { m: Markthuur }) {
 export function Bronnen({ m }: { m: Markthuur }) {
   const r = m.regel;
   return (
-    <section aria-label="Bronnen" className="rounded-xl border border-border bg-card p-4 text-sm">
+    <section aria-label="Bronnen" className="gh-card p-4 text-sm">
       <h2 className="mb-1 font-semibold">Bronnen</h2>
       {r ? (
         <p>

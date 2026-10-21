@@ -24,7 +24,9 @@ export default function IndelingStart() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Indelingsadvies</h1>
+      <h1 className="font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
+        Indelingsadvies
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Begin je vanuit een bestaande telling, of helemaal blanco vanaf een plattegrond?
       </p>

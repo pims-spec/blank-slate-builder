@@ -17,7 +17,7 @@ import {
 } from "@/lib/wws/versieDiff";
 
 const selCls =
-  "h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-9 w-full rounded-lg border border-transparent bg-muted px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface Props {
   open: boolean;
@@ -171,7 +171,7 @@ function Stat({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border p-2">
+    <div className="rounded-lg border border-border p-2">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={"font-medium " + cls}>{children}</div>
     </div>
