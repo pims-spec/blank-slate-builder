@@ -118,7 +118,7 @@ export function ArchiefAnalyses({
           {tabs}
         </div>
         <Input
-          className="w-full sm:w-72"
+          className="w-full bg-card sm:w-72"
           placeholder="Zoek op naam, portefeuille, eigenaar of collega"
           aria-label="Zoeken in portefeuille-analyses"
           value={zoek}

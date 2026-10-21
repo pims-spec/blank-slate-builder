@@ -225,7 +225,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
             placeholder="Zoek op naam, adres, postcode of eigenaar"
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
-            className="w-full sm:w-72"
+            className="w-full bg-card sm:w-72"
           />
           <Button
             variant="outline"
@@ -258,7 +258,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
       <div className="mb-4 flex flex-wrap items-end gap-3 text-sm" aria-label="Filters">
         <Filter label="Eigenaar">
           <select
-            className={veldCls}
+            className={veldCls + " bg-card!"}
             value={filters.eigenaar}
             onChange={(e) => zet("eigenaar", e.target.value)}
           >
@@ -273,7 +273,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         {toonCollega && (
           <Filter label="Collega">
             <select
-              className={veldCls}
+              className={veldCls + " bg-card!"}
               value={filters.collega}
               onChange={(e) => zet("collega", e.target.value)}
             >
@@ -288,7 +288,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         )}
         <Filter label="Segment">
           <select
-            className={veldCls}
+            className={veldCls + " bg-card!"}
             value={filters.segment}
             onChange={(e) => zet("segment", e.target.value as ArchiefFilters["segment"])}
           >
@@ -302,7 +302,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         </Filter>
         <Filter label="Woningtype">
           <select
-            className={veldCls}
+            className={veldCls + " bg-card!"}
             value={filters.woningtype}
             onChange={(e) => zet("woningtype", e.target.value as ArchiefFilters["woningtype"])}
           >
@@ -314,7 +314,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         <Filter label="Punten van">
           <Input
             inputMode="numeric"
-            className="w-20"
+            className="w-20 bg-card"
             value={filters.puntenVan}
             onChange={(e) => zet("puntenVan", e.target.value)}
           />
@@ -322,7 +322,7 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         <Filter label="tot en met">
           <Input
             inputMode="numeric"
-            className="w-20"
+            className="w-20 bg-card"
             value={filters.puntenTot}
             onChange={(e) => zet("puntenTot", e.target.value)}
           />

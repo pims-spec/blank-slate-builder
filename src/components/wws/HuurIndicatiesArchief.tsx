@@ -99,7 +99,7 @@ export function HuurIndicatiesArchief({
         <div className="flex flex-wrap gap-2">
           <Input
             aria-label="Zoeken"
-            className="w-72"
+            className="w-72 bg-card"
             placeholder="Zoek op adres, postcode, plaats of eigenaar"
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}

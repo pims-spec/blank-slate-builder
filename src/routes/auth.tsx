@@ -83,7 +83,7 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
       {/* .authcard in wws-site.html: één kaart met de inlogvelden */}
-      <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-8 shadow-[0_8px_24px_color-mix(in_oklab,var(--color-primary)_8%,transparent)]">
+      <div className="w-full max-w-sm gh-card p-8">
         <Woordmerk className="text-lg" />
         <h1 className="mt-8 font-display text-[34px] leading-tight text-foreground max-[720px]:text-[28px]">
           {title}

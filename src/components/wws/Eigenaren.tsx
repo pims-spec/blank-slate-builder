@@ -97,7 +97,7 @@ export default function Eigenaren({ rechten }: { rechten: Rechten }) {
             placeholder="Naam nieuwe eigenaar"
             value={nieuw}
             onChange={(e) => setNieuw(e.target.value)}
-            className="max-w-sm"
+            className="max-w-sm bg-card"
           />
           <Button type="submit" disabled={toevoegen.isPending || !nieuw.trim()}>
             Toevoegen

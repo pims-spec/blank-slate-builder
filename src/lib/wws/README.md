@@ -157,26 +157,70 @@ reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de v
 - **Antwoorden:** gecontroleerd met zod. Alleen eigen foutcodes; nooit de foutmelding van de
   dienst, in de browser noch in de log.
 
-## Huisstijl (fase 5b)
+## Huisstijl: GoHome UI (vervangt de stijl van fase 5b)
 
-- **Tokens** (`src/styles.css`): de kleuren uit de bron staan in de bestaande
-  shadcn/Tailwind-variabelen, met de hexwaarde van de bron erachter. Het gaat om
-  `--bg`/`--panel`/`--ink`/`--muted`/`--line` en `--accent` #5B41FF/`--soft`/`--orange`
-  #FF7C3A/`--field`, plus de segmentkleuren.
-  - **Donker:** de donkere set van de bron schakelt automatisch mee met de apparaatinstelling
-    (`prefers-color-scheme`).
-  - **Lettertypes:** Inter voor alles, Instrument Sans schuin voor taglines (`.tagline`).
-  - **Vormen:** knoppen als pil met paarse gloed, en een zachte gloed achter de pagina.
+Bron: de huisstijlgids GoHome UI (main.dv09ahdxnvvnr.amplifyapp.com, Foundations en
+Components). De vroegere stijl uit `reference/wws-site.html` (Inter, pillen, paarse gloed) is
+daarmee vervangen.
+
+- **Tokens** (`src/styles.css`): de waarden uit de gids staan in de bestaande
+  shadcn/Tailwind-variabelen, met de hexwaarde erachter.
+  - Indigo #5B41FF voor actie, papaya #FF7C3A voor waarschuwing, inkt #1d1d1f.
+  - Grijs vlak #F2F2F7 (`canvas.grouped`) met witte kaarten, en haarlijnen
+    `rgba(60,60,67,.12)`.
+  - Frost #EDF0FF en Dusk #3D28CC voor zachte accenten; Wash #FFF5E5 met Ember #C2410C voor
+    waarschuwingen; grey.700 #616161 (`--stil`) voor stille acties.
+- **Lettertype:** het systeemlettertype, geen webfont: SF Pro op Apple, Segoe UI op Windows,
+  Roboto op Android. Koppen in de Display-variant (vet, krap gezet), tekst in de Text-variant.
+  Google Fonts is niet meer gekoppeld; `.tagline` is niet meer schuin.
+- **Vormen:**
+  - Knoppen, velden en het zijmenu 8px; kaarten, dialogen en menu's 12px (`gh-card`).
+  - De schaduw is de rand: kaarten hebben geen lijn meer, alleen `--gh-shadow-card`.
+  - Velden zijn grijze vlakken zonder rand, met het label erboven en een indigo focusring. Op
+    het grijze canvas zelf zijn ze wit.
+  - Tabs zijn een grijze balk met een witte schuivende pil. Tabelkoppen zijn klein, halfvet en
+    in hoofdletters.
+  - Het zijmenu is een zwevend glaspaneel (`gh-glass`).
+  - Knoppen krimpen bij indrukken naar 0.97 (`gh-press`).
+- **Knoppen:**
+  - De hoofdknop is indigo.
+  - Annuleren en sluiten zijn grijze tekst.
+  - Verwijderen is papaya (vroeger rood); het waarschuwingsvenster blijft.
+- **Voorkeuren:**
+  - `prefers-reduced-motion`: geen indrukbeweging.
+  - `prefers-reduced-transparency`: het glas wordt effen grijs.
+  - `prefers-contrast: more`: schaduwen worden lijnen.
+
+**Afwijkingen van de gids**
+
+- **Donkere modus blijft** (op verzoek). De gids levert alleen licht; de donkere set gebruikt
+  dezelfde indigo en papaya op donkergrijs (#121214, kaarten #1C1C1E). Schaduwen worden daar
+  een haarlijn.
+- **Stille tekst #636A77 in plaats van #6b7280.** #6b7280 haalt op het grijze vlak 4,33:1,
+  net onder WCAG AA.
+- **Inkt op papaya in plaats van wit.** Wit haalt op #FF7C3A maar 2,6:1. In donkere modus
+  staat ook op indigo donkere inkt.
+- **Foutmeldingen in Ember #C2410C** (`--destructive`), in plaats van papaya als tekstkleur.
+- **Segmentkleuren** (rood, oranje, groen) blijven: het zijn statuskleuren, en de gids houdt
+  die apart van de merkkleuren.
+- **Teksten blijven Nederlands.** De schrijfregels van de gids (bv. "Back" als naam van de
+  bovenliggende pagina) zijn niet overgenomen.
+- **Mobiel:** dialogen worden onder 640px geen bottom sheet zoals in de gids; ze blijven een
+  gecentreerd venster.
+
+**Overig**
+
 - **Contrast (WCAG AA):** `src/test/contrast.test.ts` rekent de tokens na, licht en donker.
-  - Op oranje en op de segmentkleuren staat donkere inkt; wit haalt daar geen 4,5:1.
-  - Oranje tekst gebruikt `orange-ink`: #B4521A licht, #FF9A62 donker.
-- **Naam en merk:** "GoHome WWS" (`lib/merk.ts`), het woordmerk "GoHome" + "WWS"
-  (`Woordmerk.tsx`) en een favicon (paars vlak met witte G).
+- **Naam en merk:** "GoHome WWS" in de paginatitels (`lib/merk.ts`). Het woordmerk (`Woordmerk.tsx`) is
+  "GoHome" halfvet met "advice" licht en grijs, zoals "GoHome UI" in de gids.
 - **Zijmenu** (`Zijmenu.tsx`, onderdelen in `lib/menu.ts`): breed op een computer, een
   icoonbalk tot 720px. Een nieuw onderdeel is één regel in `menuOnderdelen`.
-- **Startscherm:** de homehero met groet en de statistieken van `berekenHomeStats`
-  (`home.ts`, met een vergelijkingstest tegen `reference/wws-site-home.cjs`).
-- **PDF's:** Inter ingesloten; zie hieronder.
+- **Startscherm:** de groet als hero op het canvas, met de statistieken van
+  `berekenHomeStats` (`home.ts`) in een kaart.
+- **E-mails:** het systeemlettertype, inkt #1d1d1f en knoppen met 8px hoeken.
+- **PDF's:** de kleuren van de gids (inkt #1d1d1f, stille tekst #636A77, haarlijn #E5E5EA).
+  Het lettertype blijft Inter (ingesloten; zie hieronder), want SF Pro mag niet in een PDF
+  worden meegeleverd.
 
 ## Portefeuille-analyse energielabels (nieuw, niet in de bron)
 
@@ -235,6 +279,7 @@ de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat gee
   function te verwerken.
 
 **Rechten (migratie 0008).**
+
 - **Zien:** een portefeuille en de analyses ervan zie je als maker, als hij met je gedeeld is, als
   beheerder of met de kijkrol. Een gecombineerde analyse zie je als je alle portefeuilles ervan mag
   zien (of als maker, beheerder of kijkrol).
@@ -256,6 +301,7 @@ paginanummers lopen vanaf 2, net als bij de WWS-rapporten.
 
 **Meerdere portefeuilles.** Met "Meerdere portefeuilles" draai je één analyse over gekozen
 portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigenaar toe.
+
 - **Dubbele adressen:** een adres in meer portefeuilles telt één keer (de versie met het nieuwste
   labelresultaat); adressen die niet meer in Bloxs staan tellen niet mee (`combi.ts`).
 - **Labels ophalen** blijft per portefeuille; de gecombineerde analyse toont wat nog ontbreekt.
@@ -268,6 +314,7 @@ bekijken en de PDF downloaden.
 
 **Verduurzamingsraming (migratie 0012, nieuw, niet in de bron).** Bij de EFG-regels een grove
 kostenindicatie om woningen naar minimaal label D en naar C te brengen.
+
 - **BAG:** "BAG-gegevens ophalen" haalt alleen gegevens op voor woningen met een label onder de
   EFG-regels en woningen zonder geregistreerd label (`inRaming`); alleen die staan ook in de
   raming. Per woning drie korte vragen bij PDOK (geen sleutel), elk ca. 0,1 s: de Locatieserver
@@ -304,6 +351,7 @@ analyses blijven zoals ze waren.
 
 **Eigenaar in GoHome bij Bloxs.** Bij het kiezen van een Bloxs-eigenaar stelt het venster de
 GoHome-eigenaar voor (`bloxs/eigenaarKoppeling.ts`):
+
 1. die van een eerdere portefeuille van dezelfde Bloxs-eigenaar;
 2. anders die met dezelfde naam;
 3. anders "+ Nieuw in GoHome", die bij het inladen wordt aangemaakt.
@@ -369,11 +417,11 @@ Calcasa, Altum) hebben voorwaarden of kosten; Funda/Pararius scrapen we niet.
 De app gebruikt daarom een eigen referentietabel in Normen (admin), met bron en datum per regel.
 Startwaarden, alleen wat letterlijk in de rapporten staat:
 
-| Niveau | Regels | Bron | Peildatum |
-|---|---|---|---|
-| Landelijk | alle € 19,32 · appartement € 20,72 (gem. 88 m²) · woonhuis € 15,10 (gem. 121 m²) | NVM & VGM NL, huurontwikkelingen Q2 2026 | 30-06-2026 |
-| Gemeente | Amsterdam € 25,70 · Utrecht € 22,49 · Den Haag € 20,82 · Rotterdam € 19,67 · Eindhoven € 16,64 (alle woningtypen) | idem | 30-06-2026 |
-| Provincie | twaalf provincies (alle woningtypen), van Drenthe € 11,43 tot Noord-Holland € 22,27 | NVM & VGM NL, huurontwikkelingen Q4 2025 (provinciekaart) | 31-12-2025 |
+| Niveau    | Regels                                                                                                            | Bron                                                      | Peildatum  |
+| --------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------- |
+| Landelijk | alle € 19,32 · appartement € 20,72 (gem. 88 m²) · woonhuis € 15,10 (gem. 121 m²)                                  | NVM & VGM NL, huurontwikkelingen Q2 2026                  | 30-06-2026 |
+| Gemeente  | Amsterdam € 25,70 · Utrecht € 22,49 · Den Haag € 20,82 · Rotterdam € 19,67 · Eindhoven € 16,64 (alle woningtypen) | idem                                                      | 30-06-2026 |
+| Provincie | twaalf provincies (alle woningtypen), van Drenthe € 11,43 tot Noord-Holland € 22,27                               | NVM & VGM NL, huurontwikkelingen Q4 2025 (provinciekaart) | 31-12-2025 |
 
 - Het rapport over Q2 2026 geeft geen cijfers per provincie en geen cijfers per woningtype per
   stad; daarom komen de provincies uit het rapport over Q4 2025, met die datum.
@@ -484,6 +532,7 @@ Ook de kijkrol kan de PDF van een opgeslagen indicatie downloaden.
 
 Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase
 Auth MFA).
+
 - **Afdwingen in de app:** de route `/_authenticated` stuurt elke sessie zonder code (`aal1`) naar
   `/tweestaps`. Wie nog geen code-app heeft, koppelt er daar eerst één (QR-code plus bevestiging);
   anders vul je de code in (`src/lib/tweestaps.ts`, `src/components/TweeStaps.tsx`).
@@ -595,6 +644,7 @@ stap. Ook kiest de bron zelf tussen de opties; je ziet ze niet naast elkaar.
 als geldige yyyy-mm-dd, en het beginlabel alleen als geldig label.
 
 **Afwijkend beginlabel (1a).**
+
 - `vergelijkBeginlabel` vergelijkt klasse, soort (een label van vóór 2015 telt als verschil) en
   datum. Het voorstel is het advies als dat recenter is dan de registratie, anders EP-Online.
 - **Controlevraag**: "Het energieadvies van [datum] gaat uit van label E. In EP-Online staat label
@@ -612,6 +662,7 @@ als geldige yyyy-mm-dd, en het beginlabel alleen als geldig label.
   verbeteradvies (met een melding in de route zolang het niet bevestigd is) en beide advies-PDF's.
 
 **Opties vergelijken (1b).**
+
 - `vergelijkOpties` rekent per optie met `calc()`: labelsprong vanaf het beginlabel, kosten,
   maatregelen, besparing, punten erbij, nieuw totaal, segment, maximale huur, extra huur per maand
   en een terugverdientijd als indicatie (gemiddelde kosten ÷ extra huur per jaar).

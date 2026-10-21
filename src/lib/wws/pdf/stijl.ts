@@ -24,14 +24,16 @@ export type RGB = [number, number, number];
 
 export const PDF_W = 210,
   PDF_M = 16;
+// Kleuren van GoHome UI: indigo #5B41FF, inkt #1d1d1f, stille tekst #636A77, Frost #EDF0FF,
+// haarlijn #E5E5EA, Wash #FFF5E5 met Ember #C2410C
 export const PDF_PUR: RGB = [91, 65, 255],
-  PDF_INK: RGB = [10, 10, 26],
-  PDF_MUT: RGB = [92, 92, 122],
+  PDF_INK: RGB = [29, 29, 31],
+  PDF_MUT: RGB = [99, 106, 119],
   PDF_SOFT: RGB = [237, 240, 255],
-  PDF_ALT: RGB = [248, 248, 255],
-  PDF_LINE: RGB = [230, 230, 242];
-export const PDF_WARN_BG: RGB = [255, 241, 232],
-  PDF_WARN_INK: RGB = [154, 66, 18];
+  PDF_ALT: RGB = [247, 247, 250],
+  PDF_LINE: RGB = [229, 229, 234];
+export const PDF_WARN_BG: RGB = [255, 245, 229],
+  PDF_WARN_INK: RGB = [194, 65, 12];
 export const PDF_SEGC: Record<Segment, RGB> = {
   laag: [229, 72, 77],
   midden: [255, 124, 58],

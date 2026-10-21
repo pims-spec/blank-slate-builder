@@ -3,11 +3,11 @@ import { berekenHomeStats, dagdeelGroet, homeTegels } from "@/lib/wws/home";
 import { dashboardVersiesQuery, tellingenQuery } from "./tellingStore";
 import Uitleg from "./Uitleg";
 
-/** .homehero in wws-site.html: groet en "Wat wil je doen?" in een lichte kaart */
+/** Groet en "Wat wil je doen?" als hero direct op het canvas (GoHome UI: geen kaart om een titel) */
 export function HomeHero({ naam }: { naam: string }) {
   return (
-    <div className="rounded-3xl border border-border bg-gradient-to-br from-secondary to-card px-8 py-9 shadow-[0_1px_2px_rgb(10_10_26/0.04),0_8px_24px_color-mix(in_oklab,var(--color-primary)_6%,transparent)] max-[720px]:px-5 max-[720px]:py-6">
-      <h1 className="text-[46px] leading-[1.05] font-bold tracking-[-0.03em] text-foreground max-[720px]:text-3xl">
+    <div className="pt-4 pb-2">
+      <h1 className="font-display text-[46px] leading-[1.05] text-foreground max-[720px]:text-3xl">
         {dagdeelGroet() + (naam ? ", " + naam : "")}
       </h1>
       <p className="tagline mt-1 text-[19px]">Wat wil je doen?</p>
@@ -25,7 +25,7 @@ export function HomeStats({ userId }: { userId: string }) {
   return (
     <section
       aria-label="Jouw statistieken"
-      className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-1 rounded-3xl border border-border bg-card px-2.5 py-4 shadow-[0_8px_24px_color-mix(in_oklab,var(--color-primary)_6%,transparent)]"
+      className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-1 gh-card px-2.5 py-4"
     >
       {homeTegels(S).map(([getal, label, uitleg]) => (
         <div key={label} className="px-3.5 py-2.5">

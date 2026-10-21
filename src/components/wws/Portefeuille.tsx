@@ -72,7 +72,7 @@ export default function Portefeuille({ rechten }: { rechten: Rechten }) {
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs text-muted-foreground">Eigenaar</span>
           <select
-            className="h-9 rounded-lg border border-transparent bg-muted px-2 text-sm"
+            className="h-9 rounded-lg border border-transparent bg-card px-2 text-sm shadow-card"
             value={klantId}
             onChange={(e) => setKlantId(e.target.value)}
           >
