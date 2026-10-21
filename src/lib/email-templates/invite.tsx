@@ -82,8 +82,8 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { maxWidth: '560px', border: '1px solid #E6E6F2', borderRadius: '8px', overflow: 'hidden' as const }
+const main = { backgroundColor: '#ffffff', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }
+const container = { maxWidth: '560px', border: '1px solid #E5E5EA', borderRadius: '8px', overflow: 'hidden' as const }
 const header = { backgroundColor: '#5B41FF', padding: '26px 32px' }
 const content = { padding: '30px 32px' }
 const brand = { fontSize: '26px', fontWeight: 'bold' as const, color: '#ffffff', letterSpacing: '0', margin: '0' }
@@ -91,19 +91,19 @@ const brandSmall = { fontSize: '16px', color: '#ffffff' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#0A0A1A',
+  color: '#1d1d1f',
   margin: '0 0 20px',
 }
 const text = {
   fontSize: '15px',
-  color: '#5C5C7A',
+  color: '#6b7280',
   lineHeight: '1.6',
   margin: '0 0 22px',
 }
-const h2 = { fontSize: '16px', color: '#0A0A1A', margin: '0 0 12px', fontWeight: 'bold' as const }
-const list = { paddingLeft: '20px', margin: '0 0 20px', color: '#5C5C7A', fontSize: '15px', lineHeight: '1.6' }
+const h2 = { fontSize: '16px', color: '#1d1d1f', margin: '0 0 12px', fontWeight: 'bold' as const }
+const list = { paddingLeft: '20px', margin: '0 0 20px', color: '#6b7280', fontSize: '15px', lineHeight: '1.6' }
 const listItem = { marginBottom: '8px', paddingLeft: '2px' }
-const note = { fontSize: '13px', color: '#5C5C7A', lineHeight: '1.6', margin: '0 0 22px' }
+const note = { fontSize: '13px', color: '#6b7280', lineHeight: '1.6', margin: '0 0 22px' }
 const action = { textAlign: 'center' as const }
 const link = { color: 'inherit', textDecoration: 'underline' }
 const button = {
@@ -116,14 +116,14 @@ const button = {
   fontWeight: 'bold' as const,
   textDecoration: 'none',
 }
-const footer = { fontSize: '12px', color: '#5C5C7A', lineHeight: '1.6', margin: '28px 0 0' }
+const footer = { fontSize: '12px', color: '#6b7280', lineHeight: '1.6', margin: '28px 0 0' }
 const footerLink = { ...footer, margin: '8px 0 0' }
 const fallbackLink = { color: '#5B41FF', textDecoration: 'underline' }
 // Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
 const darkModeCss = `
   @media (prefers-color-scheme: dark) {
-    .dm-btn { background-color: #8B78FF !important; color: #0A0A1A !important; }
+    .dm-btn { background-color: #8B78FF !important; color: #1d1d1f !important; }
   }
-  [data-ogsc] .dm-btn { background-color: #8B78FF !important; color: #0A0A1A !important; }
-  [data-ogsb] .dm-btn { background-color: #8B78FF !important; color: #0A0A1A !important; }
+  [data-ogsc] .dm-btn { background-color: #8B78FF !important; color: #1d1d1f !important; }
+  [data-ogsb] .dm-btn { background-color: #8B78FF !important; color: #1d1d1f !important; }
 `

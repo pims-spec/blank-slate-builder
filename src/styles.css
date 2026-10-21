@@ -20,6 +20,8 @@
  */
 
 @theme inline {
+  /* Hoeken naar rol (GoHome UI, Foundations → Radius): knoppen en velden 8px (rounded-lg),
+     kaarten, dialogen en menu's 12px (rounded-xl), sheets 16px (rounded-2xl) */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -27,10 +29,21 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  /* Inter voor alles, Instrument Sans (schuin) voor de taglines — zoals de bron */
-  --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-tagline: "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Twee families, geen webfont: Display voor koppen, Text voor het werk (GoHome UI → Typography) */
+  --font-display:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  /* Schaduw is de rand (GoHome UI → Elevation) */
+  --shadow-card: var(--gh-shadow-card);
+  --shadow-popover: var(--gh-shadow-popover);
+  --shadow-toast: var(--gh-shadow-toast);
+  --shadow-knop: var(--gh-shadow-knop);
+  /* Beweging (GoHome UI → Motion) */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-press: cubic-bezier(0, 0, 0.58, 1);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -59,6 +72,8 @@
   --color-orange: var(--orange);
   --color-orange-foreground: var(--orange-foreground);
   --color-orange-ink: var(--orange-ink);
+  --color-stil: var(--stil);
+  --color-hairline: var(--hairline);
   --color-warn: var(--warn);
   --color-warn-foreground: var(--warn-foreground);
   --color-ruimte-rand: var(--ruimte-rand);
@@ -77,85 +92,101 @@
 }
 
 :root {
-  /* GoHome-huisstijl, overgenomen uit reference/wws-site.html (--bg, --ink, --accent, --soft,
-     --orange, --line, --field, …). De hexwaarde van de bron staat erachter. */
-  --radius: 0.875rem;
+  /* GoHome-huisstijl volgens GoHome UI (main.dv09ahdxnvvnr.amplifyapp.com/foundations):
+     indigo voor actie, papaya voor waarschuwing, inkt is geen zwart, witte kaarten op een grijs
+     vlak. De hexwaarde en de tokennaam uit de gids staan erachter. */
+  --radius: 0.5rem;
   color-scheme: light;
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --background: oklch(0.9865 0.0066 286.28); /* #FAFAFF */
-  --foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --card: oklch(1 0 0); /* #FFFFFF */
-  --card-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --popover: oklch(1 0 0); /* #FFFFFF */
-  --popover-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --primary: oklch(0.5369 0.2625 279.01); /* #5B41FF */
-  --primary-foreground: oklch(1 0 0); /* #FFFFFF */
-  --secondary: oklch(0.9573 0.0204 276.96); /* #EDF0FF */
-  --secondary-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --muted: oklch(0.9751 0.0093 286.23); /* #F6F6FD */
-  --muted-foreground: oklch(0.4866 0.0478 284.48); /* #5C5C7A */
+  --background: oklch(0.9626 0.0066 286.27); /* #F2F2F7 canvas.grouped */
+  --foreground: oklch(0.2316 0.0038 286.1); /* #1d1d1f canvas.ink */
+  --card: oklch(1 0 0); /* #ffffff background.paper */
+  --card-foreground: oklch(0.2316 0.0038 286.1);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2316 0.0038 286.1);
+  --primary: oklch(0.5369 0.2625 279.01); /* #5B41FF primary.main */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9573 0.0204 276.96); /* #EDF0FF primary.light (Frost) */
+  --secondary-foreground: oklch(0.4347 0.2326 276.38); /* #3D28CC primary.dark (Dusk) */
+  --muted: oklch(0.9626 0.0066 286.27); /* #F2F2F7 velden en wells */
+  --muted-foreground: oklch(0.551 0.0234 264.36); /* #6b7280 text.secondary */
   --accent: oklch(0.9573 0.0204 276.96); /* #EDF0FF */
-  --accent-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --border: oklch(0.9284 0.0161 286.08); /* #E6E6F2 */
-  --input: oklch(0.9284 0.0161 286.08); /* #E6E6F2 */
-  --ring: oklch(0.5369 0.2625 279.01); /* #5B41FF */
-  --orange: oklch(0.7285 0.1776 44.71); /* #FF7C3A */
-  --orange-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --orange-ink: oklch(0.5545 0.143 45.79); /* #B4521A */
-  --warn: oklch(0.9667 0.0194 55.15); /* #FFF1E8 */
+  --accent-foreground: oklch(0.2316 0.0038 286.1);
+  /* Verwijderen en overslaan zijn papaya (gids: knoppen); foutmeldingen in Ember voor contrast */
+  --destructive: oklch(0.5534 0.1739 38.4); /* #C2410C secondary.dark (Ember) */
+  --destructive-foreground: oklch(1 0 0);
+  --stil: oklch(0.4926 0 0); /* #616161 grey.700: stille actie */
+  --hairline: oklch(0.3588 0.012 285.78 / 0.12); /* rgba(60,60,67,.12) canvas.hairline */
+  --border: oklch(0.3588 0.012 285.78 / 0.12);
+  --input: oklch(0.3588 0.012 285.78 / 0.12);
+  --ring: oklch(0.5369 0.2625 279.01);
+  --orange: oklch(0.7285 0.1776 44.71); /* #FF7C3A secondary.main (Papaya) */
+  --orange-foreground: oklch(1 0 0);
+  --orange-ink: oklch(0.5534 0.1739 38.4); /* #C2410C */
+  --warn: oklch(0.9737 0.0237 79.75); /* #FFF5E5 secondary.light (Wash) */
+  --warn-foreground: oklch(0.5534 0.1739 38.4); /* #C2410C */
   /* rand om een ruimte in de puntentelling: minstens 3:1 tegen kaart en achtergrond */
   --ruimte-rand: oklch(0.6 0.08 285);
-  --warn-foreground: oklch(0.4893 0.1307 44.5); /* #9A4212 */
   --chart-1: oklch(0.5369 0.2625 279.01); /* #5B41FF */
   --chart-2: oklch(0.6557 0.1931 286.22); /* #8B78FF */
   --chart-3: oklch(0.7285 0.1776 44.71); /* #FF7C3A */
   --chart-4: oklch(0.6406 0.1329 157.68); /* #30A46C */
   --chart-5: oklch(0.6256 0.1933 23.03); /* #E5484D */
+  /* segmentkleuren zijn statuskleuren en blijven apart van de merkkleuren */
   --seg-laag: oklch(0.6256 0.1933 23.03); /* #E5484D */
   --seg-midden: oklch(0.7285 0.1776 44.71); /* #FF7C3A */
   --seg-hoog: oklch(0.6406 0.1329 157.68); /* #30A46C */
-  --seg-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --sidebar: oklch(1 0 0); /* #FFFFFF */
-  --sidebar-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --sidebar-primary: oklch(0.5369 0.2625 279.01); /* #5B41FF */
-  --sidebar-primary-foreground: oklch(1 0 0); /* #FFFFFF */
-  --sidebar-accent: oklch(0.9573 0.0204 276.96); /* #EDF0FF */
-  --sidebar-accent-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-  --sidebar-border: oklch(0.9284 0.0161 286.08); /* #E6E6F2 */
-  --sidebar-ring: oklch(0.5369 0.2625 279.01); /* #5B41FF */
+  --seg-foreground: oklch(0.2316 0.0038 286.1);
+  --sidebar: oklch(1 0 0 / 0.46); /* canvas.liquidGlass */
+  --sidebar-foreground: oklch(0.2316 0.0038 286.1);
+  --sidebar-primary: oklch(0.5369 0.2625 279.01);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9573 0.0204 276.96);
+  --sidebar-accent-foreground: oklch(0.2316 0.0038 286.1);
+  --sidebar-border: oklch(0.3588 0.012 285.78 / 0.12);
+  --sidebar-ring: oklch(0.5369 0.2625 279.01);
+  /* customShadows uit de gids */
+  --gh-shadow-card: 0 12px 30px rgb(15 23 42 / 0.04);
+  --gh-shadow-popover: 0 12px 28px rgb(0 0 0 / 0.12);
+  --gh-shadow-toast:
+    inset 0 1px 0 rgb(255 255 255 / 0.85), 0 12px 40px rgb(15 23 42 / 0.18),
+    0 2px 8px rgb(15 23 42 / 0.08);
+  --gh-shadow-knop: 0 2px 8px rgb(91 65 255 / 0.18);
+  --gh-shadow-glass: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 12px 30px rgb(15 23 42 / 0.04);
+  --gh-scrim: rgb(0 0 0 / 0.32);
 }
 
-/* Donkere modus: automatisch op basis van de apparaatinstelling, zoals de bron
-   (@media (prefers-color-scheme: dark)). */
+/* Donkere modus: automatisch op basis van de apparaatinstelling. Dezelfde indigo en papaya,
+   op donkergrijze vlakken (de gids zelf levert alleen licht; dit is onze afleiding). */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.129 0.042 264.695);
-    --background: oklch(0.1573 0.0274 282.79); /* #0B0B18 */
-    --foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
-    --card: oklch(0.2042 0.0432 281.88); /* #14142A */
-    --card-foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
-    --popover: oklch(0.2042 0.0432 281.88); /* #14142A */
-    --popover-foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
+    --background: oklch(0.17 0.003 286); /* #121214 */
+    --foreground: oklch(0.9707 0.0027 286.35); /* #F5F5F7 */
+    --card: oklch(0.2273 0.0038 286.09); /* #1C1C1E */
+    --card-foreground: oklch(0.9707 0.0027 286.35);
+    --popover: oklch(0.2939 0.0036 286.18); /* #2C2C2E */
+    --popover-foreground: oklch(0.9707 0.0027 286.35);
     --primary: oklch(0.6557 0.1931 286.22); /* #8B78FF */
-    --primary-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-    --secondary: oklch(0.2553 0.0745 283.06); /* #1F1C45 */
-    --secondary-foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
-    --muted: oklch(0.1852 0.0402 281.74); /* #101024 */
-    --muted-foreground: oklch(0.7259 0.0446 285.23); /* #A3A3C2 */
-    --accent: oklch(0.2553 0.0745 283.06); /* #1F1C45 */
-    --accent-foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
-    --border: oklch(0.3002 0.0538 282.67); /* #2A2A48 */
-    --input: oklch(0.3002 0.0538 282.67); /* #2A2A48 */
-    --ring: oklch(0.6557 0.1931 286.22); /* #8B78FF */
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.2692 0.0548 289.85); /* #26213F */
+    --secondary-foreground: oklch(0.9707 0.0027 286.35);
+    --muted: oklch(0.2939 0.0036 286.18); /* #2C2C2E */
+    --muted-foreground: oklch(0.7137 0.0192 261.32); /* #9CA3AF */
+    --accent: oklch(0.2692 0.0548 289.85);
+    --accent-foreground: oklch(0.9707 0.0027 286.35);
+    --destructive: oklch(0.78 0.1406 48.72); /* #FF9A62 */
+    --destructive-foreground: oklch(0.2316 0.0038 286.1);
+    --stil: oklch(0.7118 0.0129 286.07); /* #A1A1AA */
+    --hairline: oklch(0.943 0.0134 286.14 / 0.14);
+    --border: oklch(0.943 0.0134 286.14 / 0.14);
+    --input: oklch(0.943 0.0134 286.14 / 0.14);
+    --ring: oklch(0.6557 0.1931 286.22);
     --orange: oklch(0.78 0.1406 48.72); /* #FF9A62 */
-    --orange-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-    --orange-ink: oklch(0.78 0.1406 48.72); /* #FF9A62 */
+    --orange-foreground: oklch(0.2316 0.0038 286.1);
+    --orange-ink: oklch(0.78 0.1406 48.72);
     --warn: oklch(0.2767 0.0461 50.86); /* #3A2112 */
-    --ruimte-rand: oklch(0.62 0.09 284);
     --warn-foreground: oklch(0.8643 0.0845 54.08); /* #FFC49E */
+    --ruimte-rand: oklch(0.62 0.09 284);
     --chart-1: oklch(0.6557 0.1931 286.22); /* #8B78FF */
     --chart-2: oklch(0.7748 0.1229 289.53); /* #B4A8FF */
     --chart-3: oklch(0.78 0.1406 48.72); /* #FF9A62 */
@@ -164,15 +195,35 @@
     --seg-laag: oklch(0.7122 0.1809 21.66); /* #FF6B6E */
     --seg-midden: oklch(0.78 0.1406 48.72); /* #FF9A62 */
     --seg-hoog: oklch(0.735 0.1362 159.28); /* #4CC38A */
-    --seg-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-    --sidebar: oklch(0.2042 0.0432 281.88); /* #14142A */
-    --sidebar-foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
-    --sidebar-primary: oklch(0.6557 0.1931 286.22); /* #8B78FF */
-    --sidebar-primary-foreground: oklch(0.1549 0.0337 281.74); /* #0A0A1A */
-    --sidebar-accent: oklch(0.2553 0.0745 283.06); /* #1F1C45 */
-    --sidebar-accent-foreground: oklch(0.9463 0.0147 286.12); /* #ECECF7 */
-    --sidebar-border: oklch(0.3002 0.0538 282.67); /* #2A2A48 */
-    --sidebar-ring: oklch(0.6557 0.1931 286.22); /* #8B78FF */
+    --seg-foreground: oklch(0.2316 0.0038 286.1);
+    --sidebar: oklch(0.2273 0.0038 286.09 / 0.6);
+    --sidebar-foreground: oklch(0.9707 0.0027 286.35);
+    --sidebar-primary: oklch(0.6557 0.1931 286.22);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.2692 0.0548 289.85);
+    --sidebar-accent-foreground: oklch(0.9707 0.0027 286.35);
+    --sidebar-border: oklch(0.943 0.0134 286.14 / 0.14);
+    --sidebar-ring: oklch(0.6557 0.1931 286.22);
+    /* op donker draagt een schaduw niet: een haarlijn doet het werk */
+    --gh-shadow-card: 0 0 0 1px oklch(0.943 0.0134 286.14 / 0.08);
+    --gh-shadow-popover: 0 0 0 1px oklch(0.943 0.0134 286.14 / 0.1), 0 12px 28px rgb(0 0 0 / 0.5);
+    --gh-shadow-toast: 0 0 0 1px oklch(0.943 0.0134 286.14 / 0.1), 0 12px 40px rgb(0 0 0 / 0.5);
+    --gh-shadow-knop: none;
+    --gh-shadow-glass: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 12px 30px rgb(0 0 0 / 0.3);
+    --gh-scrim: rgb(0 0 0 / 0.5);
+  }
+}
+
+/* prefers-contrast: more — schaduwen vallen weg, haarlijnen komen ervoor in de plaats */
+@media (prefers-contrast: more) {
+  :root {
+    --gh-shadow-card: 0 0 0 1px var(--foreground);
+    --gh-shadow-popover: 0 0 0 1px var(--foreground);
+    --gh-shadow-toast: 0 0 0 1px var(--foreground);
+    --gh-shadow-glass: 0 0 0 1px var(--foreground);
+    --gh-shadow-knop: none;
+    --hairline: var(--muted-foreground);
+    --border: var(--muted-foreground);
   }
 }
 
@@ -182,33 +233,79 @@
   }
 
   body {
-    /* zachte paarse gloed bovenin, zoals de bron */
-    background:
-      radial-gradient(
-        1200px 600px at 20% -10%,
-        color-mix(in oklab, var(--color-primary) 8%, transparent),
-        transparent 60%
-      ),
-      var(--color-background);
-    background-attachment: fixed;
+    background: var(--color-background);
     color: var(--color-foreground);
     font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
     @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
   }
 }
 
 @layer components {
-  /* Koppen in de huisstijl: Inter, vet en strak — .homehero h1 / h1 in wws-site.html */
+  /* Koppen: Large title 34px · 700 · -0.022em; tracking krapper naarmate de letter groter is */
   .font-display {
+    font-family: var(--font-display);
     font-weight: 700;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.022em;
   }
-  /* Taglines schuin in Instrument Sans, in de accentkleur — .tagline / .hometagline */
+  /* Intro-regel onder een kop (gids: Intro · 600 · 0.013em), in de stille tekstkleur */
   .tagline {
-    font-family: "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
-    font-style: italic;
+    font-family: var(--font-sans);
     font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--color-primary);
+    letter-spacing: 0.013em;
+    color: var(--color-muted-foreground);
+  }
+  /* Bovenregel boven een groep op het canvas (de "uppercase kicker"), nooit in een kaart */
+  .kicker {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+}
+
+/* Witte kaart op het grijze vlak: hoek 12, de schaduw is de rand (GH_CARD_SX) */
+@utility gh-card {
+  border-radius: calc(var(--radius) + 4px);
+  background-color: var(--color-card);
+  color: var(--color-card-foreground);
+  box-shadow: var(--gh-shadow-card);
+}
+
+/* Glas: alleen voor chrome (zijmenu, werkbalk), nooit voor inhoud */
+@utility gh-glass {
+  background-color: var(--color-sidebar);
+  box-shadow: var(--gh-shadow-glass);
+  -webkit-backdrop-filter: blur(40px) saturate(1.9);
+  backdrop-filter: blur(40px) saturate(1.9);
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Indrukken: 0.97 in 100ms; zonder beweging bij prefers-reduced-motion (GH_PRESS) */
+@utility gh-press {
+  transition:
+    transform 100ms var(--ease-press),
+    background-color 150ms,
+    color 150ms,
+    box-shadow 150ms,
+    filter 150ms;
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) {
+      transform: none;
+    }
   }
 }
