@@ -26,6 +26,7 @@ import {
   PDF_WARN_BG,
   PDF_WARN_INK,
   facSummary,
+  eenRegel,
   isBronModus,
   kaartHoek,
   kaartRand,
@@ -639,8 +640,7 @@ export function pdfVoorblad(
     doc.setFontSize(14);
     doc.setTextColor(...PDF_MUT);
     // één regel; een lange lijst eigenaren eindigt op "…"
-    const sub = doc.splitTextToSize(pdfTxt(kop.sub), B) as string[];
-    doc.text(sub.length > 1 ? sub[0]!.replace(/\s*\S{0,3}$/, "") + "…" : sub[0]!, X, y - 3);
+    doc.text(eenRegel(doc, pdfTxt(kop.sub), B), X, y - 3);
     y += 6;
   }
 
@@ -793,7 +793,8 @@ export function pdfBanner(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...MUT);
-    doc.text(pdfTxt(sub), M, y);
+    // huisstijl: één regel; een lange ondertitel (bv. veel portefeuilles) eindigt op "…"
+    doc.text(isBronModus() ? pdfTxt(sub) : eenRegel(doc, pdfTxt(sub), W - 2 * M), M, y);
     y += 5.5;
   }
   if (dateText) {

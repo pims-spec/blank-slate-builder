@@ -135,6 +135,15 @@ export function huisstijlTabel(opts: UserOptions): UserOptions {
   };
 }
 
+/**
+ * Tekst op één regel van hoogstens `breedte` mm (met het huidige lettertype); langer eindigt op
+ * "…". De tekst moet al door pdfTxt() zijn gegaan.
+ */
+export function eenRegel(doc: Doc, t: string, breedte: number): string {
+  const regels = doc.splitTextToSize(t, breedte) as string[];
+  return regels.length > 1 ? regels[0]!.replace(/\s*\S{0,3}$/, "") + "…" : (regels[0] ?? "");
+}
+
 /** Hoek van een kaart: 12px in de huisstijl, bron-getrouw de oorspronkelijke maat */
 export const kaartHoek = (bron: number) => (bronModus ? bron : PDF_KAART_HOEK);
 

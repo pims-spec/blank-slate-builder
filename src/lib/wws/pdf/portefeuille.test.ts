@@ -239,4 +239,15 @@ describe("PDF portefeuille-analyse", () => {
     expect(t).toContain("Portefeuilles in deze analyse (13)");
     for (const n of namen) expect(t.split(n + " ").length - 1 + (t.endsWith(n) ? 1 : 0)).toBe(1);
   });
+
+  it("lange naam: de ondertitel in de kopregel blijft op één regel en eindigt op …", async () => {
+    const namen = Array.from({ length: 12 }, (_, i) => `TEST Apricot Real Estate ${i + 1} B.V.`);
+    const lang = namen.slice(0, 3).join(", ") + " en 9 andere";
+    const u = analyseer([adres(1, "A", "2023-03-01")], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: lang, delen: namen, uitkomst: u });
+    const p2 = (await pdfTekst(pdf.blob))[1]!;
+    const sub = p2.find((t) => t.startsWith("12 portefeuilles: "))!;
+    expect(sub).toMatch(/…$/);
+    expect(sub.length).toBeLessThan(("12 portefeuilles: " + lang).length);
+  });
 });

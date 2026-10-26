@@ -227,7 +227,8 @@ daarmee vervangen.
     adres of naam is het soort rapport zelf de kop, zonder bovenkopje. De
     lila vorm met de grote wordmark uit de bron is vervallen.
   - **Kopregel** (`pdfBanner`): geen gekleurde balk meer; woordmerk links, het soort rapport
-    rechts, een haarlijn eronder.
+    rechts, een haarlijn eronder. De ondertitel blijft op één regel; een lange (bv. de naam van
+    een analyse met veel portefeuilles) eindigt op "…" (`eenRegel`).
   - **Tabellen** (`huisstijlTabel`, centraal in `tabel()`): stille kopjes in kleine
     hoofdletters, uitgelijnd met hun kolom; alleen een haarlijn onder elke rij, geen raster
     en geen zebra. Subkopjes en totalen (in de bron Frost) krijgen een licht grijs vlak;
