@@ -47,6 +47,16 @@ const dag = (iso: string | null) =>
 
 /** "1 oktober 2026" of "1 t/m 15 oktober 2026" */
 /**
+ * De adressen in "geen geregistreerd label" die EP-Online wel kent (gevonden zonder geldige
+ * labelklasse); de niet gevonden adressen horen bij "Te controleren".
+ */
+export function zonderLabelAdressen(u: AnalyseUitkomst): string[] {
+  const nietGevonden = new Set(u.teControleren.nietGevonden);
+  const geen = u.risico.find((r) => r.categorie === "geen_label");
+  return (geen?.adressen ?? []).map((a) => a.adres).filter((a) => !nietGevonden.has(a));
+}
+
+/**
  * Een lijst namen als rijen voor de PDF: tot en met `drempel` namen één kolom, daarboven twee
  * kolommen die van boven naar beneden lezen (eerst de linker kolom, dan de rechter).
  */
@@ -331,11 +341,13 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     }
   }
 
-  // woningen zonder geregistreerd label (ook "niet gevonden" bij EP-Online); oudere opgeslagen
-  // analyses hebben die lijst niet, dan alleen de niet gevonden adressen
-  const geen = u.risico.find((r) => r.categorie === "geen_label");
-  const zonderLabel = geen?.adressen?.map((a) => a.adres) ?? u.teControleren.nietGevonden;
-  kop("Woningen zonder geregistreerd label (" + (geen?.aantal ?? zonderLabel.length) + ")");
+  // woningen zonder geregistreerd label: alleen de adressen die EP-Online wel kent, maar zonder
+  // geldige labelklasse. De niet gevonden adressen staan onder "Te controleren", zodat geen adres
+  // twee keer in de PDF staat. Oudere opgeslagen analyses hebben de adressen per categorie niet;
+  // dan blijft deze lijst leeg.
+  const nietGevonden = u.teControleren.nietGevonden;
+  const zonderLabel = zonderLabelAdressen(u);
+  kop("Woningen zonder geregistreerd label (" + zonderLabel.length + ")");
   if (zonderLabel.length)
     y =
       tabel(lib, doc, {
@@ -343,11 +355,15 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         head: [["Adres"]],
         body: zonderLabel.map((a) => [a]),
         ...stijl,
-      }) + 8;
-  else {
-    tekst("Geen woningen.");
-    y += 4;
-  }
+      }) + 3;
+  else if (!nietGevonden.length) tekst("Geen woningen.");
+  if (nietGevonden.length)
+    tekst(
+      (zonderLabel.length ? "Daarnaast " : "") +
+        aantal(nietGevonden.length, "adres", "adressen") +
+        " niet gevonden bij EP-Online; die staan onder ‘Te controleren’.",
+    );
+  y += 4;
 
   const c = u.teControleren;
   const controle =

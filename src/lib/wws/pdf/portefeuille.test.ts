@@ -3,7 +3,12 @@ import { autoTable } from "jspdf-autotable";
 import { describe, expect, it } from "vitest";
 import { normaliseerAdres } from "../portefeuille/adres";
 import { PORTEFEUILLE_STANDAARD, analyseer, type AnalyseAdres } from "../portefeuille/analyse";
-import { lijstInKolommen, maakPortefeuillePdf, opgehaaldTekst } from "./portefeuille";
+import {
+  lijstInKolommen,
+  maakPortefeuillePdf,
+  opgehaaldTekst,
+  zonderLabelAdressen,
+} from "./portefeuille";
 import { INTER, pdfTekst } from "./testhulp";
 
 const LIB = { jsPDF, autoTable, lettertype: INTER };
@@ -64,8 +69,11 @@ describe("PDF portefeuille-analyse", () => {
       "1053 ZD 2",
       "Woningen onder de EFG-regels (1)",
       "1053 ZD 3",
-      "Woningen zonder geregistreerd label (1)",
-      "1053 ZD 4",
+      // niet gevonden: niet bij "zonder label", alleen onder "Te controleren"
+      "Woningen zonder geregistreerd label (0)",
+      "1 adres niet gevonden bij EP-Online; die staan onder ‘Te controleren’.",
+      "Te controleren (1)",
+      "1053 ZD 4 Niet gevonden bij EP-Online",
       "Bron: EP-Online (RVO), opgehaald op 14 oktober 2026",
     ];
     let vanaf = 0;
@@ -266,5 +274,38 @@ describe("PDF portefeuille-analyse", () => {
     const sub = p2.find((t) => t.startsWith("12 portefeuilles: "))!;
     expect(sub).toMatch(/…$/);
     expect(sub.length).toBeLessThan(("12 portefeuilles: " + lang).length);
+  });
+
+  it("elk adres maar in één lijst: zonder label (wel bekend bij EP-Online) of te controleren", async () => {
+    const zonderKlasse: AnalyseAdres = {
+      ...adres(5, null, null),
+      resultaat: { ...adres(5, null, null).resultaat!, status: "gevonden", energieklasse: null },
+    };
+    const u = analyseer(
+      [
+        adres(1, "A", "2023-03-01"),
+        zonderKlasse,
+        adres(6, null, null, "niet_gevonden"),
+        adres(7, null, null, "niet_gevonden"),
+      ],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    // het risicoprofiel telt beide soorten nog als "geen geregistreerd label"
+    expect(u.risico.find((r) => r.categorie === "geen_label")!.aantal).toBe(3);
+    expect(zonderLabelAdressen(u)).toEqual(["1053 ZD 5"]);
+    const t = (await pdfTekst(maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u }).blob))
+      .slice(1)
+      .flat()
+      .join(" ")
+      .replace(/\s+/g, " ");
+    expect(t).toContain(
+      "Woningen zonder geregistreerd label (1) ADRES 1053 ZD 5 Daarnaast 2 adressen niet gevonden bij EP-Online; die staan onder ‘Te controleren’.",
+    );
+    // vanaf de kop "Woningen zonder geregistreerd label (" (de raming ervoor noemt alle adressen)
+    const lijsten = t.slice(t.indexOf("Woningen zonder geregistreerd label ("));
+    for (const nr of ["5", "6", "7"])
+      expect(lijsten.split("1053 ZD " + nr + " ").length - 1, "1053 ZD " + nr).toBe(1);
   });
 });
