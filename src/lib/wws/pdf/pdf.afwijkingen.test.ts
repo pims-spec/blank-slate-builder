@@ -8,7 +8,18 @@ import { normaliseer } from "../calc";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { genereer } from "../testdata";
 import { maakAdviesPdf, maakRoutePdf, maakTellingPdf } from "./rapporten";
-import { binnenTekenset, nieuwDoc } from "./stijl";
+import type { CellHookData } from "jspdf-autotable";
+import { legeMeta } from "../opslag/doc";
+import {
+  PDF_ALT,
+  PDF_MUT,
+  PDF_PUR,
+  PDF_SOFT,
+  binnenTekenset,
+  huisstijlTabel,
+  nieuwDoc,
+  pdfTxt,
+} from "./stijl";
 import { INTER, bytesVan, pdfTekst, willekeurigeMeta } from "./testhulp";
 
 const LIB = { jsPDF, autoTable };
@@ -190,4 +201,98 @@ describe("bewuste afwijkingen in de PDF's", () => {
     expect(vanLabel, "route vanaf een label").toBeGreaterThan(2);
     expect(vanAnders, "route vanaf energie-index of bouwjaar").toBeGreaterThan(2);
   }, 120_000);
+
+  describe("huisstijl GoHome UI", () => {
+    const meta = {
+      ...legeMeta(),
+      naam: "TEST Woning",
+      adres: "Damrak",
+      huisnummer: "12",
+      postcode: "1012AB",
+      plaats: "Amsterdam",
+    };
+    const input = normaliseer(genereer(3));
+    const pdf = (bronGetrouw: boolean) =>
+      maakTellingPdf(LIB_HUISSTIJL, { meta, input, normen: N, bronGetrouw }).blob;
+
+    it("voorblad: woordmerk, soort rapport als bovenkopje en het adres als kop", async () => {
+      const nu = (await pdfTekst(pdf(false)))[0]!.join(" ");
+      expect(nu).toContain("GoHome advice");
+      expect(nu).toContain("RAPPORTAGE PUNTENTELLING");
+      expect(nu).toContain("Damrak 12");
+      expect(nu).toContain("1012 AB Amsterdam");
+      const bron = (await pdfTekst(pdf(true)))[0]!.join(" ");
+      expect(bron).not.toContain("advice");
+      expect(bron).toContain("Rapportage puntentelling");
+    });
+
+    it("sectiekoppen gewoon gespeld en tabelkoppen in kleine hoofdletters; bron-getrouw niet", async () => {
+      const nu = (await pdfTekst(pdf(false))).flat().join(" ");
+      expect(nu).toContain("Punten per onderdeel");
+      expect(nu).toContain("ONDERDEEL OMVAT PUNTEN");
+      const bron = (await pdfTekst(pdf(true))).flat().join(" ");
+      expect(bron).toContain("PUNTEN PER ONDERDEEL");
+      expect(bron).toContain("Onderdeel Omvat Punten");
+    });
+
+    it("² en – blijven staan met Inter; bron-getrouw en zonder Inter 2 en -", () => {
+      const met = binnenTekenset(false, () => {
+        nieuwDoc(LIB_HUISSTIJL);
+        return pdfTxt("31 m² – ≤");
+      });
+      expect(met).toBe("31 m² – ≤");
+      const zonder = binnenTekenset(false, () => {
+        nieuwDoc(LIB);
+        return pdfTxt("31 m² – ≤");
+      });
+      expect(zonder).toBe("31 m2 - <=");
+      const bron = binnenTekenset(true, () => {
+        nieuwDoc(LIB_HUISSTIJL);
+        return pdfTxt("31 m² – ≤");
+      });
+      expect(bron).toBe("31 m2 - ≤");
+    });
+
+    it("tabelstijl: stille kop zonder vlak, alleen haarlijnen, Frost wordt licht grijs", () => {
+      const opts = huisstijlTabel({
+        head: [["Ruimte", "Punten"]],
+        headStyles: { fillColor: PDF_PUR, textColor: 255 },
+        columnStyles: { 1: { halign: "right" } },
+        didParseCell: (d: CellHookData) => {
+          if (d.section === "body") d.cell.styles.fillColor = PDF_SOFT;
+        },
+      });
+      expect(opts.theme).toBe("plain");
+      const cel = (section: "head" | "body", kolom: number, text: string[]) => {
+        const d = {
+          section,
+          column: { index: kolom },
+          cell: { text, styles: { fillColor: PDF_PUR, fontSize: 9 } },
+        } as unknown as CellHookData;
+        opts.didParseCell!(d);
+        return d.cell;
+      };
+      const kop = cel("head", 1, ["Punten"]);
+      expect(kop.text).toEqual(["PUNTEN"]);
+      expect(kop.styles).toMatchObject({
+        fillColor: false,
+        textColor: PDF_MUT,
+        halign: "right",
+        lineWidth: { bottom: 0.3 },
+      });
+      expect(cel("body", 0, ["Keuken"]).styles).toMatchObject({
+        fillColor: PDF_ALT,
+        lineWidth: { bottom: 0.2 },
+      });
+      // sleutel-waarde-tabellen ("plain") houden hun vorm
+      const plain = huisstijlTabel({ theme: "plain", body: [["a", "b"]] });
+      const d = {
+        section: "body",
+        column: { index: 0 },
+        cell: { text: ["a"], styles: { fillColor: false } },
+      } as unknown as CellHookData;
+      plain.didParseCell!(d);
+      expect(d.cell.styles).toEqual({ fillColor: false });
+    });
+  });
 });

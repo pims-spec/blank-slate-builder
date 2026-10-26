@@ -71,7 +71,7 @@ De code volgt wws-site.html (bron van waarheid). Verschillen met de tekstspecifi
 ## PDF's en Excel-export (fase 4b)
 
 ```
-src/lib/wws/pdf/stijl.ts      kleuren, pdfTxt, wozCapNoteText, facSummary, voettekst
+src/lib/wws/pdf/stijl.ts      kleuren, pdfTxt, huisstijlTabel, sectieKop, wozCapNoteText, facSummary, voettekst
 src/lib/wws/pdf/delen.ts      bouwstenen (pdfGaugeCard, pdfTellingBody, pdfBanner, …)
 src/lib/wws/pdf/rapporten.ts  maakTellingPdf / maakRoutePdf / maakAdviesPdf / maakDashboardPdf
 src/lib/wws/pdf/laden.ts      jsPDF en SheetJS pas laden bij een download; bewaarBestand()
@@ -220,7 +220,26 @@ daarmee vervangen.
 - **E-mails:** het systeemlettertype, inkt #1d1d1f en knoppen met 8px hoeken.
 - **PDF's:** de kleuren van de gids (inkt #1d1d1f, stille tekst #636A77, haarlijn #E5E5EA).
   Het lettertype blijft Inter (ingesloten; zie hieronder), want SF Pro mag niet in een PDF
-  worden meegeleverd.
+  worden meegeleverd. De vormgeving volgt de app (`pdf/stijl.ts`, `pdf/delen.ts`):
+  - **Voorblad** (`pdfVoorblad`, voor alle rapporten): grijs canvas #F2F2F7, het woordmerk
+    "GoHome advice", het soort rapport als bovenkopje in indigo, een grote kop (adres of
+    portefeuille; na twee regels "…") en de gegevens in een witte kaart met haarlijnen. De
+    lila vorm met de grote wordmark uit de bron is vervallen.
+  - **Kopregel** (`pdfBanner`): geen gekleurde balk meer; woordmerk links, het soort rapport
+    rechts, een haarlijn eronder.
+  - **Tabellen** (`huisstijlTabel`, centraal in `tabel()`): stille kopjes in kleine
+    hoofdletters, uitgelijnd met hun kolom; alleen een haarlijn onder elke rij, geen raster
+    en geen zebra. Subkopjes en totalen (in de bron Frost) krijgen een licht grijs vlak;
+    totalen houden indigo tekst. Sleutel–waarde-tabellen ("plain") houden hun vorm.
+  - **Sectiekoppen** (`sectieKop`): inkt en halfvet, gewoon gespeld ("Punten per onderdeel"
+    in plaats van "PUNTEN PER ONDERDEEL").
+  - **Kaarten** (`kaartHoek`, `kaartRand`): hoek 12px (3,2 mm), een haarlijn als rand. De
+    totaalkaart en de kerncijfers houden Frost als accent; segmentkleuren blijven.
+  - **Tekens:** met Inter blijven "m²" en "–" staan (de bron maakte er "m2" en "-" van).
+  - **Geen schaduw:** jsPDF kent geen schaduw; kaarten krijgen daarom de haarlijn, zoals de
+    gids voorschrijft bij `prefers-contrast: more`.
+  - Bron-getrouw (`bronGetrouw: true`, alleen voor de vergelijkingstest) blijft alles zoals
+    de oude tool. Tests: `pdf.afwijkingen.test.ts` ("huisstijl GoHome UI").
 
 ## Portefeuille-analyse energielabels (nieuw, niet in de bron)
 
