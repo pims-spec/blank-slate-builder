@@ -638,7 +638,9 @@ export function pdfVoorblad(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(14);
     doc.setTextColor(...PDF_MUT);
-    doc.text(pdfTxt(kop.sub), X, y - 3);
+    // één regel; een lange lijst eigenaren eindigt op "…"
+    const sub = doc.splitTextToSize(pdfTxt(kop.sub), B) as string[];
+    doc.text(sub.length > 1 ? sub[0]!.replace(/\s*\S{0,3}$/, "") + "…" : sub[0]!, X, y - 3);
     y += 6;
   }
 

@@ -327,6 +327,16 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
 - **Labels ophalen** blijft per portefeuille; de gecombineerde analyse toont wat nog ontbreekt.
 - **Opslaan:** in `portefeuille_combi_analyses` (migratie 0007), een vaste momentopname met de
   namen van de portefeuilles en de eigenaren; blijft bestaan als een portefeuille later weg is.
+- **Hernoemen** (migratie 0014): in het archief kan de maker of een beheerder de naam (`titel`)
+  van een gecombineerde analyse aanpassen ("Hernoemen", `HernoemAnalyseDialoog.tsx`). Alleen
+  die kolom mag worden gewijzigd (kolomrecht); de analyse zelf blijft een vaste momentopname.
+  De naam wordt opgeschoond en is 1 tot 200 tekens (`geldigeAnalyseNaam` in `combi.ts`). Een
+  analyse van één portefeuille heeft geen eigen naam; die toont de portefeuillenaam.
+- **PDF van een gecombineerde analyse:** de naam van de analyse is de kop op het voorblad, met
+  "13 portefeuilles · eigenaar" eronder. De portefeuilles staan niet meer als komma-opsomming in
+  de samenvatting, maar in een eigen lijst "Portefeuilles in deze analyse (n)", elk op een eigen
+  regel met een opsommingsteken; vanaf 9 in twee kolommen (`lijstInKolommen`). Een te lange
+  naam eindigt op "…".
 
 **Archief.** Tabblad "Portefeuille-analyses" (`/archief?tab=analyses`): alle opgeslagen analyses,
 enkel en gecombineerd, met zoeken, bekijken, PDF en verwijderen (maker of admin). De kijkrol kan

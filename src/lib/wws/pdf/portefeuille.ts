@@ -44,6 +44,18 @@ const dag = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("nl-NL", { dateStyle: "long" }) : "–";
 
 /** "1 oktober 2026" of "1 t/m 15 oktober 2026" */
+/**
+ * Een lijst namen als rijen voor de PDF: tot en met `drempel` namen één kolom, daarboven twee
+ * kolommen die van boven naar beneden lezen (eerst de linker kolom, dan de rechter).
+ */
+export function lijstInKolommen(namen: readonly string[], drempel = 8): string[][] {
+  if (namen.length <= drempel) return namen.map((n) => [n]);
+  const helft = Math.ceil(namen.length / 2);
+  return namen
+    .slice(0, helft)
+    .map((n, i) => (namen[i + helft] !== undefined ? [n, namen[i + helft]!] : [n]));
+}
+
 export function opgehaaldTekst(van: string | null, tot: string | null): string {
   if (!van) return "nog niet opgehaald";
   return periode(van, tot, dag);
@@ -81,8 +93,11 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
       ["Bron", "EP-Online (RVO)"],
     ],
     {
-      titel: combi ? x.delen!.length + " portefeuilles" : x.portefeuille,
-      sub: x.eigenaar ?? "",
+      // de naam van de analyse als kop; bij een combinatie het aantal portefeuilles eronder
+      titel: x.portefeuille,
+      sub: [combi ? x.delen!.length + " portefeuilles" : "", x.eigenaar ?? ""]
+        .filter(Boolean)
+        .join(" · "),
     },
   );
   doc.addPage();
@@ -133,7 +148,9 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
       startY: y,
       body: [
         [combi ? "Analyse" : "Portefeuille", x.portefeuille],
-        ...(combi ? [["Portefeuilles", x.delen!.join(", ")]] : []),
+        ...(combi
+          ? [["Portefeuilles", String(x.delen!.length) + " (zie de lijst hieronder)"]]
+          : []),
         ...(x.eigenaar ? [[combi ? "Eigenaren" : "Eigenaar", x.eigenaar]] : []),
         ["Datum van de analyse", langeDatum(u.datum)],
         ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
@@ -149,6 +166,36 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
       columnStyles: { 0: { cellWidth: 62, textColor: PDF_MUT }, 1: { fontStyle: "bold" } },
       margin: { left: M, right: M },
     }) + 8;
+
+  // bij een combinatie: elke portefeuille op een eigen regel, vanaf 9 in twee kolommen
+  if (combi) {
+    kop("Portefeuilles in deze analyse (" + x.delen!.length + ")");
+    const rijen = lijstInKolommen(x.delen!);
+    const kolomB = rijen.some((r) => r.length > 1) ? (W - 2 * M) / 2 : W - 2 * M;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...PDF_INK);
+    const inKolom = (t: string) => {
+      const regels = doc.splitTextToSize(pdfTxt(t), kolomB - 10) as string[];
+      return regels.length > 1 ? regels[0]!.replace(/\s*\S{0,3}$/, "") + "…" : regels[0]!;
+    };
+    for (const rij of rijen) {
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(...PDF_INK);
+      }
+      rij.forEach((naam, k) => {
+        const x0 = M + k * kolomB;
+        doc.text("•", x0 + 1, y);
+        doc.text(inKolom(naam), x0 + 5, y);
+      });
+      y += 5;
+    }
+    y += 5;
+  }
 
   kop("Woningen per labelklasse");
   y = staafdiagram(doc, u, y) + 6;

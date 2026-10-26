@@ -3,7 +3,7 @@ import { autoTable } from "jspdf-autotable";
 import { describe, expect, it } from "vitest";
 import { normaliseerAdres } from "../portefeuille/adres";
 import { PORTEFEUILLE_STANDAARD, analyseer, type AnalyseAdres } from "../portefeuille/analyse";
-import { maakPortefeuillePdf, opgehaaldTekst } from "./portefeuille";
+import { lijstInKolommen, maakPortefeuillePdf, opgehaaldTekst } from "./portefeuille";
 import { INTER, pdfTekst } from "./testhulp";
 
 const LIB = { jsPDF, autoTable, lettertype: INTER };
@@ -197,10 +197,17 @@ describe("PDF portefeuille-analyse", () => {
       uitkomst: u,
     });
     const p = (await pdfTekst(pdf.blob)).map((x) => x.join(" ").replace(/\s+/g, " "));
+    // voorblad: de naam van de analyse als kop, het aantal portefeuilles eronder
+    expect(p[0]).toContain(
+      "LABEL-ANALYSE Oost en West 2 portefeuilles · Amstel Wonen, Rijn Vastgoed",
+    );
     expect(p[0]).toContain("Analyse Oost en West");
     expect(p[0]).toContain("Portefeuilles 2");
     expect(p[1]).toContain("2 portefeuilles: Oost en West");
-    expect(p[1]).toContain("Portefeuilles Oost, West");
+    // geen komma-opsomming meer, maar een lijst met elke portefeuille op een eigen regel
+    expect(p[1]).not.toContain("Oost, West");
+    expect(p[1]).toContain("Portefeuilles 2 (zie de lijst hieronder)");
+    expect(p[1]).toContain("Portefeuilles in deze analyse (2) • Oost • West");
     expect(p[1]).toContain("Eigenaren Amstel Wonen, Rijn Vastgoed");
     expect(pdf.bestandsnaam).toBe("Portefeuille-analyse_Oost_en_West_2026-10-15.pdf");
   });
@@ -211,5 +218,25 @@ describe("PDF portefeuille-analyse", () => {
     expect(opgehaaldTekst("2026-10-01T08:00:00Z", "2026-10-15T09:00:00Z")).toBe(
       "1 oktober 2026 t/m 15 oktober 2026",
     );
+  });
+
+  it("lijst met portefeuilles: tot 8 één kolom, daarboven twee kolommen van boven naar beneden", () => {
+    expect(lijstInKolommen(["A", "B"])).toEqual([["A"], ["B"]]);
+    const negen = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    expect(lijstInKolommen(negen)).toEqual([["1", "6"], ["2", "7"], ["3", "8"], ["4", "9"], ["5"]]);
+  });
+
+  it("veel portefeuilles: elke naam één keer in de lijst, ook over een pagina heen", async () => {
+    const namen = Array.from({ length: 13 }, (_, i) => `TEST Apricot Real Estate ${i + 1} B.V.`);
+    const u = analyseer([adres(1, "A", "2023-03-01")], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    const pdf = maakPortefeuillePdf(LIB, {
+      portefeuille: "TEST Apricot totaal",
+      eigenaar: "Semper",
+      delen: namen,
+      uitkomst: u,
+    });
+    const t = (await pdfTekst(pdf.blob)).slice(1).flat().join(" ").replace(/\s+/g, " ");
+    expect(t).toContain("Portefeuilles in deze analyse (13)");
+    for (const n of namen) expect(t.split(n + " ").length - 1 + (t.endsWith(n) ? 1 : 0)).toBe(1);
   });
 });
