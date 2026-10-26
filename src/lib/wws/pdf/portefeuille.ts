@@ -4,7 +4,12 @@
 // woningen waarvan het label binnen N maanden verloopt (of verliep), de lijst met EFG-woningen, de
 // woningen zonder geregistreerd label, de te controleren adressen (met reden) en de bronvermelding
 // van EP-Online.
-import { EFG_TOELICHTING, efgTekst, type AnalyseUitkomst } from "../portefeuille/analyse";
+import {
+  EFG_TOELICHTING,
+  efgTekst,
+  isWaarschuwingsKlasse,
+  type AnalyseUitkomst,
+} from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
 import { aantal, bandbreedte, periode } from "../portefeuille/tekst";
 import { RAMING_UITLEG } from "../portefeuille/verduurzaming";
@@ -15,6 +20,7 @@ import {
   PDF_LINE,
   PDF_M,
   PDF_MUT,
+  PDF_PAPAYA,
   PDF_PUR,
   PDF_SOFT,
   PDF_W,
@@ -440,7 +446,8 @@ function staafdiagram(doc: Doc, u: AnalyseUitkomst, y0: number): number {
     const x = M + i * stap + (stap - staaf) / 2;
     const geen = d.klasse === "geen label";
     if (h > 0) {
-      doc.setFillColor(...(geen ? ([170, 170, 190] as [number, number, number]) : PDF_PUR));
+      // EFG-labels en "geen label" in papaya, de overige in indigo
+      doc.setFillColor(...(isWaarschuwingsKlasse(d.klasse, u) ? PDF_PAPAYA : PDF_PUR));
       doc.roundedRect(x, basis - h, staaf, h + 0.01, 0.8, 0.8, "F");
       doc.rect(x, basis - Math.min(h, 1), staaf, Math.min(h, 1), "F"); // rechte voet op de basislijn
     }

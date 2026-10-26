@@ -237,6 +237,14 @@ export interface AnalyseUitkomst {
   raming?: Raming;
 }
 
+/**
+ * Staaf in de grafiek in de waarschuwingskleur (papaya): labels die onder de EFG-regels vallen
+ * (volgens de instellingen van die analyse) en "geen label"
+ */
+export function isWaarschuwingsKlasse(klasse: string, u: Pick<AnalyseUitkomst, "instellingen">) {
+  return klasse === "geen label" || (u.instellingen?.efg?.klassen ?? []).includes(klasse);
+}
+
 /** De analyse van een portefeuille op `datum`, met een venster van `maanden` (standaard 3) */
 export function analyseer(
   adressen: readonly AnalyseAdres[],

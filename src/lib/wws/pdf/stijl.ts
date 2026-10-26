@@ -32,6 +32,8 @@ export const PDF_PUR: RGB = [91, 65, 255],
   PDF_SOFT: RGB = [237, 240, 255],
   PDF_ALT: RGB = [247, 247, 250],
   PDF_LINE: RGB = [229, 229, 234];
+/** Papaya van GoHome UI (#FF7C3A): waarschuwing, bv. staven onder de EFG-regels */
+export const PDF_PAPAYA: RGB = [255, 124, 58];
 /** Grijs canvas van GoHome UI (#F2F2F7): de achtergrond van het voorblad */
 export const PDF_CANVAS: RGB = [242, 242, 247];
 /** Hoek van een kaart: 12px in de gids, in mm op A4 */

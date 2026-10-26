@@ -5,6 +5,7 @@ import {
   analyseer,
   categorie,
   efgOmschrijving,
+  isWaarschuwingsKlasse,
   portefeuilleNormen,
   verloopdatum,
   type AnalyseAdres,
@@ -290,5 +291,23 @@ describe("schoonNaam", () => {
     expect(schoonNaam("Abcdef", 3)).toBe("Abc");
     expect(schoonNaam("   ", 10)).toBeNull();
     expect(schoonNaam(null, 10)).toBeNull();
+  });
+});
+
+describe("waarschuwingskleur in de grafiek", () => {
+  it("labels onder de EFG-regels van die analyse en 'geen label'; de rest niet", () => {
+    const u = analyseer([], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    expect(["E", "F", "G", "geen label"].every((k) => isWaarschuwingsKlasse(k, u))).toBe(true);
+    expect(["A", "B", "C", "D"].some((k) => isWaarschuwingsKlasse(k, u))).toBe(false);
+    // andere instelling: alleen G onder de regels
+    const alleenG = analyseer([], "2026-10-15", 3, {
+      ...PORTEFEUILLE_STANDAARD,
+      efg: { ...PORTEFEUILLE_STANDAARD.efg, klassen: ["G"] },
+    });
+    expect(isWaarschuwingsKlasse("F", alleenG)).toBe(false);
+    expect(isWaarschuwingsKlasse("G", alleenG)).toBe(true);
+    // oude opgeslagen analyse zonder instellingen: alleen "geen label"
+    expect(isWaarschuwingsKlasse("G", {} as never)).toBe(false);
+    expect(isWaarschuwingsKlasse("geen label", {} as never)).toBe(true);
   });
 });

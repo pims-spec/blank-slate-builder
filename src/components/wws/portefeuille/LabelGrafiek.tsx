@@ -1,9 +1,10 @@
 import { useState } from "react";
-import type { AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
+import { isWaarschuwingsKlasse, type AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
 
 /**
- * Staafdiagram: aantal woningen per labelklasse (A++++ t/m G) en "geen label". Eén reeks, dus
- * één kleur (paars); "geen label" in grijs. Aantallen staan boven de staven; bij aanwijzen een
+ * Staafdiagram: aantal woningen per labelklasse (A++++ t/m G) en "geen label". Indigo; de labels
+ * onder de EFG-regels (volgens de instellingen van de analyse) en "geen label" in papaya, de
+ * waarschuwingskleur. Geen legenda (wens); schermlezers horen "onder de EFG-regels". Aantallen staan boven de staven; bij aanwijzen een
  * tooltip met aantal en percentage; klikken toont de adressen. Op telefoonbreedte liggende staven (anders worden de
  * labels onleesbaar klein). Voor schermlezers staat er een tabel onder.
  */
@@ -41,6 +42,9 @@ export function LabelGrafiek({
                 onClick={() => onKies?.(d.klasse)}
                 aria-label={
                   (geen ? "Geen label" : "Label " + d.klasse) +
+                  (!geen && isWaarschuwingsKlasse(d.klasse, uitkomst)
+                    ? ", onder de EFG-regels"
+                    : "") +
                   ": " +
                   d.aantal +
                   " woningen, adressen tonen"
@@ -53,7 +57,8 @@ export function LabelGrafiek({
                   {d.aantal > 0 && (
                     <span
                       className={
-                        "block h-full rounded-r " + (geen ? "bg-muted-foreground/45" : "bg-primary")
+                        "block h-full rounded-r " +
+                        (isWaarschuwingsKlasse(d.klasse, uitkomst) ? "bg-orange" : "bg-primary")
                       }
                       style={{ width: (d.aantal / max) * 100 + "%" }}
                     />
@@ -104,6 +109,9 @@ export function LabelGrafiek({
                 tabIndex={0}
                 aria-label={
                   (geen ? "Geen label" : "Label " + d.klasse) +
+                  (!geen && isWaarschuwingsKlasse(d.klasse, uitkomst)
+                    ? ", onder de EFG-regels"
+                    : "") +
                   ": " +
                   d.aantal +
                   " woningen, adressen tonen"
@@ -115,7 +123,9 @@ export function LabelGrafiek({
                 {h > 0 && (
                   <path
                     d={`M${x},${H - onder} V${y + Math.min(4, h)} Q${x},${y} ${x + Math.min(4, h)},${y} H${x + staaf - Math.min(4, h)} Q${x + staaf},${y} ${x + staaf},${y + Math.min(4, h)} V${H - onder} Z`}
-                    className={geen ? "fill-muted-foreground/45" : "fill-primary"}
+                    className={
+                      isWaarschuwingsKlasse(d.klasse, uitkomst) ? "fill-orange" : "fill-primary"
+                    }
                     opacity={actief === null || actief === i ? 1 : 0.55}
                   />
                 )}

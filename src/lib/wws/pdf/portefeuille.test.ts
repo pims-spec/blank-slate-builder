@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+import { jsPDF, type jsPDFOptions } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { describe, expect, it } from "vitest";
 import { normaliseerAdres } from "../portefeuille/adres";
@@ -307,5 +307,38 @@ describe("PDF portefeuille-analyse", () => {
     const lijsten = t.slice(t.indexOf("Woningen zonder geregistreerd label ("));
     for (const nr of ["5", "6", "7"])
       expect(lijsten.split("1053 ZD " + nr + " ").length - 1, "1053 ZD " + nr).toBe(1);
+  });
+
+  it("grafiek: staven onder de EFG-regels en 'geen' in papaya, de rest indigo", () => {
+    const u = analyseer(
+      [
+        adres(1, "A", "2023-03-01"),
+        adres(2, "F", "2019-05-05"),
+        adres(4, null, null, "niet_gevonden"),
+      ],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    const kleuren: string[] = [];
+    // jsPDF zet setFillColor per document; een subklasse vangt de aanroepen op
+    class Spion extends jsPDF {
+      constructor(opties?: jsPDFOptions) {
+        super(opties);
+        const orig = this.setFillColor.bind(this);
+        this.setFillColor = ((...k: Parameters<jsPDF["setFillColor"]>) => {
+          kleuren.push(k.slice(0, 3).join(","));
+          return orig(...k);
+        }) as jsPDF["setFillColor"];
+      }
+    }
+    maakPortefeuillePdf(
+      { ...LIB, jsPDF: Spion as unknown as typeof jsPDF },
+      { portefeuille: "TEST", uitkomst: u, metRaming: false },
+    );
+    // één vulkleur per staaf: F en geen in papaya
+    expect(kleuren.filter((k) => k === "255,124,58")).toHaveLength(2);
+    // A in indigo (de enige indigo vulling in deze PDF)
+    expect(kleuren.filter((k) => k === "91,65,255")).toHaveLength(1);
   });
 });
