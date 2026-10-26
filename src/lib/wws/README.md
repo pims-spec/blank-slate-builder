@@ -351,14 +351,20 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
 - **In het archief** staan de portefeuilles van een gecombineerde analyse uitklapbaar:
   "13 portefeuilles ▾", standaard dicht (`PortefeuilleLijst.tsx`), in de rij en in het venster
   Bekijken. Zoeken op de naam van een portefeuille blijft werken.
-- **Verduurzamingsraming in de PDF** (vinkje naast de PDF-knop, `RamingVinkje.tsx`): standaard
-  aan. De keuze is een gemak per gebruiker en staat alleen in de eigen browser
-  (`ramingKeuze.ts`, localStorage); de PDF-knop in het archief volgt dezelfde keuze. Uit: de
-  sectie "Verduurzamingsraming" valt weg (`metRaming: false`).
-- **Geen adressen dubbel in de PDF:** "Woningen zonder geregistreerd label" toont alleen de
-  adressen die EP-Online wel kent maar zonder geldige labelklasse (`zonderLabelAdressen`), met
-  een zin over het aantal niet gevonden adressen. Die staan alleen onder "Te controleren". Het
-  risicoprofiel telt ongewijzigd beide soorten als "Geen geregistreerd label".
+- **Vinkjes voor de PDF** (naast de PDF-knop, `PdfOpties.tsx`): "Verduurzamingsraming in de
+  PDF" en "EFG-regels in de PDF", allebei standaard aan. De keuzes zijn een gemak per gebruiker
+  en staan alleen in de eigen browser (`pdfKeuzes.ts`, localStorage); de PDF-knop in het archief
+  volgt dezelfde keuzes. Raming uit: de sectie "Verduurzamingsraming" valt weg
+  (`metRaming: false`). EFG uit (`metEfg: false`): de rij "Onder de EFG-regels", de sectie
+  EFG-regels en de lijst "Woningen onder de EFG-regels" vallen weg, en in de grafiek is alleen
+  "geen label" nog papaya. Het scherm verandert niet.
+- **Zonder label of te controleren** (`analyse.ts`): EP-Online zegt "niet gevonden" bij een adres
+  zonder label én bij een adres dat niet bestaat. De BAG beslist: bestaat het adres, dan staat
+  het onder "Woningen zonder geregistreerd label" (`zonderLabel`); kent ook de BAG het niet, dan
+  onder "Te controleren" als "Adres niet gevonden (EP-Online en BAG)". BAG nog niet opgehaald
+  (of mislukt): onder zonder label, met die opmerking (keuze van de gebruiker). Elk adres staat
+  maar in één lijst; het risicoprofiel telt ze allemaal als "Geen geregistreerd label". Oudere
+  analyses (zonder `zonderLabel`) houden de vorige indeling: alleen EP-Online.
 - **Grafiek "Woningen per labelklasse"** (scherm en PDF): de labels onder de EFG-regels van die
   analyse en "geen label" in papaya (`isWaarschuwingsKlasse`), de overige indigo. Bewust geen
   legenda (wens); schermlezers horen "onder de EFG-regels". Getallen boven de staven blijven
