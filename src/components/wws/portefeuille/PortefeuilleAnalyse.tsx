@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,14 +24,11 @@ import {
   type AnalyseUitkomst,
 } from "@/lib/wws/portefeuille/analyse";
 import { adresTekst } from "@/lib/wws/portefeuille/adres";
-import { nlDatum, plusMaanden, vandaag } from "@/lib/wws/portefeuille/datum";
+import { nlDatum, vandaag } from "@/lib/wws/portefeuille/datum";
 import type { ImportUitkomst } from "@/lib/wws/portefeuille/importeren";
 import { aantal } from "@/lib/wws/portefeuille/tekst";
-import { stopMelding } from "@/lib/wws/portefeuille/ophalen";
 import {
   MAX_PER_PORTIE,
-  haalBagGegevens,
-  haalLabelsOp,
   vulAdressenAanBijPdok,
 } from "@/lib/wws/portefeuille/portefeuille.functions";
 import { maakPortefeuillePdf } from "@/lib/wws/pdf/portefeuille";
@@ -46,22 +43,16 @@ import {
 import { useDownload } from "../useDownload";
 import EigenaarKeuze from "../EigenaarKeuze";
 import { inRaming } from "@/lib/wws/portefeuille/verduurzaming";
+import type { OphaalAdres } from "@/lib/wws/portefeuille/ronde";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { PdfOpties } from "./PdfOpties";
 import { pdfOpties } from "./pdfKeuzes";
 import { BloxsDialoog } from "./BloxsDialoog";
 import { CombiAnalyse } from "./CombiAnalyse";
+import { LabelsOphalen } from "./LabelsOphalen";
 import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
+import { useBagOphalen } from "./useBagOphalen";
 import { ImportDialoog } from "./ImportDialoog";
-
-type OpnieuwKeuze = "alle" | "probleem" | "oud";
-
-interface Voortgang {
-  gedaan: number;
-  /** Tot en met dit adres loopt de huidige portie */
-  tot: number;
-  totaal: number;
-}
 
 /** Portefeuille-analyse energielabels (nieuw onderdeel, niet in wws-site.html) */
 export default function PortefeuilleAnalyse({
@@ -103,12 +94,8 @@ export default function PortefeuilleAnalyse({
   const [datum, setDatum] = useState(vandaag());
   const [venster, setVenster] = useState("3");
   const [bekeken, setBekeken] = useState<{ id: string; uitkomst: AnalyseUitkomst } | null>(null);
-  const [opnieuw, setOpnieuw] = useState<OpnieuwKeuze>("probleem");
-  const [voortgang, setVoortgang] = useState<Voortgang | null>(null);
+  const [ophaalBezig, setOphaalBezig] = useState(false);
   const [aanvullen, setAanvullen] = useState<{ gedaan: number; totaal: number } | null>(null);
-  const [bagBezig, setBagBezig] = useState<{ gedaan: number; totaal: number } | null>(null);
-  const [melding, setMelding] = useState("");
-  const stoppen = useRef(false);
 
   const maanden = Math.min(24, Math.max(1, Math.round(Number(venster)) || 3));
   const live = useMemo(
@@ -126,10 +113,13 @@ export default function PortefeuilleAnalyse({
   const magBeheren = (createdBy: string | null) =>
     rechten.magSchrijven && (createdBy === userId || rechten.isAdmin);
   const eigenaarNaam = p?.klantId ? (klanten.find((k) => k.id === p.klantId)?.naam ?? null) : null;
-  const zonderResultaat = adressen.filter((a) => !a.resultaat);
+  const alsDoel = (adres: AnalyseAdres): OphaalAdres => ({ adres, portefeuilleId: p?.id ?? "" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- alsDoel hangt alleen van p af
+  const doelen = useMemo(() => adressen.map(alsDoel), [adressen, p?.id]);
   // PDOK alleen voor geïmporteerde portefeuilles; bij Bloxs komen straat en woonplaats uit Bloxs
   const zonderStraat = uitBloxs ? [] : adressen.filter((a) => !a.straat);
-  const bezig = voortgang !== null || aanvullen !== null || bagBezig !== null;
+  const bag = useBagOphalen(vernieuw);
+  const bezig = ophaalBezig || aanvullen !== null || bag.bezig !== null;
   // BAG alleen voor beoordeelde woningen (die tellen in de raming), nog zonder BAG-gegevens
   // alleen woningen onder de EFG-regels en woningen zonder geregistreerd label
   const zonderBag = adressen.filter(
@@ -212,93 +202,6 @@ export default function PortefeuilleAnalyse({
       setAanvullen(null);
       void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", portefeuilleId] });
     }
-  }
-
-  /** BAG-gegevens (oppervlakte, bouwjaar) ophalen bij PDOK in porties van 10, en opslaan */
-  async function haalBag(lijst: readonly AnalyseAdres[]) {
-    if (!p || !lijst.length || bezig) return;
-    const id = p.id;
-    setBagBezig({ gedaan: 0, totaal: lijst.length });
-    let gedaan = 0;
-    try {
-      for (let i = 0; i < lijst.length; i += MAX_PER_PORTIE) {
-        const portie = lijst.slice(i, i + MAX_PER_PORTIE).map((a) => ({
-          id: a.id,
-          postcode: a.postcode,
-          huisnummer: a.huisnummer,
-          huisletter: a.huisletter,
-          toevoeging: a.toevoeging,
-        }));
-        const r = await haalBagGegevens({ data: { adressen: portie } });
-        await portefeuilleStore.slaBagOp(r.resultaten);
-        gedaan += r.resultaten.length;
-        setBagBezig({ gedaan, totaal: lijst.length });
-        if (r.stop) {
-          toast.error(
-            r.stop === "te_veel_verzoeken"
-              ? "De BAG (PDOK) geeft aan dat er te veel verzoeken zijn. Probeer het over een paar minuten opnieuw."
-              : "De BAG (PDOK) is nu niet bereikbaar. Probeer het later opnieuw.",
-          );
-          break;
-        }
-      }
-      if (gedaan === lijst.length) toast.success("BAG-gegevens opgehaald (" + gedaan + ").");
-    } catch {
-      toast.error("BAG-gegevens ophalen lukte niet. Probeer het opnieuw.");
-    } finally {
-      setBagBezig(null);
-      void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", id] });
-    }
-  }
-
-  /** In porties van 10 ophalen bij EP-Online, opslaan, en de voortgang bijhouden */
-  async function ophalen(lijst: readonly AnalyseAdres[]) {
-    if (!p || !lijst.length || bezig) return;
-    stoppen.current = false;
-    setMelding("");
-    setBekeken(null);
-    setVoortgang({ gedaan: 0, tot: 0, totaal: lijst.length });
-    let gedaan = 0;
-    try {
-      for (let i = 0; i < lijst.length; i += MAX_PER_PORTIE) {
-        if (stoppen.current) {
-          setMelding(
-            "Gestopt. Met ‘Hervatten’ gaat het ophalen verder bij de adressen zonder resultaat.",
-          );
-          break;
-        }
-        const portie = lijst.slice(i, i + MAX_PER_PORTIE).map((a) => ({
-          id: a.id,
-          postcode: a.postcode,
-          huisnummer: a.huisnummer,
-          huisletter: a.huisletter,
-          toevoeging: a.toevoeging,
-        }));
-        setVoortgang({ gedaan, tot: gedaan + portie.length, totaal: lijst.length });
-        const r = await haalLabelsOp({ data: { adressen: portie } });
-        await portefeuilleStore.slaResultatenOp(p.id, userId, r.resultaten);
-        gedaan += r.resultaten.length;
-        setVoortgang({ gedaan, tot: gedaan, totaal: lijst.length });
-        if (r.stop) {
-          setMelding(stopMelding(r.stop));
-          break;
-        }
-      }
-      if (gedaan === lijst.length) toast.success("Energielabels opgehaald (" + gedaan + ").");
-    } catch {
-      setMelding(stopMelding("geen_verbinding"));
-    } finally {
-      setVoortgang(null);
-      vernieuw();
-    }
-  }
-
-  function opnieuwLijst(k: OpnieuwKeuze): AnalyseAdres[] {
-    if (k === "alle") return adressen;
-    if (k === "probleem")
-      return adressen.filter((a) => a.resultaat && a.resultaat.status !== "gevonden");
-    const grens = plusMaanden(vandaag(), -1);
-    return adressen.filter((a) => a.resultaat && a.resultaat.opgehaaldOp.slice(0, 10) < grens);
   }
 
   async function importeer(w: { naam: string; klantId: string | null }, u: ImportUitkomst) {
@@ -441,6 +344,7 @@ export default function PortefeuilleAnalyse({
       {modus === "combi" && portefeuilles.length >= 2 ? (
         <CombiAnalyse
           rechten={rechten}
+          userId={userId}
           portefeuilles={portefeuilles}
           klanten={klanten}
           instellingen={instellingen}
@@ -462,7 +366,6 @@ export default function PortefeuilleAnalyse({
                   onChange={(e) => {
                     setGekozen(e.target.value);
                     setBekeken(null);
-                    setMelding("");
                   }}
                   disabled={!portefeuilles.length || bezig}
                 >
@@ -581,97 +484,36 @@ export default function PortefeuilleAnalyse({
           ) : (
             <div className="space-y-4">
               {/* ---------- ophalen ---------- */}
-              <section className="gh-card p-4" aria-label="Energielabels ophalen">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  <span>
-                    <b>{adressen.length}</b> adressen ·{" "}
-                    <b>{adressen.length - zonderResultaat.length}</b> opgehaald
-                    {zonderResultaat.length > 0 && <> · {zonderResultaat.length} nog niet</>}
-                    {aanvullen && (
-                      <span className="text-muted-foreground">
-                        {" "}
-                        · straat en woonplaats aanvullen: {aanvullen.gedaan} van {aanvullen.totaal}
-                      </span>
-                    )}
-                  </span>
-                  {rechten.magSchrijven && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {voortgang ? (
-                        <Button variant="outline" onClick={() => (stoppen.current = true)}>
-                          Stoppen
-                        </Button>
-                      ) : (
-                        <>
-                          <Button
-                            disabled={bezig || !zonderResultaat.length}
-                            onClick={() => void ophalen(zonderResultaat)}
-                          >
-                            {adressen.length > zonderResultaat.length && zonderResultaat.length
-                              ? "Hervatten"
-                              : "Ophalen"}{" "}
-                            ({zonderResultaat.length})
-                          </Button>
-                          <select
-                            aria-label="Opnieuw ophalen: welke adressen"
-                            className="h-9 max-w-full rounded-lg border border-transparent bg-muted px-2"
-                            value={opnieuw}
-                            onChange={(e) => setOpnieuw(e.target.value as OpnieuwKeuze)}
-                          >
-                            <option value="probleem">
-                              Niet gevonden, niet eenduidig of mislukt
-                            </option>
-                            <option value="oud">Ouder dan een maand</option>
-                            <option value="alle">Alle adressen</option>
-                          </select>
-                          <Button
-                            variant="outline"
-                            disabled={bezig || !opnieuwLijst(opnieuw).length}
-                            onClick={() => void ophalen(opnieuwLijst(opnieuw))}
-                          >
-                            Opnieuw ophalen ({opnieuwLijst(opnieuw).length})
-                          </Button>
-                          {zonderStraat.length > 0 && (
-                            <Button
-                              variant="ghost"
-                              disabled={bezig}
-                              onClick={() => p && void vulAan(p.id, zonderStraat)}
-                            >
-                              Straat en woonplaats aanvullen ({zonderStraat.length})
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {voortgang && (
-                  <div className="mt-3">
-                    <div
-                      className="h-2 overflow-hidden rounded-full bg-secondary"
-                      role="progressbar"
-                      aria-label="Voortgang ophalen"
-                      aria-valuemin={0}
-                      aria-valuemax={voortgang.totaal}
-                      aria-valuenow={voortgang.gedaan}
+              <LabelsOphalen
+                key={p.id}
+                doelen={doelen}
+                userId={userId}
+                magSchrijven={rechten.magSchrijven}
+                perSeconde={instellingen.epPerSeconde}
+                geblokkeerd={aanvullen !== null || bag.bezig !== null}
+                onBezig={setOphaalBezig}
+                onStart={() => setBekeken(null)}
+                onKlaar={vernieuw}
+                extraTelling={
+                  aanvullen && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · straat en woonplaats aanvullen: {aanvullen.gedaan} van {aanvullen.totaal}
+                    </span>
+                  )
+                }
+                extraKnoppen={
+                  zonderStraat.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      disabled={bezig}
+                      onClick={() => p && void vulAan(p.id, zonderStraat)}
                     >
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: (voortgang.gedaan / voortgang.totaal) * 100 + "%" }}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {voortgang.gedaan} van {voortgang.totaal} klaar
-                      {voortgang.tot > voortgang.gedaan &&
-                        ` · bezig met ${voortgang.gedaan + 1}–${voortgang.tot}`}{" "}
-                      · ongeveer {instellingen.epPerSeconde} per seconde
-                    </p>
-                  </div>
-                )}
-                {melding && (
-                  <p className="mt-2 text-sm text-orange-ink" role="alert">
-                    {melding}
-                  </p>
-                )}
+                      Straat en woonplaats aanvullen ({zonderStraat.length})
+                    </Button>
+                  )
+                }
+              >
                 {uitBloxs && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     Uit Bloxs
@@ -732,7 +574,7 @@ export default function PortefeuilleAnalyse({
                     </ul>
                   </details>
                 )}
-              </section>
+              </LabelsOphalen>
 
               {/* ---------- analyse ---------- */}
               <section className="flex flex-wrap items-end gap-3 gh-card p-4" aria-label="Analyse">
@@ -789,15 +631,15 @@ export default function PortefeuilleAnalyse({
                 <AnalyseWeergave
                   uitkomst={toon}
                   ramingActie={
-                    rechten.magSchrijven && !bekeken && (zonderBag.length > 0 || bagBezig) ? (
+                    rechten.magSchrijven && !bekeken && (zonderBag.length > 0 || bag.bezig) ? (
                       <Button
                         size="sm"
                         variant="outline"
                         disabled={bezig}
-                        onClick={() => void haalBag(zonderBag)}
+                        onClick={() => void bag.haal(zonderBag.map(alsDoel))}
                       >
-                        {bagBezig
-                          ? `BAG ophalen… ${bagBezig.gedaan}/${bagBezig.totaal}`
+                        {bag.bezig
+                          ? `BAG ophalen… ${bag.bezig.gedaan}/${bag.bezig.totaal}`
                           : `BAG-gegevens ophalen (${zonderBag.length})`}
                       </Button>
                     ) : undefined

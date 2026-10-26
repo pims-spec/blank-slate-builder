@@ -258,6 +258,7 @@ src/lib/wws/portefeuille/datum.ts       datumrekenen op ISO-datums (maandeinde, 
 src/lib/wws/portefeuille/adres.ts       adressen normaliseren, dubbele herkennen, EP-Online-vraag
 src/lib/wws/portefeuille/importeren.ts  Excel/CSV-import (postcode, huisnummer, toevoeging)
 src/lib/wws/portefeuille/ophalen.ts     EP-Online-antwoord → resultaat; wanneer stoppen
+src/lib/wws/portefeuille/ronde.ts       ophalen in porties voor 1 of meer portefeuilles (puur)
 src/lib/wws/portefeuille/portefeuille.functions.ts  server function haalLabelsOp (porties van 10)
 src/lib/wws/portefeuille/opslag.ts      tabellen portefeuilles, portefeuille_adressen,
                                         label_resultaten, portefeuille_analyses (RLS)
@@ -301,6 +302,15 @@ de PDF tonen alleen een neutrale omschrijving uit die instellingen; er staat gee
   dwingt hem af.
 - **Stoppen:** bij te veel verzoeken of een fout met de dienst of de sleutel stopt het ophalen,
   zonder iets op te slaan. "Hervatten" gaat verder met de adressen zonder resultaat.
+- **Opnieuw ophalen:** alle adressen, alleen die met een probleem of die langer dan een maand
+  geleden zijn opgehaald. Bij "alle" en "ouder dan een maand" staat standaard "Labels die nog meer
+  dan een jaar geldig zijn overslaan" aan: een gevonden label met een verloopdatum (geldig tot,
+  anders registratie + 10 jaar) ná vandaag + 12 maanden gaat dan niet opnieuw naar EP-Online
+  (`langGeldig`, `opnieuwLijst` in `ronde.ts`).
+- **Eén ophaalronde** (`haalInPorties` in `ronde.ts`, scherm `LabelsOphalen.tsx`) voor één
+  portefeuille en voor een gecombineerde analyse: een adres dat in meer portefeuilles staat gaat
+  één keer naar EP-Online (`bundel`); het resultaat wordt bij elke portefeuille opgeslagen. BAG
+  ophalen gaat op dezelfde manier (`useBagOphalen.ts`).
 - **Opslag:** per adres alleen het laatste resultaat, met het moment van opvragen.
 - **Analyses:** een opgeslagen analyse is een vaste momentopname.
 - **Totaalbestand:** het maandelijkse totaalbestand kan later; het is te groot om in een server
@@ -332,7 +342,10 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
 
 - **Dubbele adressen:** een adres in meer portefeuilles telt één keer (de versie met het nieuwste
   labelresultaat); adressen die niet meer in Bloxs staan tellen niet mee (`combi.ts`).
-- **Labels ophalen** blijft per portefeuille; de gecombineerde analyse toont wat nog ontbreekt.
+- **Labels ophalen:** met schrijfrechten in één keer voor alle gekozen portefeuilles (ook
+  opnieuw, waarmee de peildatum van EP-Online op vandaag komt), en BAG-gegevens ophalen bij de
+  raming. Opslaan gaat per portefeuille met het token van de gebruiker (RLS), dus alleen waar die
+  mag schrijven. De kijkrol ziet per portefeuille wat nog ontbreekt, met "Openen".
 - **Opslaan:** in `portefeuille_combi_analyses` (migratie 0007), een vaste momentopname met de
   namen van de portefeuilles en de eigenaren; blijft bestaan als een portefeuille later weg is.
 - **Hernoemen** (migratie 0014): in het archief kan de maker of een beheerder de naam (`titel`)
@@ -369,7 +382,8 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
   staan ook onder "zonder label", met "BAG niet gecontroleerd" (`zonderLabelLijst`,
   `teControlerenLijsten`; scherm en PDF).
 - **Grafiek "Woningen per labelklasse"** (scherm en PDF): de labels onder de EFG-regels van die
-  analyse en "geen label" in papaya (`isWaarschuwingsKlasse`), de overige indigo. Bewust geen
+  analyse en "geen label" in papaya (`isWaarschuwingsKlasse`), de overige indigo. Staat
+  "EFG-regels in de PDF" uit, dan is (op het scherm en in de PDF) alleen "geen label" papaya. Bewust geen
   legenda (wens); schermlezers horen "onder de EFG-regels". Getallen boven de staven blijven
   inkt (wit haalt op papaya te weinig contrast).
 

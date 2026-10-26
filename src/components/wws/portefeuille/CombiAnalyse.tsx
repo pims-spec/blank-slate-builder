@@ -6,35 +6,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Rechten } from "@/lib/rollen";
 import type { Klant } from "@/lib/wws/opslag";
-import { analyseer, type PortefeuilleNormen } from "@/lib/wws/portefeuille/analyse";
+import {
+  analyseer,
+  isBeoordeeld,
+  klasseVan,
+  type PortefeuilleNormen,
+} from "@/lib/wws/portefeuille/analyse";
 import { combiTitel, combineerAdressen } from "@/lib/wws/portefeuille/combi";
 import { vandaag } from "@/lib/wws/portefeuille/datum";
 import type { Portefeuille } from "@/lib/wws/portefeuille/opslag";
+import type { OphaalAdres } from "@/lib/wws/portefeuille/ronde";
 import { aantal } from "@/lib/wws/portefeuille/tekst";
+import { inRaming } from "@/lib/wws/portefeuille/verduurzaming";
 import { maakPortefeuillePdf } from "@/lib/wws/pdf/portefeuille";
 import { portefeuilleAdressenQuery, portefeuilleStore } from "../tellingStore";
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
+import { LabelsOphalen } from "./LabelsOphalen";
 import { PdfOpties } from "./PdfOpties";
 import { pdfOpties } from "./pdfKeuzes";
+import { useBagOphalen } from "./useBagOphalen";
 
 /**
  * Eén analyse over meerdere portefeuilles (bijv. van meerdere eigenaren). Een adres dat in meer
- * portefeuilles staat telt één keer. Labels ophalen gebeurt per portefeuille; hier staat alleen
- * hoeveel adressen nog niet zijn opgehaald, met een knop om die portefeuille te openen.
+ * portefeuilles staat telt één keer. Met schrijfrechten kunnen de labels (en BAG-gegevens) van
+ * alle gekozen portefeuilles hier in één keer worden opgehaald; een adres dat in meer
+ * portefeuilles staat gaat dan één keer naar EP-Online. Zonder schrijfrechten staat er per
+ * portefeuille hoeveel adressen nog niet zijn opgehaald, met een knop om die te openen.
  */
 export function CombiAnalyse({
   rechten,
+  userId,
   portefeuilles,
   klanten,
   instellingen,
   onOpen,
 }: {
   rechten: Rechten;
+  userId: string;
   portefeuilles: readonly Portefeuille[];
   klanten: readonly Klant[];
   instellingen: PortefeuilleNormen;
-  /** Een portefeuille openen (om labels op te halen) */
+  /** Een portefeuille openen (kijkrol: zien wat er nog niet is opgehaald) */
   onOpen: (id: string) => void;
 }) {
   const qc = useQueryClient();
@@ -44,6 +57,7 @@ export function CombiAnalyse({
   const [venster, setVenster] = useState("3");
   const [titel, setTitel] = useState("");
   const [bezig, setBezig] = useState(false);
+  const [ophaalBezig, setOphaalBezig] = useState(false);
 
   const klantNaam = useMemo(() => new Map(klanten.map((k) => [k.id, k.naam])), [klanten]);
   const delen = portefeuilles.filter((p) => gekozen.includes(p.id));
@@ -75,6 +89,30 @@ export function CombiAnalyse({
       n: (lijsten[i] ?? []).filter((a) => !a.nietInBloxsSinds && !a.resultaat).length,
     }))
     .filter((x) => x.n > 0);
+
+  // de adressen die meedoen, met hun portefeuille (om resultaten bij elke portefeuille op te slaan)
+  const doelen = useMemo<OphaalAdres[]>(
+    () =>
+      delen.flatMap((p, i) =>
+        (lijsten[i] ?? [])
+          .filter((a) => !a.nietInBloxsSinds && !a.uitgeslotenOp)
+          .map((adres) => ({ adres, portefeuilleId: p.id })),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [adressenQ.map((q) => q.dataUpdatedAt).join(","), gekozen.join(",")],
+  );
+  // BAG alleen voor beoordeelde woningen in de raming, nog zonder BAG-gegevens (als bij één portefeuille)
+  const zonderBag = doelen.filter(
+    ({ adres: a }) =>
+      !a.bag &&
+      isBeoordeeld(a.resultaat) &&
+      inRaming(klasseVan(a.resultaat), instellingen.efg.klassen),
+  );
+  const vernieuw = () => {
+    for (const p of delen) void qc.invalidateQueries({ queryKey: ["portefeuille-adressen", p.id] });
+    void qc.invalidateQueries({ queryKey: ["portefeuilles"] });
+  };
+  const bag = useBagOphalen(vernieuw);
 
   const titelTekst = titel.trim() || combiTitel(delen.map((p) => p.naam));
   const eigenaren = [
@@ -165,22 +203,37 @@ export function CombiAnalyse({
         <p className="text-sm text-muted-foreground">Adressen laden…</p>
       ) : (
         <>
-          {nogNiet.length > 0 && (
-            <section className="gh-card p-4 text-sm" aria-label="Nog niet opgehaald">
-              <p className="text-orange-ink">
-                Niet alle labels zijn opgehaald. Haal ze op in de portefeuille zelf:
+          {rechten.magSchrijven ? (
+            <LabelsOphalen
+              doelen={doelen}
+              userId={userId}
+              magSchrijven
+              perSeconde={instellingen.epPerSeconde}
+              geblokkeerd={bag.bezig !== null}
+              onBezig={setOphaalBezig}
+              onKlaar={vernieuw}
+            >
+              <p className="mt-2 text-xs text-muted-foreground">
+                Een adres dat in meer portefeuilles staat wordt één keer opgevraagd; het resultaat
+                komt bij elke portefeuille.
               </p>
-              <ul className="mt-2 space-y-1">
-                {nogNiet.map(({ p, n }) => (
-                  <li key={p.id} className="flex flex-wrap items-center gap-2">
-                    {p.naam}: {aantal(n, "adres", "adressen")} nog niet opgehaald
-                    <Button size="sm" variant="outline" onClick={() => onOpen(p.id)}>
-                      Openen
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            </LabelsOphalen>
+          ) : (
+            nogNiet.length > 0 && (
+              <section className="gh-card p-4 text-sm" aria-label="Nog niet opgehaald">
+                <p className="text-orange-ink">Niet alle labels zijn opgehaald:</p>
+                <ul className="mt-2 space-y-1">
+                  {nogNiet.map(({ p, n }) => (
+                    <li key={p.id} className="flex flex-wrap items-center gap-2">
+                      {p.naam}: {aantal(n, "adres", "adressen")} nog niet opgehaald
+                      <Button size="sm" variant="outline" onClick={() => onOpen(p.id)}>
+                        Openen
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
           )}
 
           <section className="flex flex-wrap items-end gap-3 gh-card p-4">
@@ -237,7 +290,23 @@ export function CombiAnalyse({
             </Link>
             .
           </p>
-          <AnalyseWeergave uitkomst={uitkomst} />
+          <AnalyseWeergave
+            uitkomst={uitkomst}
+            ramingActie={
+              rechten.magSchrijven && (zonderBag.length > 0 || bag.bezig) ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={ophaalBezig || bag.bezig !== null}
+                  onClick={() => void bag.haal(zonderBag)}
+                >
+                  {bag.bezig
+                    ? `BAG ophalen… ${bag.bezig.gedaan}/${bag.bezig.totaal}`
+                    : `BAG-gegevens ophalen (${zonderBag.length})`}
+                </Button>
+              ) : undefined
+            }
+          />
         </>
       )}
     </div>
