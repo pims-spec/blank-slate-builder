@@ -364,4 +364,18 @@ describe("bewuste afwijkingen in de PDF's", () => {
       expect(bron).not.toContain("Let op: bij afmelden");
     }
   });
+
+  it("uitleg WOZ-cap: geldt in de vrije sector (de bron schreef 'niet in')", async () => {
+    const input = normaliseer(genereer(5));
+    const meta = willekeurigeMeta(5);
+    const inst = standaardInstellingen(N);
+    const tekst = (b: boolean) =>
+      pdfTekst(maakAdviesPdf(LIB, { meta, input, normen: N, inst, bronGetrouw: b }).blob).then(
+        (p) => p.flat().join(" ").replace(/\s+/g, " "),
+      );
+    expect(await tekst(false)).toContain(
+      "WOZ-cap is alleen van kracht wanneer de woning zich in de vrije sector bevindt.",
+    );
+    expect(await tekst(true)).toContain("zich niet in de vrije sector bevindt");
+  });
 });

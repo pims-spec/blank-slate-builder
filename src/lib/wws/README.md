@@ -773,6 +773,9 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
 - **Waar te zien:** tabblad "Opties" in het adviesvenster; het volledige adviesrapport
   ("Huidig + adviesopties als PDF") met maximaal drie opties, elk met de doelzin onder de titel;
   de afmeldkosten bij "Instellingen en kosten" en in Normen.
+- **Uitleg WOZ-cap** (pagina "Energielabel en WOZ-waarde"): de bron schreef dat de cap geldt
+  "wanneer de woning zich niet in de vrije sector bevindt"; de app schrijft "in de vrije sector"
+  (zo rekent `calc()` ook). Brongetrouw blijft de oude tekst.
 - **Brongetrouw** (`brongetrouw: true`, `bronGetrouw: true`): de twee oude opties, geen afmelden,
   geen doelzin en geen waarschuwing.
 - Tests: `opties.test.ts`, `AdviesDialoog.test.tsx`, `NormenBeheer.test.tsx`,

@@ -1488,7 +1488,11 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
   const capTxt: string[] = doc.splitTextToSize(
     pdfTxt(
       normen.wozCapPct +
-        "% WOZ-cap is alleen van kracht wanneer de woning zich niet in de vrije sector bevindt. De WOZ-cap houdt in dat de WOZ-waarde niet meer dan " +
+        // bewuste afwijking: de bron schreef "niet in de vrije sector"; de cap geldt juist daar
+        (isBronModus()
+          ? "% WOZ-cap is alleen van kracht wanneer de woning zich niet in de vrije sector bevindt."
+          : "% WOZ-cap is alleen van kracht wanneer de woning zich in de vrije sector bevindt.") +
+        " De WOZ-cap houdt in dat de WOZ-waarde niet meer dan " +
         normen.wozCapPct +
         "% van het totaal aantal punten mag bijdragen. Wanneer de WOZ-punten, berekend op basis van deel 1 plus deel 2, hoger zijn dan " +
         normen.wozCapPct +
