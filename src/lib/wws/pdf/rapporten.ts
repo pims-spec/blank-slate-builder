@@ -3,13 +3,15 @@
 // Elk geeft een Blob en de bestandsnaam terug; downloaden gebeurt in de UI (bewaarBestand).
 // pdf.vergelijk.test.ts vergelijkt de tekst van deze PDF's met die van de originele functies.
 import {
+  adviesOpties,
   berekenRoute,
   energieVanOmschrijving,
   selectieResultaat,
   type AdviesInstellingen,
   type AdviesResultaat,
 } from "../advies";
-import { beginlabel } from "../advies/energieAdvies";
+import { beginlabel, terugvalBijAfmelden, terugvalTekst } from "../advies/energieAdvies";
+import type { OptieSoort } from "../advies/opties";
 import { eur, fmt } from "../basis";
 import { calc } from "../calc";
 import type { Dashboard } from "../dashboard";
@@ -28,6 +30,7 @@ import {
   pdfTellingBody,
   pdfEnergieAdviesKeuze,
   pdfVerduurzamingPagina,
+  pdfWaarschuwing,
   type PdfRoute,
 } from "./delen";
 import {
@@ -174,6 +177,7 @@ function routePdf(lib: PdfLib, x: RoutePdfInvoer): PdfBestand {
     "Puntentelling volgens het Woningwaarderingsstelsel, zelfstandige woonruimte",
     vandaag,
   );
+  if (!x.bronGetrouw) y = terugvalWaarschuwing(doc, y, cur, N);
   y = pdfPlattegrondBlok(doc, y, x.plattegrond);
   const body1 = pdfTellingBody(lib, doc, y, meta, cur, N);
   const R1 = body1.R;
@@ -307,38 +311,75 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   const vandaag = vandaagLang();
   pdfCoverPage(doc, meta);
 
-  // Optie 1: goedkoopste route naar de vrije sector; optie 2: met marge (standaard 4 punten),
-  // of anders de maximaal haalbare route. Optie 2 bouwt voort op optie 1.
-  const margeGewenst = inst.marge > 0 ? inst.marge : 4;
-  const doel1 = N.grensMidden + 1;
-  const doel2 = N.grensMidden + 1 + margeGewenst;
   const opt = { brongetrouw: !!x.bronGetrouw };
-  const route1 = berekenRoute(x.input, N, inst, doel1, undefined, opt);
-  let route2 = berekenRoute(x.input, N, inst, doel2, route1, opt);
-  let titel2 = "Optie 2: route met marge naar de vrije sector",
-    sub2 =
-      "De maatregelen van optie 1, aangevuld tot een marge van " +
-      margeGewenst +
-      " punten boven de grens van de vrije sector";
-  if (!route2.gehaald) {
-    route2 = berekenRoute(x.input, N, inst, 9999, route1, opt);
-    route2.doel = route2.eind.totaal;
-    route2.gehaald = true;
-    titel2 = "Optie 2: maximaal haalbare route";
-    sub2 =
-      "Optie 1, aangevuld met alle overige beschikbare maatregelen, voor het hoogst haalbare puntentotaal";
+  const opties: { titel: string; sub: string; route: PdfRoute; doelzin?: string }[] = [];
+  if (x.bronGetrouw) {
+    // Optie 1: goedkoopste route naar de vrije sector; optie 2: met marge (standaard 4 punten),
+    // of anders de maximaal haalbare route. Optie 2 bouwt voort op optie 1.
+    const margeGewenst = inst.marge > 0 ? inst.marge : 4;
+    const doel1 = N.grensMidden + 1;
+    const doel2 = N.grensMidden + 1 + margeGewenst;
+    const route1 = berekenRoute(x.input, N, inst, doel1, undefined, opt);
+    let route2 = berekenRoute(x.input, N, inst, doel2, route1, opt);
+    let titel2 = "Optie 2: route met marge naar de vrije sector",
+      sub2 =
+        "De maatregelen van optie 1, aangevuld tot een marge van " +
+        margeGewenst +
+        " punten boven de grens van de vrije sector";
+    if (!route2.gehaald) {
+      route2 = berekenRoute(x.input, N, inst, 9999, route1, opt);
+      route2.doel = route2.eind.totaal;
+      route2.gehaald = true;
+      titel2 = "Optie 2: maximaal haalbare route";
+      sub2 =
+        "Optie 1, aangevuld met alle overige beschikbare maatregelen, voor het hoogst haalbare puntentotaal";
+    }
+    opties.push(
+      {
+        titel: "Optie 1: goedkoopste en snelste route naar de vrije sector",
+        sub: "De meest kosteneffectieve maatregelen om net in de vrije sector te komen",
+        route: route1,
+      },
+      { titel: titel2, sub: sub2, route: route2 },
+    );
+  } else {
+    // Bewuste afwijking: de vaste opties van de GoHome-adviesrapporten (advies/opties.ts)
+    adviesOpties(x.input, N, inst, opt).forEach((o, i) =>
+      opties.push({
+        titel: "Optie " + (i + 1) + ": " + o.titel.toLowerCase(),
+        sub: OPTIE_SUB[o.soort](o.doel),
+        route: o.route,
+        doelzin: o.doelzin,
+      }),
+    );
   }
 
-  // Inhoudsopgave en samenvatting met de drie puntentotalen
+  // Inhoudsopgave en samenvatting met de puntentotalen
   const Rcur = calc(cur, N);
   const sections = [
     "Huidige situatie, met de volledige puntentelling",
-    "Verbeteroptie 1, met maatregelen en de volledige puntentelling",
-    "Verbeteroptie 2, met maatregelen en de volledige puntentelling",
+    ...opties.map(
+      (o, i) =>
+        "Verbeteroptie " +
+        (i + 1) +
+        (x.bronGetrouw ? "" : " (" + o.titel.replace(/^Optie \d+: /, "") + ")") +
+        ", met maatregelen en de volledige puntentelling",
+    ),
   ];
+  if (!opties.length)
+    sections.push("Geen verbeteropties: de woning zit al ruim in de vrije sector");
   if (cur.energieAdvies) sections.push("Verduurzamingsopties");
   sections.push("Energielabel en WOZ-waarde");
-  pdfSamenvattingPagina(doc, meta, cur, N, Rcur, route1, route2, sections, x.plattegrond);
+  pdfSamenvattingPagina(
+    doc,
+    meta,
+    cur,
+    N,
+    Rcur,
+    opties.map((o, i): [string, PdfRoute] => ["Verbeteroptie " + (i + 1), o.route]),
+    sections,
+    x.plattegrond,
+  );
 
   // Huidige situatie
   doc.addPage();
@@ -349,25 +390,29 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
     "Puntentelling volgens het Woningwaarderingsstelsel, zelfstandige woonruimte",
     vandaag,
   );
+  if (!x.bronGetrouw) y = terugvalWaarschuwing(doc, y, cur, N);
   y = pdfPlattegrondBlok(doc, y, x.plattegrond);
   const body1 = pdfTellingBody(lib, doc, y, meta, cur, N);
   const R1 = body1.R;
 
-  // De twee opties, elk met hun eigen volledige puntentelling
-  let R2: WwsResultaat | null = null,
-    R3: WwsResultaat | null = null;
-  ({ y, R: R2 } = pdfOptiePagina(
-    lib,
-    doc,
-    N,
-    1,
-    "Optie 1: goedkoopste en snelste route naar de vrije sector",
-    "De meest kosteneffectieve maatregelen om net in de vrije sector te komen",
-    route1,
-    undefined,
-    meta,
-  ));
-  ({ y, R: R3 } = pdfOptiePagina(lib, doc, N, 2, titel2, sub2, route2, undefined, meta));
+  // De opties, elk met hun eigen volledige puntentelling
+  const Ropties: WwsResultaat[] = [];
+  opties.forEach((o, i) => {
+    const p = pdfOptiePagina(
+      lib,
+      doc,
+      N,
+      i + 1,
+      o.titel,
+      o.sub,
+      o.route,
+      undefined,
+      meta,
+      o.doelzin,
+    );
+    y = p.y;
+    if (p.R) Ropties.push(p.R);
+  });
 
   // Verduurzamingsopties uit een geüpload advies (optioneel)
   if (cur.energieAdvies) {
@@ -387,7 +432,7 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...MUT);
-  const allWarn = [...new Set(R1.warn.concat(R2 ? R2.warn : []).concat(R3 ? R3.warn : []))];
+  const allWarn = [...new Set(R1.warn.concat(...Ropties.map((R) => R.warn)))];
   const disc =
     DISC_BASIS(N) +
     DISC_ADVIES +
@@ -396,6 +441,25 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   voettekst(doc, 2);
   const base = bestandsBasis(naamVan(meta, "puntentelling"));
   return { blob: doc.output("blob"), bestandsnaam: "WWS_" + base + "_huidig_advies_opties.pdf" };
+}
+
+/** Ondertitel van een optiepagina (bewuste afwijking) */
+const OPTIE_SUB: Record<OptieSoort, (doel: number) => string> = {
+  middenhuur: (d) => "Precies op de grens van de middenhuur: " + d + " punten",
+  klein: (d) => "In de vrije sector met een kleine marge: " + d + " punten",
+  ruim: (d) => "In de vrije sector met een ruime marge: " + d + " punten",
+  max: () => "Het hoogst haalbare puntentotaal met de beschikbare maatregelen",
+};
+
+/** Bewuste afwijking: waarschuwing als afmelden volgens het energieadvies punten kost */
+function terugvalWaarschuwing(
+  doc: Parameters<typeof pdfWaarschuwing>[0],
+  y: number,
+  cur: WwsInput,
+  N: Normen,
+) {
+  const t = terugvalBijAfmelden(cur, N, new Date().toISOString().slice(0, 10));
+  return t ? pdfWaarschuwing(doc, y, terugvalTekst(t)) : y;
 }
 
 // ---------- dashboard ----------

@@ -741,6 +741,38 @@ kastje, stopcontacten vóór een wastafel met kastje.
 - Tests: `niveaus.test.ts` (kastje vóór stopcontacten, kastruimte vóór handdoekradiator, lastiger
   alleen als het moet, aftopping), `NormenBeheer.test.tsx`, `pdf.afwijkingen.test.ts`.
 
+### Adviesopties zoals de GoHome-adviesrapporten (`advies/opties.ts`)
+
+Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (187 en 187 + marge).
+
+- **Drie vaste opties** (`adviesOpties`), elk voortbouwend op de vorige:
+  - **Middenhuur optimaal**: precies 186 punten. Alleen als de woning eronder zit en de route er
+    ook echt op uitkomt; schiet de route erover, dan dekt de volgende optie dat.
+  - **Kleine marge vrije sector**: 188 punten.
+  - **Ruime marge vrije sector**: 195 punten; niet haalbaar → **Maximaal haalbaar**.
+  - De marges (+2 en +9 boven de middenhuur) staan in Normen (`normen.adviesDoelen`,
+    `ADVIES_DOELEN_STANDAARD`). Een woning op of boven de ruime marge krijgt geen opties.
+- **Energielabel afmelden** (`afmeldStap` in `advies.ts`): met een bevestigd advieslabel
+  (`energieAdvies.uitgangspunt`) dat punten oplevert, is de eerste stap "Energielabel afmelden:
+  label D naar label B (zonder werkzaamheden)". Kosten standaard € 350 (`kosten.afmelden`,
+  `AFMELD_KOSTEN_STANDAARD`), eenvoudig, uit te zetten bij de instellingen. Zit er in dezelfde
+  route ook labelwerk, dan vervalt de aparte stap (het nieuwe label wordt dan toch geregistreerd),
+  zoals in de rapporten: "Afmelden energielabel B" alleen, of "van D naar A" met werkzaamheden.
+- **Waarschuwing bij terugval** (`terugvalBijAfmelden`, `terugvalTekst`): valt de woning lager
+  uit met het label uit het advies, dan staat er "Let op: bij afmelden … daalt de woning van 195
+  naar 177 punten en valt ze terug in de middenhuur." in het adviesvenster en in beide
+  advies-PDF's. Ook zonder bevestigd uitgangspunt.
+- **Doelzin** (`doelzin`): "Om de woning [doel], moet [maatregelen]." met alleen wat in de optie
+  bijkomt; keuken en badkamer "gemaximaliseerd" als de rubriek daarna is afgetopt, anders
+  "uitgebreid"; het label "verbeterd (van D naar A)", vanaf het advieslabel als er wordt afgemeld.
+- **Waar te zien:** tabblad "Opties" in het adviesvenster; het volledige adviesrapport
+  ("Huidig + adviesopties als PDF") met maximaal drie opties, elk met de doelzin onder de titel;
+  de afmeldkosten bij "Instellingen en kosten" en in Normen.
+- **Brongetrouw** (`brongetrouw: true`, `bronGetrouw: true`): de twee oude opties, geen afmelden,
+  geen doelzin en geen waarschuwing.
+- Tests: `opties.test.ts`, `AdviesDialoog.test.tsx`, `NormenBeheer.test.tsx`,
+  `pdf.afwijkingen.test.ts`.
+
 ### Energieadvies: afwijkend beginlabel en opties vergelijken (`advies/energieAdvies.ts`)
 
 **Wat de bron doet.** De bron leest het label uit het advies wel uit (`huidig.label`), maar toont

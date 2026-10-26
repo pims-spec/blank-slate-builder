@@ -141,6 +141,11 @@ export function pdfGaugeCard(doc: Doc, y: number, R: WwsResultaat, normen: Norme
 export function pdfWozCapNote(doc: Doc, y: number, R: WwsResultaat, normen: Normen): number {
   const t = wozCapNoteText(R, normen);
   if (!t) return y;
+  return pdfWaarschuwing(doc, y, t);
+}
+
+/** Een waarschuwing in een oranje vlak (zoals de melding bij de WOZ-cap) */
+export function pdfWaarschuwing(doc: Doc, y: number, t: string): number {
   const W = PDF_W,
     M = PDF_M;
   const lines: string[] = doc.splitTextToSize(pdfTxt(t), W - 2 * M - 12);
@@ -1010,6 +1015,8 @@ export function pdfOptiePagina(
   route: PdfRoute,
   badge?: string,
   meta?: TellingMeta,
+  /** Bewuste afwijking: de doelzin van de optie ("Om de woning …, moet …") */
+  doelzin?: string,
 ): { y: number; R: WwsResultaat | null } {
   const W = PDF_W,
     M = PDF_M,
@@ -1038,6 +1045,14 @@ export function pdfOptiePagina(
     doc.text(k[1], x, y + 17);
   });
   y += 29;
+  if (doelzin) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...INK);
+    const regels: string[] = doc.splitTextToSize(pdfTxt(doelzin), W - 2 * M);
+    doc.text(regels, M, y);
+    y += regels.length * 5 + 3;
+  }
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   doc.setTextColor(...INK);
@@ -1591,8 +1606,8 @@ export function pdfSamenvattingPagina(
   input: WwsInput,
   normen: Normen,
   R: WwsResultaat,
-  route1: PdfRoute,
-  route2: PdfRoute,
+  /** De opties met hun naam in de samenvatting ("Verbeteroptie 1", …) */
+  opties: [string, PdfRoute][],
   sections: string[],
   img?: string | null,
 ): number {
@@ -1670,7 +1685,7 @@ export function pdfSamenvattingPagina(
   });
   y += 8;
   y = pdfKaartHeader(doc, M, y, "Samenvatting");
-  const cardH = 14 + 3 * 29;
+  const cardH = 14 + (1 + opties.length) * 29;
   if (y + cardH > 270) {
     doc.addPage();
     y = 20;
@@ -1681,8 +1696,7 @@ export function pdfSamenvattingPagina(
   let by = y + 13;
   const items: [string, number][] = [
     ["Huidige status", R.totaal],
-    ["Verbeteroptie 1", route1.eind.totaal],
-    ["Verbeteroptie 2", route2.eind.totaal],
+    ...opties.map(([naam, route]): [string, number] => [naam, route.eind.totaal]),
   ];
   items.forEach((it) => {
     by = pdfMiniGaugeRow(doc, M + 10, by, W - 2 * M - 20, it[0], it[1], normen);

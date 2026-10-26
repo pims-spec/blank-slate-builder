@@ -3,7 +3,7 @@
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { describe, expect, it } from "vitest";
-import { berekenAdvies, selectieResultaat, standaardInstellingen } from "../advies";
+import { adviesOpties, berekenAdvies, selectieResultaat, standaardInstellingen } from "../advies";
 import { normaliseer } from "../calc";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { genereer } from "../testdata";
@@ -305,5 +305,63 @@ describe("bewuste afwijkingen in de PDF's", () => {
       plain.didParseCell!(d);
       expect(d.cell.styles).toEqual({ fillColor: false });
     });
+  });
+
+  it("adviesrapport: de vaste opties met doelzin; brongetrouw de twee oude opties", async () => {
+    let getest = 0;
+    for (let seed = 1; seed <= 40 && getest < 3; seed++) {
+      const input = normaliseer(genereer(seed));
+      const inst = standaardInstellingen(N);
+      const opties = adviesOpties(input, N, inst);
+      if (opties.length < 2) continue;
+      const meta = willekeurigeMeta(seed);
+      const tekst = (await pdfTekst(maakAdviesPdf(LIB, { meta, input, normen: N, inst }).blob))
+        .flat()
+        .join(" ")
+        .replace(/\s+/g, " ");
+      opties.forEach((o, i) => {
+        expect(tekst).toContain("Optie " + (i + 1) + ": " + o.titel.toLowerCase());
+        expect(tekst).toContain(o.doelzin);
+        expect(tekst).toContain("Verbeteroptie " + (i + 1) + " (" + o.titel.toLowerCase() + ")");
+      });
+      const bron = (
+        await pdfTekst(maakAdviesPdf(LIB, { meta, input, normen: N, inst, bronGetrouw: true }).blob)
+      )
+        .flat()
+        .join(" ")
+        .replace(/\s+/g, " ");
+      expect(bron).toContain("Optie 1: goedkoopste en snelste route naar de vrije sector");
+      expect(bron).not.toContain("Om de woning");
+      getest++;
+    }
+    expect(getest).toBe(3);
+  });
+
+  it("route- en adviesrapport: waarschuwing als afmelden volgens het advies punten kost", async () => {
+    const input = normaliseer(genereer(3));
+    input.energie = {
+      soort: "label",
+      label: "B",
+      indexKlasse: "",
+      bouwjaar: "",
+      datum: "2024-01-01",
+    };
+    input.energieAdvies = { huidig: { label: "F" }, maatregelen: [] };
+    const meta = willekeurigeMeta(3);
+    const inst = standaardInstellingen(N);
+    const A = berekenAdvies(input, N, inst);
+    const maak = {
+      route: (b: boolean) =>
+        maakRoutePdf(LIB, { meta, input, normen: N, advies: A, overslaan: {}, bronGetrouw: b }),
+      advies: (b: boolean) => maakAdviesPdf(LIB, { meta, input, normen: N, inst, bronGetrouw: b }),
+    };
+    for (const m of Object.values(maak)) {
+      const tekst = (await pdfTekst(m(false).blob)).flat().join(" ").replace(/\s+/g, " ");
+      expect(tekst).toContain(
+        "Let op: bij afmelden van het energielabel volgens het energieadvies (label F in plaats van label B)",
+      );
+      const bron = (await pdfTekst(m(true).blob)).flat().join(" ");
+      expect(bron).not.toContain("Let op: bij afmelden");
+    }
   });
 });
