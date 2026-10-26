@@ -12,6 +12,7 @@ import {
   NIVEAU_NAMEN,
   standaardAntwoorden,
   WONINGTYPE_NAMEN,
+  wozTekst,
   type HuurAdvies,
   type HuurAntwoorden,
   type HuurWoning,
@@ -593,6 +594,7 @@ export function WwsKaart({
   onTelling?: () => void;
 }) {
   const vrij = c.segLaag === "hoog";
+  const woz = wozTekst(c, grens);
   return (
     <section aria-label="WWS-check" className="space-y-3 gh-card p-4">
       <h2 className="font-semibold">WWS-check (globaal)</h2>
@@ -628,14 +630,7 @@ export function WwsKaart({
           </p>
         )
       )}
-      {c.wozVrijeSector && (
-        <p className="text-xs text-muted-foreground">
-          Zonder WOZ-waarde gerekend met de minimum-WOZ.{" "}
-          {c.wozVrijeSector.laag != null
-            ? `Vanaf een WOZ-waarde van ca. ${euroHeel(c.wozVrijeSector.laag)}${c.wozVrijeSector.hoog != null && c.wozVrijeSector.hoog !== c.wozVrijeSector.laag ? "–" + euroHeel(c.wozVrijeSector.hoog) : ""} komt de woning naar verwachting op ${grens} punten of meer.`
-            : `Ook met een hoge WOZ-waarde komt de woning naar verwachting niet op ${grens} punten.`}
-        </p>
-      )}
+      {woz && <p className="text-xs text-muted-foreground">{woz}</p>}
       <div className="rounded-lg bg-secondary p-3">
         <div className="text-xs font-medium uppercase tracking-wide text-primary">
           Advies huurprijs

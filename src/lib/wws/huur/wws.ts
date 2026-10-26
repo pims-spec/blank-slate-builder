@@ -166,11 +166,15 @@ export interface WwsCheck {
   invoer: WwsInput;
 }
 
-/** Laagste WOZ-waarde (op € 1.000) waarbij het scenario 187 punten of meer haalt; null = nooit */
+/**
+ * Laagste WOZ-waarde (op € 1.000) waarbij het scenario 187 punten of meer haalt; 0 = al met de
+ * minimum-WOZ, null = nooit
+ */
 export function wozVoorVrijeSector(x: WwsInput, N: Normen): number | null {
   const met = (woz: number) =>
     calc({ ...x, woz: { ...x.woz, soort: "woz", waarde: woz } }, N).totaal;
   const grens = N.grensMidden + 1;
+  if (calc({ ...x, woz: { ...x.woz, soort: "minimum", waarde: "" } }, N).totaal >= grens) return 0;
   let hoog = 3_000_000;
   if (met(hoog) < grens) return null;
   let laag = 0;
@@ -206,6 +210,45 @@ export function wwsCheck(w: HuurWoning, a: HuurAntwoorden, H: HuurNormen, N: Nor
         : { laag: wozVoorVrijeSector(xh, N), hoog: wozVoorVrijeSector(xl, N) },
     invoer: xh,
   };
+}
+
+/**
+ * De uitleg bij een WWS-check zonder WOZ-waarde, voor scherm en PDF. Het segment bepaalt of de
+ * woning al vrije sector is, zodat ook oudere opgeslagen indicaties (toen nog met een zoekuitkomst
+ * van ca. € 1.000) de goede tekst krijgen. null = er is een WOZ-waarde ingevuld.
+ */
+export function wozTekst(
+  c: Pick<WwsCheck, "segLaag" | "segHoog" | "wozVrijeSector">,
+  grens: number,
+): string | null {
+  const w = c.wozVrijeSector;
+  if (!w) return null;
+  const begin = "Zonder WOZ-waarde gerekend met de minimum-WOZ. ";
+  if (c.segLaag === "hoog")
+    return (
+      begin +
+      `Ook daarmee komt de woning naar verwachting al op ${grens} punten of meer; de WOZ-waarde verandert het segment niet.`
+    );
+  if (c.segHoog === "hoog")
+    return (
+      begin +
+      `In het hoge scenario komt de woning al op ${grens} punten of meer; ` +
+      (w.hoog != null
+        ? `in het lage scenario vanaf een WOZ-waarde van ca. ${eurTekst(w.hoog)}.`
+        : `in het lage scenario ook met een hoge WOZ-waarde niet.`)
+    );
+  if (w.laag == null)
+    return (
+      begin + `Ook met een hoge WOZ-waarde komt de woning naar verwachting niet op ${grens} punten.`
+    );
+  const bereik =
+    w.hoog != null && w.hoog !== w.laag
+      ? `${eurTekst(w.laag)}–${eurTekst(w.hoog)}`
+      : eurTekst(w.laag);
+  return (
+    begin +
+    `Vanaf een WOZ-waarde van ca. ${bereik} komt de woning naar verwachting op ${grens} punten of meer.`
+  );
 }
 
 export interface HuurAdvies {

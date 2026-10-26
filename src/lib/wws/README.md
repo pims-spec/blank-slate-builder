@@ -478,6 +478,9 @@ Prijs per m² × oppervlakte × groottefactor × correctiefactoren + parkeren.
   sanitair minder of meer uitgebreid bij de gekozen staat), gerekend met `calc()`. De uitkomst is
   een bandbreedte in punten, geen exact puntenaantal.
 - Zonder WOZ-waarde: de minimum-WOZ, plus de WOZ-waarde vanaf welke de woning 187 punten haalt.
+  Haalt een scenario dat al met de minimum-WOZ, dan is die waarde 0 en zegt de tekst dat de
+  WOZ-waarde het segment niet verandert (`wozTekst`, voor scherm en PDF). De tekst kijkt naar het
+  segment, zodat oudere opgeslagen indicaties (toen ca. € 1.000) ook goed uitkomen.
 - **Grensgeval** (de scenario's vallen in een ander segment): "volledige telling nodig".
 - **Advies: altijd de laagste van markthuur en wettelijke maximale huur.** Onder 187 punten
   geldt de maximale huur bij de lage puntenschatting (voorzichtig, naar beneden op hele euro's);

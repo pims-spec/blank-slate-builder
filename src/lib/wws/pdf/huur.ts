@@ -5,6 +5,7 @@
 import { SEGMENT_NAMEN } from "../calc";
 import { isInschatting, NIVEAU_NAMEN, WONINGTYPE_NAMEN } from "../huur/normen";
 import type { HuurIndicatieData } from "../huur/opslag";
+import { wozTekst } from "../huur/wws";
 import { pdfBanner, pdfVoorblad } from "./delen";
 import {
   PDF_ALT,
@@ -193,18 +194,8 @@ function huurPdf(lib: PdfLib, x: HuurPdfInvoer) {
       margin: { left: M, right: M },
     }) + 3;
   if (c.grensgeval) tekst("Grensgeval: volledige telling nodig.", 9.5, PDF_PUR);
-  if (c.wozVrijeSector)
-    tekst(
-      "Zonder WOZ-waarde gerekend met de minimum-WOZ. " +
-        (c.wozVrijeSector.laag != null
-          ? `Vanaf een WOZ-waarde van ca. ${euro(c.wozVrijeSector.laag)}` +
-            (c.wozVrijeSector.hoog != null && c.wozVrijeSector.hoog !== c.wozVrijeSector.laag
-              ? ` – ${euro(c.wozVrijeSector.hoog)}`
-              : "") +
-            ` komt de woning naar verwachting op ${d.snapshot.grensVrijeSector} punten of meer.`
-          : `Ook met een hoge WOZ-waarde komt de woning naar verwachting niet op ${d.snapshot.grensVrijeSector} punten.`),
-      8.5,
-    );
+  const woz = wozTekst(c, d.snapshot.grensVrijeSector);
+  if (woz) tekst(woz, 8.5);
   tekst(
     "Globale telling in twee scenario's met de rekenkern van het woningwaarderingsstelsel; geen exact puntenaantal.",
     8,

@@ -12,6 +12,7 @@ import {
   standaardAntwoorden,
   STANDAARD_REGELS,
   woningtypeUitGebouwtype,
+  wozTekst,
   wozVoorVrijeSector,
   wwsCheck,
   zoekBronRegel,
@@ -252,6 +253,59 @@ describe("WWS-check", () => {
       calc({ ...c.invoer, woz: { ...c.invoer.woz, soort: "woz", waarde: woz } }, N).totaal;
     expect(met(nodig)).toBeGreaterThanOrEqual(N.grensMidden + 1);
     expect(met(nodig - 1000)).toBeLessThan(N.grensMidden + 1);
+  });
+
+  it("zonder WOZ en al vrije sector met de minimum-WOZ: 0, niet de laagste zoekstap", () => {
+    const w = woning({ bagOppervlakte: 306 });
+    const a = antwoorden(w, { oppervlakte: 306, slaapkamers: 4 });
+    const c = wwsCheck(w, a, H, N);
+    expect(c.segLaag).toBe("hoog");
+    expect(c.wozVrijeSector).toEqual({ laag: 0, hoog: 0 });
+    expect(wozTekst(c, N.grensMidden + 1)).toMatch(/al op 187 punten of meer/);
+  });
+});
+
+describe("WOZ-tekst bij de WWS-check", () => {
+  const tekst = (c: Partial<WwsCheck>) =>
+    wozTekst(
+      { segLaag: "midden", segHoog: "midden", wozVrijeSector: { laag: null, hoog: null }, ...c },
+      187,
+    );
+
+  it("met een WOZ-waarde: geen tekst", () => {
+    expect(tekst({ wozVrijeSector: null })).toBeNull();
+  });
+
+  it("al vrije sector: geen WOZ-bedrag, ook bij een oud record met ca. € 1.000", () => {
+    const t = tekst({
+      segLaag: "hoog",
+      segHoog: "hoog",
+      wozVrijeSector: { laag: 1000, hoog: 1000 },
+    });
+    expect(t).toMatch(/al op 187 punten of meer; de WOZ-waarde verandert het segment niet/);
+    expect(t).not.toMatch(/€/);
+  });
+
+  it("alleen het hoge scenario al vrije sector: het bedrag voor het lage scenario", () => {
+    const t = tekst({ segHoog: "hoog", wozVrijeSector: { laag: 1000, hoog: 250000 } });
+    expect(t).toMatch(/In het hoge scenario komt de woning al op 187 punten of meer/);
+    expect(t).toMatch(/lage scenario vanaf een WOZ-waarde van ca\. € 250\.000\./);
+    expect(t).not.toMatch(/€ 1\.000/);
+  });
+
+  it("nog niet vrije sector: de bandbreedte van WOZ-waarden", () => {
+    expect(tekst({ wozVrijeSector: { laag: 300000, hoog: 350000 } })).toMatch(
+      /Vanaf een WOZ-waarde van ca\. € 300\.000–€ 350\.000 komt/,
+    );
+    expect(tekst({ wozVrijeSector: { laag: 300000, hoog: 300000 } })).toMatch(
+      /ca\. € 300\.000 komt/,
+    );
+  });
+
+  it("nooit vrije sector", () => {
+    expect(tekst({})).toMatch(
+      /Ook met een hoge WOZ-waarde komt de woning naar verwachting niet op 187 punten/,
+    );
   });
 });
 
