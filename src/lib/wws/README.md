@@ -114,6 +114,16 @@ reference/wws-site-pdf.cjs    letterlijke uitsnede van de PDF- en Excel-code, al
 - **Plattegrond.** Die komt in fase 4c uit Storage. De PDF-functies nemen hem al als parameter
   (`plattegrond`, een JPEG-data-URL).
 
+## Fotobeoordeling keuken en badkamer (in opbouw)
+
+`foto/elementen.ts` en `foto/beoordeling.ts`: welke elementen een foto-AI zoekt (sleutels zoals in
+de telling), de instructie, het JSON-schema van het antwoord en de controle daarvan (zod). Per
+element een status (`aanwezig`, `waarschijnlijk_aanwezig`, `niet_vast_te_stellen`), vrijstaand,
+aantal, soort, bewijs en foto's. Bij twijfel de lagere status; alleen ingebouwde apparatuur telt.
+De AI kent geen punten toe. Nog niet in de app: eerst een vergelijkingstest (Claude Opus 5.5,
+Claude Sonnet 5.5, Gemini 4 Argon, Gemini 3.8 Flash) met dezelfde instructie en hetzelfde schema,
+buiten de repo.
+
 ## AI en plattegronden (fase 4c)
 
 ```
