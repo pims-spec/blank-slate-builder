@@ -20,12 +20,14 @@ const leeg = (): ElementOordeel => ({
 });
 
 function keukenAntwoord(over: Record<string, Partial<ElementOordeel>> = {}) {
-  return Object.fromEntries(
-    KEUKEN_ELEMENTEN.map((e) => [
-      e.sleutel,
-      { ...leeg(), ...(e.telbaar ? { aantal: 0 } : {}), ...over[e.sleutel] },
-    ]),
-  );
+  return {
+    elementen: KEUKEN_ELEMENTEN.map((e) => ({
+      element: e.sleutel,
+      ...leeg(),
+      ...(e.telbaar ? { aantal: 0 } : {}),
+      ...over[e.sleutel],
+    })),
+  };
 }
 
 describe("elementen", () => {
@@ -56,21 +58,28 @@ describe("fotoPrompt en fotoSchema", () => {
     expect(p).toContain("Beschrijf geen personen");
   });
 
-  it("schema: elk element verplicht, geen extra velden; soort en aantal alleen waar nodig", () => {
+  it("schema: één platte lijst; element en soort uit vaste lijsten", () => {
     const s = fotoSchema("keuken") as {
       required: string[];
-      additionalProperties: boolean;
-      properties: Record<string, { properties: Record<string, unknown> }>;
+      properties: {
+        elementen: { items: { required: string[]; properties: Record<string, unknown> } };
+      };
     };
-    expect(s.required).toEqual(KEUKEN_ELEMENTEN.map((e) => e.sleutel));
-    expect(s.additionalProperties).toBe(false);
-    expect(s.properties["vaatwasser"]!.properties["soort"]).toEqual({ type: "null" });
-    expect(s.properties["kast"]!.properties["aantal"]).toEqual({
-      anyOf: [{ type: "integer" }, { type: "null" }],
+    expect(s.required).toEqual(["elementen"]);
+    const regel = s.properties.elementen.items;
+    expect(regel.required).toContain("element");
+    expect(regel.properties["element"]).toEqual({
+      type: "string",
+      enum: KEUKEN_ELEMENTEN.map((e) => e.sleutel),
     });
-    expect(s.properties["kookplaat"]!.properties["soort"]).toEqual({
-      anyOf: [{ type: "string", enum: ["inductie", "keramisch", "gas"] }, { type: "null" }],
+    expect(regel.properties["soort"]).toMatchObject({
+      anyOf: [
+        { type: "string", enum: expect.arrayContaining(["inductie", "gas", "eenhands"]) },
+        { type: "null" },
+      ],
     });
+    // klein genoeg: geen apart blok per element
+    expect(JSON.stringify(s).length).toBeLessThan(2000);
   });
 });
 
@@ -99,20 +108,35 @@ describe("controleerBeoordeling", () => {
   });
 
   it("ongeldig: ontbrekend of onbekend element, foute status, foto die niet bestaat", () => {
-    const { vaatwasser: _weg, ...zonder } = keukenAntwoord();
+    const goed = keukenAntwoord();
+    const zonder = { elementen: goed.elementen.filter((r) => r.element !== "vaatwasser") };
     expect(controleerBeoordeling("keuken", 2, zonder)).toBeNull();
-    expect(controleerBeoordeling("keuken", 2, { ...keukenAntwoord(), sauna: leeg() })).toBeNull();
+    const dubbel = { elementen: [...goed.elementen, goed.elementen[0]!] };
+    expect(controleerBeoordeling("keuken", 2, dubbel)).toBeNull();
+    const vreemd = { elementen: [...zonder.elementen, { ...leeg(), element: "sauna" }] };
+    expect(controleerBeoordeling("keuken", 2, vreemd)).toBeNull();
+    expect(controleerBeoordeling("keuken", 2, { ...goed, extra: 1 })).toBeNull();
     expect(
       controleerBeoordeling("keuken", 2, keukenAntwoord({ oven: { status: "zeker" as never } })),
     ).toBeNull();
     expect(controleerBeoordeling("keuken", 2, keukenAntwoord({ oven: { fotos: [3] } }))).toBeNull();
+    // soort van een ander element (kraan) bij de kookplaat
     expect(
-      controleerBeoordeling("keuken", 2, keukenAntwoord({ vaatwasser: { soort: "inbouw" } })),
+      controleerBeoordeling("keuken", 2, keukenAntwoord({ kookplaat: { soort: "eenhands" } })),
     ).toBeNull();
     expect(
       controleerBeoordeling("keuken", 2, keukenAntwoord({ kookplaat: { soort: "hout" } })),
     ).toBeNull();
     expect(controleerBeoordeling("keuken", 2, "geen object")).toBeNull();
+  });
+
+  it("velden die bij een element niet horen worden genegeerd", () => {
+    const b = controleerBeoordeling(
+      "keuken",
+      1,
+      keukenAntwoord({ vaatwasser: { aantal: 2, soort: "gas" } }),
+    );
+    expect(b!["vaatwasser"]).toMatchObject({ aantal: null, soort: null });
   });
 
   it("vrijstaand telt alleen bij inbouwelementen", () => {

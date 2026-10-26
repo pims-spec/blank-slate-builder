@@ -61,53 +61,65 @@ export function fotoPrompt(ruimte: FotoRuimte, nFotos: number): string {
     "Elementen:",
     ...ELEMENTEN[ruimte].map(elementRegel),
     "",
-    "Antwoord met alleen het JSON-object volgens het schema, met elk element precies één keer.",
+    "Antwoord met alleen het JSON-object volgens het schema: in elementen per element precies één regel, in de volgorde hierboven.",
   ].join("\n");
 }
 
-/** JSON Schema van het antwoord (voor structured output bij Claude en Gemini) */
+/**
+ * JSON Schema van het antwoord (voor structured output bij Claude en Gemini): één lijst met per
+ * element een regel. Bewust plat en klein; een apart blok per element maakte het schema te groot
+ * voor Claude. Wat per element mag (soort, aantal) controleert controleerBeoordeling.
+ */
 export function fotoSchema(ruimte: FotoRuimte): Record<string, unknown> {
-  const element = (e: FotoElement) => ({
-    type: "object",
-    additionalProperties: false,
-    required: ["status", "vrijstaand", "aantal", "soort", "bewijs", "fotos"],
-    properties: {
-      status: { type: "string", enum: [...STATUSSEN] },
-      vrijstaand: { type: "boolean" },
-      aantal: e.telbaar ? { anyOf: [{ type: "integer" }, { type: "null" }] } : { type: "null" },
-      soort: e.soorten
-        ? { anyOf: [{ type: "string", enum: [...e.soorten] }, { type: "null" }] }
-        : { type: "null" },
-      bewijs: { type: "string" },
-      fotos: { type: "array", items: { type: "integer" } },
-    },
-  });
   const els = ELEMENTEN[ruimte];
+  const soorten = [...new Set(els.flatMap((e) => e.soorten ?? []))];
   return {
     type: "object",
     additionalProperties: false,
-    required: els.map((e) => e.sleutel),
-    properties: Object.fromEntries(els.map((e) => [e.sleutel, element(e)])),
+    required: ["elementen"],
+    properties: {
+      elementen: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["element", "status", "vrijstaand", "aantal", "soort", "bewijs", "fotos"],
+          properties: {
+            element: { type: "string", enum: els.map((e) => e.sleutel) },
+            status: { type: "string", enum: [...STATUSSEN] },
+            vrijstaand: { type: "boolean" },
+            aantal: { anyOf: [{ type: "integer" }, { type: "null" }] },
+            soort: soorten.length
+              ? { anyOf: [{ type: "string", enum: soorten }, { type: "null" }] }
+              : { type: "null" },
+            bewijs: { type: "string" },
+            fotos: { type: "array", items: { type: "integer" } },
+          },
+        },
+      },
+    },
   };
 }
 
-function elementZod(e: FotoElement, nFotos: number) {
-  return z
+const Regel = (nFotos: number) =>
+  z
     .object({
+      element: z.string(),
       status: z.enum(STATUSSEN),
       vrijstaand: z.boolean(),
-      aantal: e.telbaar ? z.number().int().min(0).max(50).nullable() : z.null(),
-      soort: e.soorten ? z.enum(e.soorten as [string, ...string[]]).nullable() : z.null(),
+      aantal: z.number().int().min(0).max(50).nullable(),
+      soort: z.string().nullable(),
       bewijs: z.string().max(MAX_BEWIJS * 2),
       fotos: z.array(z.number().int().min(1).max(nFotos)).max(MAX_FOTOS),
     })
     .strict();
-}
 
 /**
- * Het antwoord van de AI controleren. null als het niet klopt (verkeerde vorm, onbekende of
- * ontbrekende elementen, foto's die niet bestaan). Vrijstaand bij een element dat niet ingebouwd
- * hoeft te zijn wordt genegeerd (false); het bewijs wordt ingekort.
+ * Het antwoord van de AI controleren. null als het niet klopt: verkeerde vorm, een element dat
+ * ontbreekt, dubbel of onbekend is, een soort die bij dat element niet bestaat, of een foto die
+ * niet bestaat. Velden die bij een element niet horen worden genegeerd (aantal bij een niet
+ * telbaar element, vrijstaand bij een element dat niet ingebouwd hoeft te zijn); het bewijs wordt
+ * ingekort.
  */
 export function controleerBeoordeling(
   ruimte: FotoRuimte,
@@ -115,17 +127,27 @@ export function controleerBeoordeling(
   data: unknown,
 ): Beoordeling | null {
   const els = ELEMENTEN[ruimte];
-  const schema = z
-    .object(Object.fromEntries(els.map((e) => [e.sleutel, elementZod(e, nFotos)])))
-    .strict();
-  const r = schema.safeParse(data);
+  const r = z
+    .object({ elementen: z.array(Regel(nFotos)).max(els.length * 2) })
+    .strict()
+    .safeParse(data);
   if (!r.success) return null;
+  const per = new Map<string, z.infer<ReturnType<typeof Regel>>>();
+  for (const regel of r.data.elementen) {
+    if (per.has(regel.element)) return null;
+    per.set(regel.element, regel);
+  }
+  if (per.size !== els.length) return null;
   const uit: Beoordeling = {};
   for (const e of els) {
-    const o = r.data[e.sleutel] as z.infer<ReturnType<typeof elementZod>>;
+    const o = per.get(e.sleutel);
+    if (!o) return null;
+    if (o.soort !== null && e.soorten && !e.soorten.includes(o.soort)) return null;
     uit[e.sleutel] = {
-      ...o,
+      status: o.status,
       vrijstaand: !!e.inbouw && o.vrijstaand,
+      aantal: e.telbaar ? o.aantal : null,
+      soort: e.soorten ? o.soort : null,
       bewijs: o.bewijs.replace(/\s+/g, " ").trim().slice(0, MAX_BEWIJS),
       fotos: [...new Set(o.fotos)].sort((a, b) => a - b),
     };
