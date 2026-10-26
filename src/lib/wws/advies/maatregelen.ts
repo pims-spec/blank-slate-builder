@@ -107,7 +107,10 @@ function adviesOptie(
 function labelVanafStart(x: WwsInput, ctx: GenContext): GenKandidaat[] | null {
   const st = ctx.start;
   if (!st) return null;
-  const ongewijzigd = x.energie.soort === st.energie.soort && x.energie.label === st.energie.label;
+  // ook ongewijzigd na "energielabel afmelden" (advies.ts): dan staat het advieslabel er al
+  const ongewijzigd =
+    (x.energie.soort === st.energie.soort && x.energie.label === st.energie.label) ||
+    (st.bron === "advies" && x.energie.soort === "label" && x.energie.label === st.label);
   if (st.gekozen) return ongewijzigd ? [adviesOptie(st.gekozen, x, st, ctx.K, ctx.vandaag)] : [];
   if (!ongewijzigd || st.bron !== "advies" || !st.label) return null;
   const lab = st.label;

@@ -267,3 +267,73 @@ export function gekozenOptie(EA: EnergieAdvies | undefined): EnergieAdviesMaatre
     ? EA.maatregelen[i]
     : null;
 }
+
+/** De woning na het afmelden van het energielabel volgens het advies (als label, vanaf vandaag) */
+function naAfmelden(x: WwsInput, label: Labelklasse, vandaag: string): WwsInput {
+  const y = structuredClone(x);
+  y.energie = { soort: "label", label, indexKlasse: "", bouwjaar: "", datum: vandaag };
+  return normaliseer(y);
+}
+
+export interface Terugval {
+  /** Het label volgens het energieadvies */
+  advieslabel: string;
+  /** "label B" of de omschrijving van index of bouwjaar */
+  huidig: string;
+  van: number;
+  naar: number;
+  segVan: Segment;
+  segNaar: Segment;
+}
+
+/**
+ * Valt de woning lager uit als het energielabel wordt afgemeld volgens het energieadvies (een
+ * lager label dan het geregistreerde, of een index die een slechter label wordt)? Ook zonder
+ * bevestigd uitgangspunt: juist dan is de waarschuwing belangrijk. null: geen advieslabel, of
+ * afmelden levert niet minder punten op.
+ */
+export function terugvalBijAfmelden(x0: WwsInput, N: Normen, vandaag: string): Terugval | null {
+  const x = normaliseer(x0);
+  const al = adviesLabel(x.energieAdvies);
+  if (!al) return null;
+  if (x.energie.soort === "label" && x.energie.label === al) return null;
+  const voor = calc(x, N);
+  const na = calc(naAfmelden(x, al, vandaag), N);
+  if (na.exact >= voor.exact - 0.009) return null;
+  return {
+    advieslabel: al,
+    huidig:
+      x.energie.soort === "label" || x.energie.soort === "labelOud"
+        ? "label " + x.energie.label
+        : energieVanOmschrijving(x.energie),
+    van: voor.totaal,
+    naar: na.totaal,
+    segVan: voor.seg,
+    segNaar: na.seg,
+  };
+}
+
+const SEGMENT_TEKST: Record<Segment, string> = {
+  laag: "de sociale huur",
+  midden: "de middenhuur",
+  hoog: "de vrije sector",
+};
+
+/** "Let op: bij afmelden … daalt de woning van 195 naar 177 punten en valt ze terug in de middenhuur." */
+export function terugvalTekst(t: Terugval): string {
+  return (
+    "Let op: bij afmelden van het energielabel volgens het energieadvies (label " +
+    t.advieslabel +
+    " in plaats van " +
+    t.huidig +
+    ") daalt de woning van " +
+    t.van +
+    " naar " +
+    t.naar +
+    " punten" +
+    (t.segNaar !== t.segVan
+      ? " en valt ze terug in " + SEGMENT_TEKST[t.segNaar]
+      : " en blijft ze in " + SEGMENT_TEKST[t.segNaar]) +
+    "."
+  );
+}

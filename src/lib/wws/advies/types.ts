@@ -3,6 +3,7 @@ import type { WwsInput, WwsResultaat } from "../types";
 export type Haalbaarheid = "eenvoudig" | "gemiddeld" | "lastig";
 
 export type MaatregelKey =
+  | "afmelden"
   | "label"
   | "indexKlasse"
   | "verwVertrek"
@@ -21,6 +22,7 @@ export type MaatregelKey =
 
 /** Kostenramingen per maatregel (N.kosten in wws-site.html), plus de oppervlakte van een nieuw balkon */
 export type KostenKey =
+  | "afmelden"
   | "labelStap"
   | "verwVertrek"
   | "koeling"

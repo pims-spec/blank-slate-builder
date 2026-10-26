@@ -258,6 +258,11 @@ export interface NormenShape {
    */
   adviesNiveaus?: Record<string, "eenvoudig" | "gemiddeld" | "lastig">;
   /**
+   * Verbeteradvies (niet in de bron): de doelen van de opties "kleine marge" en "ruime marge", in
+   * punten boven de grens van de vrije sector. Ontbrekende waarden: ADVIES_DOELEN_STANDAARD.
+   */
+  adviesDoelen?: { kleineMarge?: number; ruimeMarge?: number };
+  /**
    * Huurprijsindicator (niet in de bron): referentietabel met prijzen per m² per regio en de
    * correctiefactoren. Ontbrekende waarden: HUUR_STANDAARD (huur/normen.ts).
    */
@@ -265,6 +270,11 @@ export interface NormenShape {
 }
 
 export type Normen = NormenShape;
+
+/** Doelen van de adviesopties, in punten boven de grens van de vrije sector (186): 188 en 195 */
+export const ADVIES_DOELEN_STANDAARD = { kleineMarge: 2, ruimeMarge: 9 } as const;
+/** Standaardkosten van het afmelden van het energielabel (zonder werkzaamheden) */
+export const AFMELD_KOSTEN_STANDAARD = 350;
 
 /** Standaard daglimiet AI-gebruik (zelfde als in de database-functie) */
 export const AI_LIMIET_STANDAARD = { lezen: 30, afbeelding: 10 } as const;
@@ -282,6 +292,7 @@ export function mergeNormen(n?: Partial<Normen> | null): Normen {
     if (n.kosten) Object.assign(d["kosten"] as object, n.kosten);
     // eigen instellingen van het verbeteradvies (geen wettelijke normen): ook bewaren
     if (n.adviesNiveaus) d["adviesNiveaus"] = clone(n.adviesNiveaus);
+    if (n.adviesDoelen) d["adviesDoelen"] = clone(n.adviesDoelen);
     if (n.huurindicator) d["huurindicator"] = clone(n.huurindicator);
     return d as unknown as Normen;
   }

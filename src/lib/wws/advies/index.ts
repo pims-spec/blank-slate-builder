@@ -20,3 +20,11 @@ export {
   VOORZIENING_NIVEAU,
   niveauVan,
 } from "./niveaus";
+export {
+  OPTIE_TITEL,
+  adviesDoelen,
+  adviesOpties,
+  doelzin,
+  type AdviesOptie,
+  type OptieSoort,
+} from "./opties";

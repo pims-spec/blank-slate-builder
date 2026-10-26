@@ -12,7 +12,7 @@
 
 import { INDEX_KLASSEN, LABELS, num, r2 } from "../basis";
 import { calc, deriveFac, normaliseer } from "../calc";
-import { DEFAULT_NORMEN, type Normen } from "../normen";
+import { AFMELD_KOSTEN_STANDAARD, DEFAULT_NORMEN, type Normen } from "../normen";
 import type { WwsInput } from "../types";
 import { beginlabel, gekozenOptie } from "./energieAdvies";
 import {
@@ -45,7 +45,8 @@ const labelIndex = (l: string) => (LABELS as readonly string[]).indexOf(l);
 export function standaardInstellingen(N: Normen): AdviesInstellingen {
   return {
     kosten: {
-      ...(DEFAULT_NORMEN.kosten as unknown as Kosten),
+      afmelden: AFMELD_KOSTEN_STANDAARD,
+      ...(DEFAULT_NORMEN.kosten as unknown as Omit<Kosten, "afmelden">),
       ...(N.kosten as Partial<Kosten>),
     },
     uit: { laadpaal: true },
@@ -154,6 +155,43 @@ export function adviesStart(x: WwsInput): AdviesStart | undefined {
   return { energie: structuredClone(x.energie), label: b.label, bron: b.bron, gekozen };
 }
 
+/**
+ * De stap "energielabel afmelden" naar het advieslabel, als die punten oplevert; anders null
+ * (dan geldt de waarschuwing van terugvalBijAfmelden()).
+ */
+function afmeldStap(
+  x: WwsInput,
+  N: Normen,
+  K: Kosten,
+  advieslabel: string,
+  vandaag: string,
+): Omit<Stap, "tot"> | null {
+  const van =
+    x.energie.soort === "label" || x.energie.soort === "labelOud"
+      ? "label " + x.energie.label
+      : energieVanOmschrijving(x.energie);
+  const apply: Toepassing = (y) => {
+    y.energie = {
+      soort: "label",
+      label: advieslabel as WwsInput["energie"]["label"],
+      indexKlasse: "",
+      bouwjaar: "",
+      datum: vandaag,
+    };
+  };
+  const g = r2(calc(pasToe(apply, x), N).exact - calc(x, N).exact);
+  if (g <= 0.009) return null;
+  return {
+    key: "afmelden",
+    o: "Energielabel afmelden: " + van + " naar label " + advieslabel + " (zonder werkzaamheden)",
+    g,
+    c: K.afmelden ?? AFMELD_KOSTEN_STANDAARD,
+    h: "eenvoudig",
+    hr: "Nieuw label laten registreren zoals het energieadvies de huidige situatie beoordeelt",
+    apply,
+  };
+}
+
 /** Losse maatregel in de route, vóór het samenvoegen per soort */
 interface Stap extends AdviesBron {
   key: MaatregelKey;
@@ -229,6 +267,16 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
         });
       }),
     );
+  }
+  // Energielabel afmelden (bewuste afwijking): met een bevestigd advieslabel dat punten oplevert,
+  // eerst het label laten registreren zoals het advies de huidige situatie beoordeelt, zonder
+  // werkzaamheden. Daarna gaan de labelstappen verder vanaf dat label.
+  if (!brongetrouw && !baseOptie && vanAdvies && !uit.afmelden && start.totaal < doel) {
+    const af = afmeldStap(x, N, K, aStart.label!, vandaag);
+    if (af) {
+      x = pasToe(af.apply, x);
+      stappen.push({ ...af, tot: calc(x, N).totaal });
+    }
   }
   // De gekozen optie uit het energieadvies is de labelmaatregel en gaat altijd mee
   const gekozenKandidaat =
