@@ -100,12 +100,15 @@ const zelfdeKleur = (a: unknown, b: RGB) =>
  * - Frost (subkop en totaal) → licht grijs vlak; een totaal in indigo blijft indigo;
  * - rasterlijnen → alleen een haarlijn aan de onderkant.
  * Tabellen met theme "plain" (sleutel–waarde) houden hun vorm; alleen een kopregel krijgt de stijl.
+ * Een rij wordt niet over twee pagina's gesplitst: past hij niet meer, dan gaat hij als geheel
+ * naar de volgende pagina.
  */
 export function huisstijlTabel(opts: UserOptions): UserOptions {
   const plain = opts.theme === "plain";
   const eigen = opts.didParseCell;
   return {
     ...opts,
+    rowPageBreak: opts.rowPageBreak ?? "avoid",
     theme: "plain",
     ...(plain ? {} : { alternateRowStyles: {} }),
     didParseCell: (d) => {

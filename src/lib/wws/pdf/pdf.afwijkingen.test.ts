@@ -272,6 +272,8 @@ describe("bewuste afwijkingen in de PDF's", () => {
         },
       });
       expect(opts.theme).toBe("plain");
+      // een rij gaat als geheel naar de volgende pagina, niet half
+      expect(opts.rowPageBreak).toBe("avoid");
       const cel = (section: "head" | "body", kolom: number, text: string[]) => {
         const d = {
           section,

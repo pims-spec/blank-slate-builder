@@ -173,7 +173,11 @@ export function ArchiefAnalyses({
                       </Badge>
                     )}
                     {a.soort === "combi" && (
-                      <PortefeuilleLijst namen={a.portefeuilleNamen} className="mt-0.5" />
+                      <PortefeuilleLijst
+                        namen={a.portefeuilleNamen}
+                        className="mt-0.5"
+                        kolommen={false}
+                      />
                     )}
                   </td>
                   <td className="px-3 py-2">{eigenaarNamen(a, klantNamen).join(", ") || "—"}</td>

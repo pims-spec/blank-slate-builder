@@ -238,7 +238,8 @@ daarmee vervangen.
   - **Tabellen** (`huisstijlTabel`, centraal in `tabel()`): stille kopjes in kleine
     hoofdletters, uitgelijnd met hun kolom; alleen een haarlijn onder elke rij, geen raster
     en geen zebra. Subkopjes en totalen (in de bron Frost) krijgen een licht grijs vlak;
-    totalen houden indigo tekst. Sleutel–waarde-tabellen ("plain") houden hun vorm.
+    totalen houden indigo tekst. Sleutel–waarde-tabellen ("plain") houden hun vorm. Een rij
+    wordt niet over twee pagina's gesplitst (`rowPageBreak: "avoid"`).
   - **Sectiekoppen** (`sectieKop`): inkt en halfvet, gewoon gespeld ("Punten per onderdeel"
     in plaats van "PUNTEN PER ONDERDEEL").
   - **Kaarten** (`kaartHoek`, `kaartRand`): hoek 12px (3,2 mm), een haarlijn als rand. De
@@ -349,8 +350,8 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
   EP-Online-gegevens erin; de analysedatum (voorblad, samenvatting en "Analyse per …" onder de
   titel) is weggelaten. De bestandsnaam houdt de analysedatum.
 - **In het archief** staan de portefeuilles van een gecombineerde analyse uitklapbaar:
-  "13 portefeuilles ▾", standaard dicht (`PortefeuilleLijst.tsx`), in de rij en in het venster
-  Bekijken. Zoeken op de naam van een portefeuille blijft werken.
+  "13 portefeuilles ▾", standaard dicht (`PortefeuilleLijst.tsx`), in de rij (één kolom; de cel
+  is smal) en in het venster Bekijken (vanaf 9 namen twee kolommen). Zoeken op de naam van een portefeuille blijft werken.
 - **Vinkjes voor de PDF** (naast de PDF-knop, `PdfOpties.tsx`): "Verduurzamingsraming in de
   PDF" en "EFG-regels in de PDF", allebei standaard aan. De keuzes zijn een gemak per gebruiker
   en staan alleen in de eigen browser (`pdfKeuzes.ts`, localStorage); de PDF-knop in het archief

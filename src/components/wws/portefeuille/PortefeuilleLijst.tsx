@@ -4,15 +4,18 @@ import { cn } from "@/lib/utils";
 
 /**
  * De portefeuilles van een gecombineerde analyse: dicht alleen "13 portefeuilles", uitgeklapt
- * elke portefeuille op een eigen regel (vanaf 9 in twee kolommen op een breed scherm), net als
- * in de PDF. Standaard dicht, zodat een rij in het archief niet hoog wordt.
+ * elke portefeuille op een eigen regel (vanaf 9 in twee kolommen op een breed scherm, behalve
+ * met `kolommen={false}`, zoals in een smalle tabelcel), net als in de PDF. Standaard dicht,
+ * zodat een rij in het archief niet hoog wordt.
  */
 export function PortefeuilleLijst({
   namen,
   className,
+  kolommen = true,
 }: {
   namen: readonly string[];
   className?: string;
+  kolommen?: boolean;
 }) {
   return (
     <Collapsible className={cn("text-xs text-muted-foreground", className)}>
@@ -27,7 +30,7 @@ export function PortefeuilleLijst({
         <ul
           className={cn(
             "mt-1 list-disc space-y-0.5 pl-4 text-foreground",
-            namen.length > 8 && "sm:columns-2 sm:gap-6",
+            kolommen && namen.length > 8 && "sm:columns-2 sm:gap-6",
           )}
         >
           {namen.map((n, i) => (
