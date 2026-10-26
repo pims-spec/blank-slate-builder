@@ -51,4 +51,22 @@ describe("LabelGrafiek", () => {
     // geen legenda
     expect(screen.queryByText(/EFG-regels/)).not.toBeInTheDocument();
   });
+
+  it("zonder EFG-regels (vink uit): alleen 'geen label' papaya, geen EFG voor schermlezers", () => {
+    const u = analyseer(
+      [adres(1, "A"), adres(3, "E"), adres(5, null)],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    render(<LabelGrafiek uitkomst={u} metEfg={false} />);
+    const kleurVan = (naam: RegExp) =>
+      screen
+        .getAllByRole("button", { name: naam })
+        .map((g) => g.querySelector("path")?.getAttribute("class"))
+        .filter(Boolean);
+    expect(kleurVan(/^Label E:/)).toEqual(["fill-primary"]);
+    expect(kleurVan(/^Geen label:/)).toEqual(["fill-orange"]);
+    expect(screen.queryAllByRole("button", { name: /onder de EFG-regels/ })).toEqual([]);
+  });
 });

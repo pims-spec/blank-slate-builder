@@ -4,15 +4,18 @@ import { isWaarschuwingsKlasse, type AnalyseUitkomst } from "@/lib/wws/portefeui
 /**
  * Staafdiagram: aantal woningen per labelklasse (A++++ t/m G) en "geen label". Indigo; de labels
  * onder de EFG-regels (volgens de instellingen van de analyse) en "geen label" in papaya, de
- * waarschuwingskleur. Geen legenda (wens); schermlezers horen "onder de EFG-regels". Aantallen staan boven de staven; bij aanwijzen een
+ * waarschuwingskleur; met `metEfg={false}` alleen "geen label", zoals in de PDF. Geen legenda (wens); schermlezers horen "onder de EFG-regels". Aantallen staan boven de staven; bij aanwijzen een
  * tooltip met aantal en percentage; klikken toont de adressen. Op telefoonbreedte liggende staven (anders worden de
  * labels onleesbaar klein). Voor schermlezers staat er een tabel onder.
  */
 export function LabelGrafiek({
   uitkomst,
   onKies,
+  metEfg = true,
 }: {
   uitkomst: AnalyseUitkomst;
+  /** Zonder EFG-regels (vink uit, net als in de PDF) is alleen "geen label" papaya */
+  metEfg?: boolean;
   /** Klik op een staaf: de adressen van die klasse tonen */
   onKies?: (klasse: string) => void;
 }) {
@@ -20,6 +23,7 @@ export function LabelGrafiek({
   const totaal = data.reduce((s, d) => s + d.aantal, 0);
   const max = Math.max(1, ...data.map((d) => d.aantal));
   const [actief, setActief] = useState<number | null>(null);
+  const papaya = (k: string) => (metEfg ? isWaarschuwingsKlasse(k, uitkomst) : k === "geen label");
   const B = 640,
     H = 220,
     boven = 22,
@@ -42,9 +46,7 @@ export function LabelGrafiek({
                 onClick={() => onKies?.(d.klasse)}
                 aria-label={
                   (geen ? "Geen label" : "Label " + d.klasse) +
-                  (!geen && isWaarschuwingsKlasse(d.klasse, uitkomst)
-                    ? ", onder de EFG-regels"
-                    : "") +
+                  (!geen && papaya(d.klasse) ? ", onder de EFG-regels" : "") +
                   ": " +
                   d.aantal +
                   " woningen, adressen tonen"
@@ -57,8 +59,7 @@ export function LabelGrafiek({
                   {d.aantal > 0 && (
                     <span
                       className={
-                        "block h-full rounded-r " +
-                        (isWaarschuwingsKlasse(d.klasse, uitkomst) ? "bg-orange" : "bg-primary")
+                        "block h-full rounded-r " + (papaya(d.klasse) ? "bg-orange" : "bg-primary")
                       }
                       style={{ width: (d.aantal / max) * 100 + "%" }}
                     />
@@ -109,9 +110,7 @@ export function LabelGrafiek({
                 tabIndex={0}
                 aria-label={
                   (geen ? "Geen label" : "Label " + d.klasse) +
-                  (!geen && isWaarschuwingsKlasse(d.klasse, uitkomst)
-                    ? ", onder de EFG-regels"
-                    : "") +
+                  (!geen && papaya(d.klasse) ? ", onder de EFG-regels" : "") +
                   ": " +
                   d.aantal +
                   " woningen, adressen tonen"
@@ -123,9 +122,7 @@ export function LabelGrafiek({
                 {h > 0 && (
                   <path
                     d={`M${x},${H - onder} V${y + Math.min(4, h)} Q${x},${y} ${x + Math.min(4, h)},${y} H${x + staaf - Math.min(4, h)} Q${x + staaf},${y} ${x + staaf},${y + Math.min(4, h)} V${H - onder} Z`}
-                    className={
-                      isWaarschuwingsKlasse(d.klasse, uitkomst) ? "fill-orange" : "fill-primary"
-                    }
+                    className={papaya(d.klasse) ? "fill-orange" : "fill-primary"}
                     opacity={actief === null || actief === i ? 1 : 0.55}
                   />
                 )}

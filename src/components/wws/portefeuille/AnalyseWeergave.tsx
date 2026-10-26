@@ -10,6 +10,7 @@ import { nlDatum } from "@/lib/wws/portefeuille/datum";
 import { aantal, periode } from "@/lib/wws/portefeuille/tekst";
 import { AdresLijstDialoog, type Doorklik } from "./AdresLijstDialoog";
 import { LabelGrafiek } from "./LabelGrafiek";
+import { useInPdf } from "./pdfKeuzes";
 import { RamingKaart } from "./RamingKaart";
 
 const pctTekst = (p: number) => p.toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%";
@@ -44,6 +45,8 @@ export function AnalyseWeergave({
   const aantalControle =
     c.nietGevonden.length + c.meerdere.length + c.fout.length + c.nietOpgehaald.length;
   const [doorklik, setDoorklik] = useState<Doorklik | null>(null);
+  // de kleuren in de grafiek volgen de keuze "EFG-regels in de PDF"
+  const [metEfg] = useInPdf("efg");
   const kiesKlasse = (klasse: string) => {
     const k = u.perKlasse.find((x) => x.klasse === klasse);
     if (k)
@@ -64,7 +67,7 @@ export function AnalyseWeergave({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Kaart titel="Woningen per labelklasse">
-          <LabelGrafiek uitkomst={u} onKies={kiesKlasse} />
+          <LabelGrafiek uitkomst={u} onKies={kiesKlasse} metEfg={metEfg} />
           <p className="mt-1 text-xs text-muted-foreground">Klik op een staaf voor de adressen.</p>
         </Kaart>
         <Kaart titel="Risicoprofiel">

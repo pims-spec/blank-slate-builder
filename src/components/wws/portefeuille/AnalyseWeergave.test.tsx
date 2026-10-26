@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { normaliseerAdres } from "@/lib/wws/portefeuille/adres";
 import {
   PORTEFEUILLE_STANDAARD,
@@ -7,6 +7,7 @@ import {
   type AnalyseAdres,
 } from "@/lib/wws/portefeuille/analyse";
 import { AnalyseWeergave } from "./AnalyseWeergave";
+import { vergeetPdfKeuzes, zetInPdf } from "./pdfKeuzes";
 
 function adres(hn: number, klasse: string | null, reg: string | null): AnalyseAdres {
   const a = normaliseerAdres({ postcode: "1053ZD", huisnummer: hn });
@@ -62,5 +63,25 @@ describe("doorklikken in de analyse", () => {
     render(<AnalyseWeergave uitkomst={oud} />);
     fireEvent.click(screen.getByRole("button", { name: "Geen geregistreerd label" }));
     expect(screen.getByText(/lijst met adressen niet bewaard/)).toBeInTheDocument();
+  });
+});
+
+describe("kleuren in de grafiek", () => {
+  afterEach(() => {
+    localStorage.clear();
+    vergeetPdfKeuzes();
+  });
+
+  it("volgen de vink 'EFG-regels in de PDF'", () => {
+    const efg = analyseer([adres(1, "F", "2023-01-01")], "2026-10-16", 3, PORTEFEUILLE_STANDAARD);
+    render(<AnalyseWeergave uitkomst={efg} />);
+    const fKleur = () =>
+      screen
+        .getAllByRole("button", { name: /^Label F/ })
+        .map((g) => g.querySelector("path")?.getAttribute("class"))
+        .filter(Boolean);
+    expect(fKleur()).toEqual(["fill-orange"]);
+    act(() => zetInPdf("efg", false));
+    expect(fKleur()).toEqual(["fill-primary"]);
   });
 });
