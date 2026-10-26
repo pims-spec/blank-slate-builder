@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyseAdres } from "./analyse";
-import { combiTitel, combineerAdressen } from "./combi";
+import { combiTitel, combineerAdressen, geldigeAnalyseNaam } from "./combi";
 
 const a = (
   id: string,
@@ -52,6 +52,15 @@ describe("combineerAdressen", () => {
       [a("y", 2, null)],
     ]);
     expect(r.map((x) => x.id)).toEqual(["y"]);
+  });
+});
+
+describe("geldigeAnalyseNaam", () => {
+  it("witruimte samengevoegd en bijgeknipt; leeg of langer dan 200 tekens: null", () => {
+    expect(geldigeAnalyseNaam("  Apricot   totaal ")).toBe("Apricot totaal");
+    expect(geldigeAnalyseNaam("   ")).toBeNull();
+    expect(geldigeAnalyseNaam("x".repeat(200))).toHaveLength(200);
+    expect(geldigeAnalyseNaam("x".repeat(201))).toBeNull();
   });
 });
 

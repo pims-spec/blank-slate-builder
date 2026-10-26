@@ -7,6 +7,7 @@ import type { SyncPlan } from "../bloxs/syncPlan";
 import { adresSleutel, type PortefeuilleAdres } from "./adres";
 import type { AnalyseAdres, AnalyseUitkomst, LabelResultaat, LabelStatus } from "./analyse";
 import type { BagResultaat, BagStatus } from "./bag";
+import { geldigeAnalyseNaam, MAX_ANALYSE_NAAM } from "./combi";
 import type { OpgeslagenResultaat } from "./ophalen";
 
 type Db = SupabaseClient<Database>;
@@ -553,6 +554,24 @@ export function maakPortefeuilleStore(db: Db) {
         .single();
       if (error) throw error;
       return data.id;
+    },
+
+    /** De naam van een gecombineerde analyse aanpassen (maker of admin; migratie 0014) */
+    async hernoemCombiAnalyse(id: string, titel: string): Promise<string> {
+      const naam = geldigeAnalyseNaam(titel);
+      if (!naam) throw new Error(`Geef de analyse een naam van 1 tot ${MAX_ANALYSE_NAAM} tekens.`);
+      const { data, error } = await db
+        .from("portefeuille_combi_analyses")
+        .update({ titel: naam })
+        .eq("id", id)
+        .select("id");
+      // eigen melding: de ruwe databasefout hoort niet in beeld
+      if (error) throw new Error("De naam aanpassen lukte niet. Probeer het opnieuw.");
+      if (!data?.length)
+        throw new Error(
+          "Alleen wie de analyse heeft opgeslagen, of een beheerder, kan de naam aanpassen.",
+        );
+      return naam;
     },
 
     async verwijderCombiAnalyse(id: string): Promise<void> {

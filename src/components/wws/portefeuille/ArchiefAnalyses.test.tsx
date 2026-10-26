@@ -12,6 +12,7 @@ const store = vi.hoisted(() => ({
   verwijderAnalyse: vi.fn(),
   verwijderCombiAnalyse: vi.fn(),
   verwijderBewaardeAnalyse: vi.fn(),
+  hernoemCombiAnalyse: vi.fn(),
 }));
 vi.mock("../tellingStore", () => ({
   portefeuilleStore: store,
@@ -164,6 +165,47 @@ describe("Archief: portefeuille-analyses", () => {
     fireEvent.click(screen.getByRole("button", { name: "Verwijderen" }));
     fireEvent.click(await screen.findByRole("button", { name: "Verwijderen", hidden: false }));
     await waitFor(() => expect(store.verwijderBewaardeAnalyse).toHaveBeenCalledWith("v1"));
+  });
+
+  it("hernoemen: alleen bij gecombineerd, voor maker of admin; slaat de nieuwe naam op", async () => {
+    const { unmount } = toon(["member"], "u1");
+    await screen.findByRole("table", { name: "Portefeuille-analyses" });
+    // de gecombineerde is van u2: u1 mag niet hernoemen
+    expect(screen.queryByRole("button", { name: "Hernoemen" })).not.toBeInTheDocument();
+    unmount();
+    store.hernoemCombiAnalyse.mockResolvedValue("Oost + West 2026");
+    toon(["member"], "u2");
+    await screen.findByRole("table", { name: "Portefeuille-analyses" });
+    expect(screen.getAllByRole("button", { name: "Hernoemen" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Hernoemen" }));
+    const d = await screen.findByRole("dialog");
+    const veld = within(d).getByLabelText("Naam");
+    expect(veld).toHaveValue("Oost en West");
+    fireEvent.change(veld, { target: { value: "   " } });
+    fireEvent.click(within(d).getByRole("button", { name: "Opslaan" }));
+    expect(await within(d).findByText(/1 tot 200 tekens/)).toBeInTheDocument();
+    expect(store.hernoemCombiAnalyse).not.toHaveBeenCalled();
+    fireEvent.change(veld, { target: { value: " Oost + West 2026 " } });
+    fireEvent.click(within(d).getByRole("button", { name: "Opslaan" }));
+    await waitFor(() =>
+      expect(store.hernoemCombiAnalyse).toHaveBeenCalledWith("c1", "Oost + West 2026"),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(store.archiefAnalyses.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("hernoemen mislukt: melding in het venster, venster blijft open", async () => {
+    store.hernoemCombiAnalyse.mockRejectedValue(
+      new Error("De naam aanpassen lukte niet. Probeer het opnieuw."),
+    );
+    toon(["admin"], "u9");
+    await screen.findByRole("table", { name: "Portefeuille-analyses" });
+    fireEvent.click(screen.getByRole("button", { name: "Hernoemen" }));
+    const d = await screen.findByRole("dialog");
+    fireEvent.change(within(d).getByLabelText("Naam"), { target: { value: "Nieuw" } });
+    fireEvent.click(within(d).getByRole("button", { name: "Opslaan" }));
+    expect(await within(d).findByText(/lukte niet/)).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("kijkrol: geen delen", async () => {

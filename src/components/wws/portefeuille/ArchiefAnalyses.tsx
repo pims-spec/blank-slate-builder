@@ -29,6 +29,7 @@ import {
 } from "../tellingStore";
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
+import { HernoemAnalyseDialoog } from "./HernoemAnalyseDialoog";
 import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
 
 const opgeslagen = (iso: string) =>
@@ -61,6 +62,7 @@ export function ArchiefAnalyses({
   const [zoek, setZoek] = useState("");
   const [bekijk, setBekijk] = useState<{ a: ArchiefAnalyse; u: AnalyseUitkomst } | null>(null);
   const [weg, setWeg] = useState<ArchiefAnalyse | null>(null);
+  const [hernoem, setHernoem] = useState<ArchiefAnalyse | null>(null);
   const rijen = zoekAnalyses(data, zoek, klantNamen);
 
   const magVerwijderen = (a: ArchiefAnalyse) =>
@@ -91,6 +93,13 @@ export function ArchiefAnalyses({
     } catch {
       toast.error("Openen lukte niet.");
     }
+  }
+
+  /** Alleen een gecombineerde analyse heeft een eigen naam (migratie 0014) */
+  async function hernoemen(a: ArchiefAnalyse, naam: string) {
+    await portefeuilleStore.hernoemCombiAnalyse(a.id, naam);
+    toast.success("Naam aangepast.");
+    await qc.invalidateQueries({ queryKey: ["archief-analyses"] });
   }
 
   async function verwijder(a: ArchiefAnalyse) {
@@ -193,6 +202,11 @@ export function ArchiefAnalyses({
                           Delen
                         </Button>
                       )}
+                      {a.soort === "combi" && magVerwijderen(a) && (
+                        <Button size="sm" variant="outline" onClick={() => setHernoem(a)}>
+                          Hernoemen
+                        </Button>
+                      )}
                       {magVerwijderen(a) && (
                         <Button
                           size="sm"
@@ -249,6 +263,12 @@ export function ArchiefAnalyses({
         portefeuilles={delen ? deelbaar(delen) : []}
         userId={userId}
         isAdmin={rechten.isAdmin}
+      />
+
+      <HernoemAnalyseDialoog
+        naam={hernoem?.titel ?? null}
+        onOpenChange={(o) => !o && setHernoem(null)}
+        onOpslaan={(naam) => (hernoem ? hernoemen(hernoem, naam) : Promise.resolve())}
       />
 
       <AlertDialog open={!!weg} onOpenChange={(o) => !o && setWeg(null)}>

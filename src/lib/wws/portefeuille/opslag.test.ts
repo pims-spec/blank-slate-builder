@@ -117,4 +117,31 @@ describe("portefeuille-opslag", () => {
     await expect(maakPortefeuilleStore(db).verwijder("p1")).rejects.toThrow(/maker|beheerder/);
     await expect(maakPortefeuilleStore(db).verwijderAnalyse("x")).rejects.toThrow(/beheerder/);
   });
+
+  describe("gecombineerde analyse hernoemen", () => {
+    it("alleen de titel, opgeschoond, met het id", async () => {
+      const { db, log } = nepDb(() => ({ data: [{ id: "c1" }] }));
+      const naam = await maakPortefeuilleStore(db).hernoemCombiAnalyse("c1", "  Apricot  totaal ");
+      expect(naam).toBe("Apricot totaal");
+      expect(log[0]!.tabel).toBe("portefeuille_combi_analyses");
+      expect(stap(log[0], "update")).toEqual([{ titel: "Apricot totaal" }]);
+      expect(stap(log[0], "eq")).toEqual(["id", "c1"]);
+    });
+
+    it("lege naam: niets naar de database; geen rij (geen recht) of een fout: eigen melding", async () => {
+      const leeg = nepDb();
+      await expect(maakPortefeuilleStore(leeg.db).hernoemCombiAnalyse("c1", " ")).rejects.toThrow(
+        /1 tot 200 tekens/,
+      );
+      expect(leeg.log).toHaveLength(0);
+      const geenRecht = nepDb(() => ({ data: [] }));
+      await expect(
+        maakPortefeuilleStore(geenRecht.db).hernoemCombiAnalyse("c1", "Nieuw"),
+      ).rejects.toThrow(/Alleen wie de analyse heeft opgeslagen/);
+      const fout = nepDb(() => ({ error: { message: "permission denied for table x" } }));
+      await expect(
+        maakPortefeuilleStore(fout.db).hernoemCombiAnalyse("c1", "Nieuw"),
+      ).rejects.toThrow(/^De naam aanpassen lukte niet\. Probeer het opnieuw\.$/);
+    });
+  });
 });
