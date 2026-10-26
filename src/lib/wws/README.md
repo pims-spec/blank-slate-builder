@@ -344,7 +344,8 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
   "Portefeuilles in deze analyse (n)", elk op een eigen regel met een opsommingsteken; vanaf 9 in
   twee kolommen (`lijstInKolommen`). Een te lange naam eindigt op "…".
 - **Geen dubbele gegevens in de portefeuille-PDF** (wens): de eigenaar staat alleen op het
-  voorblad, de portefeuille(s) alleen op pagina 2. Van de datums staat alleen de peildatum van de
+  voorblad (met de bron), de portefeuille(s), het aantal adressen en de peildatum alleen op
+  pagina 2. Van de datums staat alleen de peildatum van de
   EP-Online-gegevens erin; de analysedatum (voorblad, samenvatting en "Analyse per …" onder de
   titel) is weggelaten. De bestandsnaam houdt de analysedatum.
 - **In het archief** staan de portefeuilles van een gecombineerde analyse uitklapbaar:

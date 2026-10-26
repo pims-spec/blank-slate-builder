@@ -76,7 +76,8 @@ describe("PDF portefeuille-analyse", () => {
     ];
     // geen dubbele gegevens: eigenaar alleen op het voorblad, geen analysedatum
     const paginas = (await pdfTekst(pdf.blob)).map((x) => x.join(" ").replace(/\s+/g, " "));
-    expect(paginas[0]).toContain("Eigenaar Amstel Wonen");
+    expect(paginas[0]).toContain("Eigenaar Amstel Wonen Bron EP-Online (RVO)");
+    expect(paginas[0]).not.toMatch(/Adressen|Peildatum/);
     expect(paginas[0]).not.toMatch(/Portefeuille TEST Oost/);
     const rest = paginas.slice(1).join(" ");
     expect(rest).not.toContain("Amstel Wonen");
@@ -207,8 +208,8 @@ describe("PDF portefeuille-analyse", () => {
     expect(voorblad).toContain("GoHome");
     expect(voorblad).toContain("LABEL-ANALYSE");
     expect(voorblad).not.toContain("Analysedatum");
-    expect(voorblad).toContain("Adressen 1");
-    expect(voorblad).toContain("Peildatum 14 oktober 2026");
+    // adressen en peildatum alleen op pagina 2
+    expect(voorblad).not.toMatch(/Adressen|Peildatum/);
     expect(voorblad).toContain("Bron EP-Online (RVO)");
     expect(voorblad).not.toContain("Eigenaar");
     expect(voorblad).not.toContain("Pagina");

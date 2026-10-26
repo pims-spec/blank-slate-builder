@@ -100,13 +100,10 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   pdfVoorblad(
     doc,
     "Label-analyse",
-    // geen dubbele gegevens: de eigenaar alleen hier, de portefeuille(s) alleen op pagina 2;
-    // van de datums alleen de peildatum van de EP-Online-gegevens
+    // geen dubbele gegevens: de eigenaar alleen hier; portefeuille(s), adressen en peildatum
+    // alleen op pagina 2 (de analysedatum staat er niet in)
     [
       ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
-      ["Adressen", String(u.aantalAdressen)],
-      // korte labels: de kolom met labels is 32 mm breed (wws-site.html)
-      ["Peildatum", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
       ["Bron", "EP-Online (RVO)"],
     ],
     {
