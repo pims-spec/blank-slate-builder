@@ -56,6 +56,7 @@ describe("fotoPrompt en fotoSchema", () => {
     expect(p).toContain("kies dan de lagere");
     for (const e of KEUKEN_ELEMENTEN) expect(p).toContain(`- ${e.sleutel} (`);
     expect(p).toContain("Beschrijf geen personen");
+    expect(p).toContain("telt als oven én als magnetron");
   });
 
   it("schema: één platte lijst; element en soort uit vaste lijsten", () => {

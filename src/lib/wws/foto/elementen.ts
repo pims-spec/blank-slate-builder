@@ -65,7 +65,7 @@ export const KEUKEN_ELEMENTEN: readonly FotoElement[] = [
     sleutel: "oven",
     naam: "Inbouw oven",
     kenmerken:
-      "Oven ingebouwd in een kast of onder de kookplaat (glazen deur met greep, bedieningspaneel). Elektrisch tenzij gasknoppen of een gasaansluiting duidelijk zichtbaar zijn. Een combimagnetron in een kast telt als oven of magnetron, niet allebei; kies wat het meest zichtbaar is.",
+      "Oven ingebouwd in een kast of onder de kookplaat (glazen deur met greep, bedieningspaneel). Elektrisch tenzij gasknoppen of een gasaansluiting duidelijk zichtbaar zijn. Een ingebouwde combimagnetron (oven met magnetronfunctie, vaak een compact apparaat van ca. 45 cm hoog) telt als oven én als magnetron: zet dan bij allebei dezelfde status.",
     soorten: ["elektrisch", "gas"],
     inbouw: true,
   },
@@ -73,7 +73,7 @@ export const KEUKEN_ELEMENTEN: readonly FotoElement[] = [
     sleutel: "magnetron",
     naam: "Inbouw magnetron",
     kenmerken:
-      "Magnetron ingebouwd in een kast of nis (alleen het front zichtbaar). Een magnetron die los op het aanrecht staat is vrijstaand.",
+      "Magnetron ingebouwd in een kast of nis (alleen het front zichtbaar), ook een ingebouwde combimagnetron (telt als oven én als magnetron). Een magnetron die los op het aanrecht staat is vrijstaand.",
     inbouw: true,
   },
   {
