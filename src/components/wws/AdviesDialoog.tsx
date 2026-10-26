@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { eur, fmt, num, type EnergieAdvies, type WwsInput } from "@/lib/wws";
 import {
   MAATREGELEN,
+  adviesOpties,
   berekenAdvies,
   selectieResultaat,
   standaardInstellingen,
@@ -25,7 +26,11 @@ import {
   type KostenKey,
   type MaatregelKey,
 } from "@/lib/wws/advies";
-import { vergelijkBeginlabel } from "@/lib/wws/advies/energieAdvies";
+import {
+  terugvalBijAfmelden,
+  terugvalTekst,
+  vergelijkBeginlabel,
+} from "@/lib/wws/advies/energieAdvies";
 import type { TellingMeta } from "@/lib/wws/opslag";
 import { maakAdviesPdf, maakRoutePdf } from "@/lib/wws/pdf/rapporten";
 import { useNormen } from "./NormenContext";
@@ -212,6 +217,12 @@ function AdviesInhoud({
   }, [input.energie, ea]);
 
   const A = useMemo(() => berekenAdvies(input, NORMEN, inst), [input, inst, NORMEN]);
+  // de opties van het adviesrapport: middenhuur optimaal, kleine en ruime marge
+  const opties = useMemo(() => adviesOpties(input, NORMEN, inst), [input, inst, NORMEN]);
+  const terugval = useMemo(
+    () => terugvalBijAfmelden(input, NORMEN, new Date().toISOString().slice(0, 10)),
+    [input, NORMEN],
+  );
   const S = useMemo(() => selectieResultaat(input, NORMEN, A, skip), [input, A, skip, NORMEN]);
 
   // Kosten als standaard voor iedereen (alleen admins; de database staat het ook alleen hen toe)
@@ -339,9 +350,16 @@ function AdviesInhoud({
         Altijd 1 labelsprong verwerken in het advies (ook in de downloadbare adviesrapporten)
       </label>
 
+      {terugval && (
+        <p role="note" className="rounded-lg bg-warn px-3 py-2 text-sm">
+          {terugvalTekst(terugval)}
+        </p>
+      )}
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="route">Route ({A.stappen.length})</TabsTrigger>
+          <TabsTrigger value="opties">Opties ({opties.length})</TabsTrigger>
           <TabsTrigger value="alle">Alle maatregelen ({A.los.length})</TabsTrigger>
           {ea && <TabsTrigger value="energie">Energieadvies</TabsTrigger>}
           <TabsTrigger value="inst">Instellingen en kosten</TabsTrigger>
@@ -411,6 +429,57 @@ function AdviesInhoud({
                 weergeven en een renovatie kan ook de WOZ-waarde verhogen; dat is niet meegerekend.
               </p>
             </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="opties" className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            De opties van het adviesrapport: middenhuur optimaal, een kleine en een ruime marge in
+            de vrije sector. Elke optie bouwt voort op de vorige.
+          </p>
+          {opties.length ? (
+            <ul className="grid gap-3 lg:grid-cols-3" aria-label="Adviesopties">
+              {opties.map((o) => (
+                <li
+                  key={o.soort}
+                  className="flex min-w-0 flex-col gap-2 rounded-lg border border-border p-3 text-sm"
+                >
+                  <div className="font-semibold">{o.titel}</div>
+                  <p>{o.doelzin}</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-lg font-semibold tabular-nums">
+                        {o.route.eind.totaal}
+                      </div>
+                      <div className="text-xs text-muted-foreground">punten</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold tabular-nums">
+                        {o.route.eind.maxHuur != null ? eur(o.route.eind.maxHuur) : "vrij"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">max. huur</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold tabular-nums">{eur(o.route.kosten)}</div>
+                      <div className="text-xs text-muted-foreground">kosten</div>
+                    </div>
+                  </div>
+                  <ul className="space-y-1 border-t border-border pt-2 text-xs">
+                    {o.route.stappen.map((st, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="min-w-0 flex-1">{st.o}</span>
+                        <span className="tabular-nums text-muted-foreground">+{fmt(st.g)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Melding ok>
+              De woning heeft al {A.start.totaal} punten en zit ruim in de vrije sector; er zijn
+              geen opties nodig.
+            </Melding>
           )}
         </TabsContent>
 
@@ -562,6 +631,35 @@ function AdviesInhoud({
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-t border-border align-top">
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        className={vinkCls}
+                        aria-label="Meenemen: Energielabel afmelden"
+                        checked={!conceptUit.afmelden}
+                        onChange={(e) =>
+                          setConceptUit((u) => ({ ...u, afmelden: !e.target.checked }))
+                        }
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      Energielabel afmelden (zonder werkzaamheden)
+                      <div className="text-xs text-muted-foreground">
+                        Alleen met een bevestigd label uit het energieadvies dat punten oplevert
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge h="eenvoudig" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <KostenVeld
+                        label="Kosten: Energielabel afmelden"
+                        waarde={conceptKosten.afmelden}
+                        zet={(v) => setConceptKosten((k) => ({ ...k, afmelden: v }))}
+                      />
+                    </td>
+                  </tr>
                   <tr className="border-t border-border">
                     <td />
                     <td className="px-3 py-2">Oppervlakte nieuw balkon (m²)</td>
@@ -630,7 +728,7 @@ function AdviesInhoud({
                   )
                 }
               >
-                {download.bezig === "advies" ? "PDF maken…" : "Huidig + 2 adviesopties als PDF"}
+                {download.bezig === "advies" ? "PDF maken…" : "Huidig + adviesopties als PDF"}
               </Button>
             </>
           )}

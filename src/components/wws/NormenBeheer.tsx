@@ -14,7 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Normen } from "@/lib/wws";
-import { AI_LIMIET_STANDAARD, mergeNormen } from "@/lib/wws/normen";
+import {
+  ADVIES_DOELEN_STANDAARD,
+  AFMELD_KOSTEN_STANDAARD,
+  AI_LIMIET_STANDAARD,
+  mergeNormen,
+} from "@/lib/wws/normen";
 import { MAATREGELEN, NIVEAU_STANDAARD, NIVEAUS, type Haalbaarheid } from "@/lib/wws/advies";
 import {
   ENERGIE_RIJEN,
@@ -47,6 +52,13 @@ const KOSTEN_VELDEN: NormVeld[] = [
     pad: "kosten." + m.kost,
   })),
   { label: "Oppervlakte nieuw balkon (m²)", pad: "kosten.balkonM2" },
+  { label: "Energielabel afmelden (zonder werkzaamheden)", pad: "kosten.afmelden" },
+];
+
+/** Doelen van de adviesopties, in punten boven de grens van de middenhuur */
+const ADVIES_DOEL_VELDEN: NormVeld[] = [
+  { label: "Kleine marge (punten boven de middenhuur)", pad: "adviesDoelen.kleineMarge" },
+  { label: "Ruime marge (punten boven de middenhuur)", pad: "adviesDoelen.ruimeMarge" },
 ];
 
 /**
@@ -68,10 +80,12 @@ const AI_VELDEN: NormVeld[] = [
   { label: "AI-afbeeldingen (Gemini) per dag", pad: "aiLimiet.afbeelding" },
 ];
 
-/** Met de standaard-AI-limiet als die nog niet is ingesteld */
+/** Met de standaard-AI-limiet, afmeldkosten en adviesdoelen als die nog niet zijn ingesteld */
 const metAiLimiet = (n: Normen): Normen => ({
   ...n,
   aiLimiet: { ...AI_LIMIET_STANDAARD, ...n.aiLimiet },
+  kosten: { afmelden: AFMELD_KOSTEN_STANDAARD, ...n.kosten },
+  adviesDoelen: { ...ADVIES_DOELEN_STANDAARD, ...n.adviesDoelen },
 });
 
 /** Alle getalvelden van het formulier, met hun huidige waarde als tekst */
@@ -83,6 +97,7 @@ function beginwaarden(n: Normen): Record<string, string> {
     ...n.voorzSan.map((_v, i) => `voorzSan.${i}.p`),
     ...Object.keys(n.woz).flatMap((j) => [0, 1, 2].map((x) => `woz.${j}.${x}`)),
     ...KOSTEN_VELDEN.map((v) => v.pad),
+    ...ADVIES_DOEL_VELDEN.map((v) => v.pad),
     ...AI_VELDEN.map((v) => v.pad),
   ];
   const m = metAiLimiet(n);
@@ -141,6 +156,13 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
     // portefeuille-analyse: gecontroleerd aangevuld (ongeldige waarden → standaard)
     n.portefeuille = portefeuilleNormen(pf);
     n.adviesNiveaus = afwijkendeNiveaus(niveaus);
+    // adviesdoelen: hele punten 1–60, anders de standaard
+    const marge = (x: number | undefined, d: number) =>
+      Number.isFinite(x) && x! >= 1 ? Math.min(60, Math.round(x!)) : d;
+    n.adviesDoelen = {
+      kleineMarge: marge(n.adviesDoelen?.kleineMarge, ADVIES_DOELEN_STANDAARD.kleineMarge),
+      ruimeMarge: marge(n.adviesDoelen?.ruimeMarge, ADVIES_DOELEN_STANDAARD.ruimeMarge),
+    };
     // huurprijsindicator: ongeldige regels en factoren vallen terug op de standaard
     n.huurindicator = huurNormen(huur);
     return n;
@@ -347,6 +369,12 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
             adviesvenster.
           </p>
           <div className="grid gap-3 sm:grid-cols-3">{KOSTEN_VELDEN.map(veld)}</div>
+          <h3 className="mb-1 mt-5 text-sm font-medium">Doelen van de adviesopties</h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Het adviesrapport geeft de opties middenhuur optimaal ({basis.grensMidden} punten), een
+            kleine en een ruime marge in de vrije sector. Standaard 188 en 195 punten.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">{ADVIES_DOEL_VELDEN.map(veld)}</div>
         </Sectie>
 
         <Sectie titel="Eenvoud van maatregelen (verbeteradvies)">

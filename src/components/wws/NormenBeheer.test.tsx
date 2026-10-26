@@ -170,3 +170,33 @@ describe("Normen: portefeuille-analyse", () => {
     });
   });
 });
+
+describe("Normen: verbeteradvies", () => {
+  it("afmeldkosten en doelen van de adviesopties: standaard 350, 2 en 9; opgeslagen", async () => {
+    instellingenStore.slaNormenOp.mockReset();
+    instellingenStore.slaNormenOp.mockResolvedValue(undefined);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NormenBeheer normen={structuredClone(N)} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByLabelText("Energielabel afmelden (zonder werkzaamheden)")).toHaveValue(
+      "350",
+    );
+    expect(screen.getByLabelText("Kleine marge (punten boven de middenhuur)")).toHaveValue("2");
+    expect(screen.getByLabelText("Ruime marge (punten boven de middenhuur)")).toHaveValue("9");
+    fireEvent.change(screen.getByLabelText("Kleine marge (punten boven de middenhuur)"), {
+      target: { value: "3" },
+    });
+    fireEvent.change(screen.getByLabelText("Ruime marge (punten boven de middenhuur)"), {
+      target: { value: "0" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Normen opslaan" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Opslaan" }));
+    await waitFor(() => expect(instellingenStore.slaNormenOp).toHaveBeenCalledTimes(1));
+    const opgeslagen = instellingenStore.slaNormenOp.mock.calls[0]![0] as Normen;
+    // ongeldig (0) valt terug op de standaard
+    expect(opgeslagen.adviesDoelen).toEqual({ kleineMarge: 3, ruimeMarge: 9 });
+    expect(opgeslagen.kosten["afmelden"]).toBe(350);
+  });
+});

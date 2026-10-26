@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_NORMEN, calc, legeInput, type Normen, type WwsInput } from "@/lib/wws";
-import { berekenAdvies, standaardInstellingen } from "@/lib/wws/advies";
+import { adviesOpties, berekenAdvies, standaardInstellingen } from "@/lib/wws/advies";
 import AdviesDialoog from "./AdviesDialoog";
 
 const instellingenStore = vi.hoisted(() => ({ slaNormenOp: vi.fn() }));
@@ -96,5 +96,40 @@ describe("AdviesDialoog", () => {
     expect(n.kosten.aanbel).toBe(1250);
     expect(n.kosten.labelStap).toBe(N.kosten["labelStap"]);
     expect(n.grensMidden).toBe(N.grensMidden);
+  });
+
+  it("tabblad Opties: de opties met doelzin, punten en kosten", () => {
+    const x = woning();
+    const opties = adviesOpties(x, N, standaardInstellingen(N));
+    metQuery(<AdviesDialoog open onOpenChange={() => {}} input={x} onToepassen={vi.fn()} />);
+    fireEvent.mouseDown(screen.getByRole("tab", { name: `Opties (${opties.length})` }));
+    const lijst = screen.getByRole("list", { name: "Adviesopties" });
+    const kaarten = within(lijst)
+      .getAllByRole("listitem")
+      .filter((li) => li.parentElement === lijst);
+    expect(kaarten).toHaveLength(opties.length);
+    opties.forEach((o, i) => {
+      expect(within(kaarten[i]!).getByText(o.titel)).toBeInTheDocument();
+      expect(within(kaarten[i]!).getByText(o.doelzin)).toBeInTheDocument();
+      expect(within(kaarten[i]!).getByText(String(o.route.eind.totaal))).toBeInTheDocument();
+    });
+  });
+
+  it("waarschuwing als afmelden volgens het energieadvies punten kost", () => {
+    const x = woning();
+    x.energieAdvies = { huidig: { label: "G" }, maatregelen: [] };
+    metQuery(<AdviesDialoog open onOpenChange={() => {}} input={x} onToepassen={vi.fn()} />);
+    expect(
+      screen.getByText(
+        /^Let op: bij afmelden van het energielabel volgens het energieadvies \(label G in plaats van label E\)/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("kosten van afmelden staan bij de instellingen", () => {
+    metQuery(<AdviesDialoog open onOpenChange={() => {}} input={woning()} onToepassen={vi.fn()} />);
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Instellingen en kosten" }));
+    expect(screen.getByLabelText("Kosten: Energielabel afmelden")).toHaveValue("350");
+    expect(screen.getByRole("checkbox", { name: "Meenemen: Energielabel afmelden" })).toBeChecked();
   });
 });
