@@ -32,6 +32,10 @@ export const PDF_PUR: RGB = [91, 65, 255],
   PDF_SOFT: RGB = [237, 240, 255],
   PDF_ALT: RGB = [247, 247, 250],
   PDF_LINE: RGB = [229, 229, 234];
+/** Grijs canvas van GoHome UI (#F2F2F7): de achtergrond van het voorblad */
+export const PDF_CANVAS: RGB = [242, 242, 247];
+/** Hoek van een kaart: 12px in de gids, in mm op A4 */
+export const PDF_KAART_HOEK = 3.2;
 export const PDF_WARN_BG: RGB = [255, 245, 229],
   PDF_WARN_INK: RGB = [194, 65, 12];
 export const PDF_SEGC: Record<Segment, RGB> = {
@@ -50,11 +54,13 @@ let bronModus = false;
 export const isBronModus = () => bronModus;
 let interActief = false;
 export const pdfTxt = (s: unknown) => {
-  const t = String(s ?? "")
-    .replace(/²/g, "2")
-    .replace(/–/g, "-");
-  return !bronModus && !interActief ? t.replace(/≤/g, "<=") : t;
+  const t = String(s ?? "");
+  // Inter kent ², – en ≤; alleen bron-getrouw of zonder Inter worden ze 2, - en <=
+  if (bronModus) return t.replace(/²/g, "2").replace(/–/g, "-");
+  return interActief ? t : t.replace(/²/g, "2").replace(/–/g, "-").replace(/≤/g, "<=");
 };
+/** "m²" in de huisstijl (Inter), anders "m2" zoals de bron */
+export const pdfM2 = () => pdfTxt("m²");
 
 /**
  * Draait het maken van een PDF bron-getrouw (Helvetica, zonder de bewuste afwijkingen) of in de
@@ -77,8 +83,69 @@ export const segName = (s: Segment) => SEGMENT_NAMEN[s];
 
 /** Een tabel tekenen; geeft de onderkant terug (doc.lastAutoTable.finalY in de bron) */
 export function tabel(lib: PdfLib, doc: Doc, opts: UserOptions): number {
-  lib.autoTable(doc, opts);
+  lib.autoTable(doc, bronModus ? opts : huisstijlTabel(opts));
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+}
+
+const zelfdeKleur = (a: unknown, b: RGB) =>
+  Array.isArray(a) && a.length === 3 && a.every((x, i) => x === b[i]);
+
+/**
+ * Tabellen zoals in de app (GoHome UI): een stille kopregel in kleine hoofdletters zonder vlak,
+ * alleen een haarlijn onder elke rij, geen raster en geen zebra. De bron-kleuren worden per cel
+ * omgezet, zodat de bestaande tabellen niet elk apart aangepast hoeven te worden:
+ * - indigo kopvlak → geen vlak, stille tekst;
+ * - Frost (subkop en totaal) → licht grijs vlak; een totaal in indigo blijft indigo;
+ * - rasterlijnen → alleen een haarlijn aan de onderkant.
+ * Tabellen met theme "plain" (sleutel–waarde) houden hun vorm.
+ */
+export function huisstijlTabel(opts: UserOptions): UserOptions {
+  if (opts.theme === "plain") return opts;
+  const eigen = opts.didParseCell;
+  return {
+    ...opts,
+    theme: "plain",
+    alternateRowStyles: {},
+    didParseCell: (d) => {
+      eigen?.(d);
+      const s = d.cell.styles;
+      // kop en voet volgen de uitlijning van hun kolom (zonder vlak valt een scheve kop op)
+      const kolom = opts.columnStyles?.[d.column.index];
+      if (d.section !== "body" && kolom?.halign) s.halign = kolom.halign;
+      if (d.section === "head") {
+        s.fillColor = false;
+        s.textColor = PDF_MUT;
+        s.fontStyle = "bold";
+        s.fontSize = Math.min(Number(s.fontSize) || 9, 7.5);
+        d.cell.text = d.cell.text.map((t) => t.toUpperCase());
+        s.lineColor = PDF_LINE;
+        s.lineWidth = { bottom: 0.3 };
+        return;
+      }
+      if (zelfdeKleur(s.fillColor, PDF_SOFT) || zelfdeKleur(s.fillColor, PDF_ALT))
+        s.fillColor = PDF_ALT;
+      else if (zelfdeKleur(s.fillColor, PDF_PUR)) {
+        s.fillColor = PDF_ALT;
+        s.textColor = PDF_INK;
+      } else s.fillColor = false;
+      s.lineColor = PDF_LINE;
+      s.lineWidth = { bottom: 0.2 };
+    },
+  };
+}
+
+/** Sectiekop zoals in de app: inkt en halfvet, gewoon gespeld; bron-getrouw indigo hoofdletters */
+export function sectieKop(doc: Doc, t: string, x: number, y: number) {
+  doc.setFont("helvetica", "bold");
+  if (bronModus) {
+    doc.setFontSize(11);
+    doc.setTextColor(...PDF_PUR);
+    doc.text(t.toUpperCase(), x, y);
+  } else {
+    doc.setFontSize(12);
+    doc.setTextColor(...PDF_INK);
+    doc.text(t, x, y);
+  }
 }
 
 /** Nieuwe A4 zoals in de bron; in de huisstijl met Inter in plaats van Helvetica */

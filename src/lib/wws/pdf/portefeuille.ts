@@ -67,16 +67,24 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     return regels.length > 1 ? regels[0]!.replace(/\s*\S{0,3}$/, "") + "…" : t;
   };
   const combi = !!x.delen && x.delen.length > 1;
-  pdfVoorblad(doc, "Label-analyse", [
-    [combi ? "Analyse" : "Portefeuille", past(x.portefeuille)],
-    ...(combi ? ([["Portefeuilles", String(x.delen!.length)]] as [string, string][]) : []),
-    ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
-    ["Analysedatum", langeDatum(u.datum)],
-    ["Adressen", String(u.aantalAdressen)],
-    // korte labels: de kolom met labels is 32 mm breed (wws-site.html)
-    ["Peildatum", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
-    ["Bron", "EP-Online (RVO)"],
-  ]);
+  pdfVoorblad(
+    doc,
+    "Label-analyse",
+    [
+      [combi ? "Analyse" : "Portefeuille", past(x.portefeuille)],
+      ...(combi ? ([["Portefeuilles", String(x.delen!.length)]] as [string, string][]) : []),
+      ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
+      ["Analysedatum", langeDatum(u.datum)],
+      ["Adressen", String(u.aantalAdressen)],
+      // korte labels: de kolom met labels is 32 mm breed (wws-site.html)
+      ["Peildatum", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
+      ["Bron", "EP-Online (RVO)"],
+    ],
+    {
+      titel: combi ? x.delen!.length + " portefeuilles" : x.portefeuille,
+      sub: x.eigenaar ?? "",
+    },
+  );
   doc.addPage();
 
   let y = pdfBanner(

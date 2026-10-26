@@ -58,15 +58,20 @@ function huurPdf(lib: PdfLib, x: HuurPdfInvoer) {
   const W = PDF_W,
     M = PDF_M;
 
-  pdfVoorblad(doc, "Huurprijsindicatie", [
-    ["Adres", adres || "–"],
-    ["Plaats", `${pc} ${w.plaats}`.trim()],
-    ...(x.eigenaar ? ([["Eigenaar", x.eigenaar]] as [string, string][]) : []),
-    ["Datum", datum(d.datum)],
-    ["Opgesteld door", d.gemaaktDoor || "–"],
-    ["Markthuur", `${euro(m.laag)} – ${euro(m.hoog)}`],
-    ["Advies", euro(d.advies.bedrag)],
-  ]);
+  pdfVoorblad(
+    doc,
+    "Huurprijsindicatie",
+    [
+      ["Adres", adres || "–"],
+      ["Plaats", `${pc} ${w.plaats}`.trim()],
+      ...(x.eigenaar ? ([["Eigenaar", x.eigenaar]] as [string, string][]) : []),
+      ["Datum", datum(d.datum)],
+      ["Opgesteld door", d.gemaaktDoor || "–"],
+      ["Markthuur", `${euro(m.laag)} – ${euro(m.hoog)}`],
+      ["Advies", euro(d.advies.bedrag)],
+    ],
+    { titel: adres || "Huurprijsindicatie", sub: `${pc} ${w.plaats}`.trim() },
+  );
   doc.addPage();
   let y = pdfBanner(
     doc,

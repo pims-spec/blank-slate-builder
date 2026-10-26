@@ -116,7 +116,7 @@ describe("PDF portefeuille-analyse", () => {
       "Verduurzamingsraming",
       "Grove indicatie",
       "Naar minimaal label D: € 12.000 – € 18.000. Naar label C: € 18.000 – € 27.000.",
-      "Adres Label Bouwjaar m² Naar D Naar C",
+      "ADRES LABEL BOUWJAAR M² NAAR D NAAR C",
       "1053 ZD 1 F 1980 60 2 stappen, € 12.000 – € 18.000 3 stappen, € 18.000 – € 27.000",
     ];
     let vanaf = 0;
@@ -147,7 +147,7 @@ describe("PDF portefeuille-analyse", () => {
       "EFG-regels",
       "Het kabinet wil dat huurwoningen",
       "Te controleren (4)",
-      "Adres Reden",
+      "ADRES REDEN",
       "1053 ZD 4 Niet gevonden bij EP-Online",
       "1053 ZD 5 Niet eenduidig (meerdere labels)",
       "1053 ZD 6 Ophalen mislukt",
@@ -174,7 +174,7 @@ describe("PDF portefeuille-analyse", () => {
     const paginas = await pdfTekst(pdf.blob);
     const voorblad = paginas[0]!.join(" ").replace(/\s+/g, " ");
     expect(voorblad).toContain("GoHome");
-    expect(voorblad).toContain("Label-analyse");
+    expect(voorblad).toContain("LABEL-ANALYSE");
     expect(voorblad).toContain("Analysedatum 15 oktober 2026");
     expect(voorblad).toContain("Adressen 1");
     expect(voorblad).toContain("Peildatum 14 oktober 2026");

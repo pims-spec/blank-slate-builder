@@ -39,7 +39,8 @@ describe("PDF huurprijsindicatie", () => {
     expect(pdf.bestandsnaam).toMatch(/^Huurprijsindicatie_.*Teststraat.*_2026-10-20\.pdf$/);
     const paginas = await pdfTekst(pdf.blob);
     const voorblad = paginas[0]!.join(" ");
-    expect(voorblad).toContain("Huurprijsindicatie");
+    expect(voorblad).toContain("HUURPRIJSINDICATIE");
+    expect(voorblad).toContain("Teststraat 12");
     expect(voorblad).toContain("Testeigenaar");
     const t = paginas.slice(1).flat().join(" ").replace(/\s+/g, " ");
     expect(t).toContain("Indicatie markthuur");

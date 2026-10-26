@@ -13,7 +13,9 @@ import type { TellingMeta } from "../opslag/types";
 import type { Fac, Maat, OverigeRuimte, Vertrek, WwsInput, WwsResultaat } from "../types";
 import {
   PDF_ALT,
+  PDF_CANVAS,
   PDF_INK,
+  PDF_KAART_HOEK,
   PDF_LINE,
   PDF_M,
   PDF_MUT,
@@ -25,7 +27,9 @@ import {
   PDF_WARN_INK,
   facSummary,
   isBronModus,
+  pdfM2,
   pdfTxt,
+  sectieKop,
   segName,
   tabel,
   wozCapNoteText,
@@ -48,8 +52,9 @@ export function pdfGaugeCard(doc: Doc, y: number, R: WwsResultaat, normen: Norme
     SOFT = PDF_SOFT,
     SEGC = PDF_SEGC;
   const cardH = 30;
+  const hoek = isBronModus() ? 5 : PDF_KAART_HOEK;
   doc.setFillColor(...SOFT);
-  doc.roundedRect(M, y, W - 2 * M, cardH, 5, 5, "F");
+  doc.roundedRect(M, y, W - 2 * M, cardH, hoek, hoek, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...PUR);
@@ -185,10 +190,7 @@ export function pdfTellingBody(
       doc.addPage();
       y = 20;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PUR);
-    doc.text(t.toUpperCase(), M, y);
+    sectieKop(doc, t, M, y);
     y += 4;
   };
   // Woning
@@ -275,7 +277,7 @@ export function pdfTellingBody(
     y =
       tabel(lib, doc, {
         startY: y,
-        head: [metM2 ? [titel, "m2", "Punten"] : [titel, "Punten"]],
+        head: [metM2 ? [titel, pdfM2(), "Punten"] : [titel, "Punten"]],
         body,
         styles: {
           fontSize: 9,
@@ -366,7 +368,7 @@ export function pdfTellingBody(
     bin.push([
       rn("overig", r) +
         (m ? "  (" + m + ")" : "") +
-        (num(r.m2) > 0 && num(r.m2) < normen.minOverig ? ", kleiner dan 2 m2" : ""),
+        (num(r.m2) > 0 && num(r.m2) < normen.minOverig ? ", kleiner dan 2 " + pdfM2() : ""),
       m2s(r.m2),
       "",
       "item",
@@ -576,14 +578,104 @@ export function pdfCoverPage(doc: Doc, meta: TellingMeta, titel?: string) {
       ["Postcode", meta.postcode || "-"],
     ] as [string, string][]
   ).filter((r) => r[0] !== "Toevoeging" || r[1]);
-  pdfVoorblad(doc, titel || "Rapportage puntentelling & verbeteradvies", rows);
+  const pc = String(meta.postcode || "").replace(/^(\d{4})\s*([A-Za-z]{2})$/, "$1 $2");
+  pdfVoorblad(doc, titel || "Rapportage puntentelling & verbeteradvies", rows, {
+    titel: [meta.adres, meta.huisnummer].filter(Boolean).join(" ") || meta.naam || "",
+    sub: [pc, meta.plaats].filter(Boolean).join(" "),
+  });
+}
+
+/** De grote regel op het voorblad: waar het rapport over gaat (adres, portefeuille) */
+export interface VoorbladKop {
+  titel: string;
+  sub?: string;
 }
 
 /**
- * De voorpagina zelf (achtergrond, paarse vorm, wordmark, titel en een tabel met rijen), zoals
- * pdfCoverPage() in wws-site.html; ook gebruikt voor het voorblad van de label-analyse.
+ * De voorpagina. In de huisstijl (GoHome UI): grijs canvas, het woordmerk "GoHome advice", het
+ * soort rapport als bovenkopje in indigo, een grote kop (adres of portefeuille) en de gegevens in
+ * een witte kaart. Bron-getrouw: de paarse vorm met de grote wordmark, zoals pdfCoverPage() in
+ * wws-site.html. Ook gebruikt voor de label-analyse en de huurprijsindicatie.
  */
-export function pdfVoorblad(doc: Doc, titel: string, rows: readonly [string, string][]) {
+export function pdfVoorblad(
+  doc: Doc,
+  titel: string,
+  rows: readonly [string, string][],
+  kop?: VoorbladKop,
+) {
+  if (isBronModus()) return bronVoorblad(doc, titel, rows);
+  const W = PDF_W,
+    H = 297,
+    X = 20,
+    B = W - 2 * X;
+  doc.setFillColor(...PDF_CANVAS);
+  doc.rect(0, 0, W, H, "F");
+  pdfWoordmerk(doc, X, 28, 20);
+
+  let y = 112;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...PDF_PUR);
+  doc.text(pdfTxt(titel).toUpperCase(), X, y);
+  y += 13;
+  const kopTekst = kop?.titel?.trim() || titel;
+  doc.setFontSize(30);
+  doc.setTextColor(...PDF_INK);
+  // hoogstens twee regels; een langere kop (portefeuillenaam) eindigt op "…"
+  const alle = doc.splitTextToSize(pdfTxt(kopTekst), B) as string[];
+  const kopRegels = alle.slice(0, 2);
+  if (alle.length > 2) kopRegels[1] = kopRegels[1]!.replace(/\s*\S{0,3}$/, "") + "…";
+  kopRegels.forEach((r) => {
+    doc.text(r, X, y);
+    y += 12;
+  });
+  if (kop?.sub?.trim()) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(14);
+    doc.setTextColor(...PDF_MUT);
+    doc.text(pdfTxt(kop.sub), X, y - 3);
+    y += 6;
+  }
+
+  // gegevens in een witte kaart, met een haarlijn tussen de rijen
+  const RH = 9,
+    LW = 44;
+  const kaartY = Math.max(y + 8, 168);
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...PDF_LINE);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(X, kaartY, B, rows.length * RH + 4, PDF_KAART_HOEK, PDF_KAART_HOEK, "FD");
+  doc.setFontSize(9.5);
+  rows.forEach((r, i) => {
+    const ry = kaartY + 2 + i * RH;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...PDF_MUT);
+    doc.text(pdfTxt(r[0]), X + 6, ry + 6);
+    doc.setTextColor(...PDF_INK);
+    doc.text(pdfTxt(String(r[1])), X + 6 + LW, ry + 6);
+    if (i < rows.length - 1) doc.line(X + 6, ry + RH, X + B - 6, ry + RH);
+  });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PDF_MUT);
+  doc.text("gohome.io", X, 280);
+}
+
+/** Het woordmerk zoals in de app: "GoHome" vet in inkt, "advice" gewoon en stil */
+export function pdfWoordmerk(doc: Doc, x: number, y: number, grootte: number) {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(grootte);
+  doc.setTextColor(...PDF_INK);
+  doc.text("GoHome", x, y);
+  const w = doc.getTextWidth("GoHome");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(grootte * 0.7);
+  doc.setTextColor(...PDF_MUT);
+  doc.text("advice", x + w + grootte * 0.08, y);
+}
+
+function bronVoorblad(doc: Doc, titel: string, rows: readonly [string, string][]) {
   const W = PDF_W,
     H = 297,
     INK = PDF_INK,
@@ -644,16 +736,28 @@ export function pdfBanner(
     SOFT = PDF_SOFT,
     INK = PDF_INK;
   const BANDPUR: RGB = [127, 125, 255];
-  doc.setFillColor(...SOFT);
-  doc.rect(0, 0, W, 22, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(...BANDPUR);
-  doc.text(pdfTxt(badge), M, 14);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(...BANDPUR);
-  doc.text("GoHome", W - 8, 14, { align: "right" });
+  if (isBronModus()) {
+    doc.setFillColor(...SOFT);
+    doc.rect(0, 0, W, 22, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...BANDPUR);
+    doc.text(pdfTxt(badge), M, 14);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...BANDPUR);
+    doc.text("GoHome", W - 8, 14, { align: "right" });
+  } else {
+    // huisstijl: geen gekleurde balk; woordmerk links, het soort rapport rechts, haarlijn eronder
+    pdfWoordmerk(doc, M, 14, 12);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUT);
+    doc.text(pdfTxt(badge), W - M, 14, { align: "right" });
+    doc.setDrawColor(...PDF_LINE);
+    doc.setLineWidth(0.2);
+    doc.line(M, 19, W - M, 19);
+  }
   // Titel: laat op 22pt passen; anders stapsgewijs kleiner, en anders twee regels
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...INK);
