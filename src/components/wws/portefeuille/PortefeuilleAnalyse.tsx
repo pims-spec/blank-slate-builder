@@ -47,8 +47,8 @@ import { useDownload } from "../useDownload";
 import EigenaarKeuze from "../EigenaarKeuze";
 import { inRaming } from "@/lib/wws/portefeuille/verduurzaming";
 import { AnalyseWeergave } from "./AnalyseWeergave";
-import { RamingVinkje } from "./RamingVinkje";
-import { ramingInPdf } from "./ramingKeuze";
+import { PdfOpties } from "./PdfOpties";
+import { pdfOpties } from "./pdfKeuzes";
 import { BloxsDialoog } from "./BloxsDialoog";
 import { CombiAnalyse } from "./CombiAnalyse";
 import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
@@ -390,7 +390,7 @@ export default function PortefeuilleAnalyse({
         portefeuille: p!.naam,
         eigenaar: eigenaarNaam,
         uitkomst: u,
-        metRaming: ramingInPdf(),
+        ...pdfOpties(),
       }),
     );
 
@@ -768,7 +768,7 @@ export default function PortefeuilleAnalyse({
                 >
                   {download.bezig === "pdf" ? "PDF maken…" : "PDF"}
                 </Button>
-                <RamingVinkje />
+                <PdfOpties />
               </section>
 
               {bekeken && (

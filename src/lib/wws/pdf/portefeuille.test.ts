@@ -376,4 +376,47 @@ describe("PDF portefeuille-analyse", () => {
     expect(t).toContain("Te controleren (1)");
     expect(t).toContain("1053 ZD 3 Adres niet gevonden (EP-Online en BAG)");
   });
+
+  it("EFG-regels uitgevinkt: samenvattingsrij, sectie en lijst weg; in de grafiek alleen 'geen' papaya", async () => {
+    const u = analyseer(
+      [
+        adres(1, "A", "2023-03-01"),
+        adres(2, "F", "2019-05-05"),
+        adres(3, null, null, "niet_gevonden"),
+      ],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    const kleuren: string[] = [];
+    class Spion extends jsPDF {
+      constructor(opties?: jsPDFOptions) {
+        super(opties);
+        const orig = this.setFillColor.bind(this);
+        this.setFillColor = ((...k: Parameters<jsPDF["setFillColor"]>) => {
+          kleuren.push(k.slice(0, 3).join(","));
+          return orig(...k);
+        }) as jsPDF["setFillColor"];
+      }
+    }
+    const pdf = maakPortefeuillePdf(
+      { ...LIB, jsPDF: Spion as unknown as typeof jsPDF },
+      { portefeuille: "TEST", uitkomst: u, metEfg: false, metRaming: false },
+    );
+    const t = (await pdfTekst(pdf.blob)).flat().join(" ");
+    expect(t).not.toMatch(/EFG/);
+    expect(t).toContain("Risicoprofiel");
+    expect(t).toContain("Woningen zonder geregistreerd label");
+    // alleen de staaf "geen" papaya; F nu indigo
+    expect(kleuren.filter((k) => k === "255,124,58")).toHaveLength(1);
+    expect(kleuren.filter((k) => k === "91,65,255")).toHaveLength(2);
+    // met EFG-regels (standaard) staan ze er wel
+    const met = (
+      await pdfTekst(maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u }).blob)
+    )
+      .flat()
+      .join(" ");
+    expect(met).toContain("Onder de EFG-regels");
+    expect(met).toContain("Woningen onder de EFG-regels (1)");
+  });
 });

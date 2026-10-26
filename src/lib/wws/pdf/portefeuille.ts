@@ -44,6 +44,8 @@ export interface PortefeuillePdfInvoer {
   uitkomst: AnalyseUitkomst;
   /** De verduurzamingsraming opnemen (standaard ja) */
   metRaming?: boolean;
+  /** De EFG-regels opnemen: samenvatting, toelichting, lijst en kleur in de grafiek (standaard ja) */
+  metEfg?: boolean;
 }
 
 const pct = (p: number) => p.toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%";
@@ -102,6 +104,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     return regels.length > 1 ? regels[0]!.replace(/\s*\S{0,3}$/, "") + "…" : t;
   };
   const combi = !!x.delen && x.delen.length > 1;
+  const metEfg = x.metEfg !== false;
   pdfVoorblad(
     doc,
     "Label-analyse",
@@ -169,10 +172,14 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
         ["Adressen", u.aantalAdressen + " (waarvan " + u.aantalBeoordeeld + " beoordeeld)"],
         ["Venster verloopdatum", "± " + u.vensterMaanden + " maanden rond de analysedatum"],
-        [
-          "Onder de EFG-regels",
-          aantal(u.efg.aantal, "woning", "woningen") + " (" + pct(u.efg.pct) + ")",
-        ],
+        ...(metEfg
+          ? [
+              [
+                "Onder de EFG-regels",
+                aantal(u.efg.aantal, "woning", "woningen") + " (" + pct(u.efg.pct) + ")",
+              ],
+            ]
+          : []),
       ],
       theme: "plain",
       styles: { fontSize: 9.5, textColor: PDF_INK, cellPadding: 1.6 },
@@ -211,7 +218,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   }
 
   kop("Woningen per labelklasse");
-  y = staafdiagram(doc, u, y) + 6;
+  y = staafdiagram(doc, u, y, metEfg) + 6;
 
   kop("Risicoprofiel");
   y =
@@ -233,23 +240,25 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   );
   y += 4;
 
-  kop("EFG-regels");
-  tekst(efgTekst(u), 9, PDF_INK);
-  tekst(EFG_TOELICHTING, 8);
-  tekst(
-    aantal(u.efg.aantal, "woning", "woningen") +
-      " (" +
-      pct(u.efg.pct) +
-      " van de beoordeelde woningen)" +
-      (u.efg.geenLabelApart !== null
-        ? "; daarnaast " +
-          aantal(u.efg.geenLabelApart, "woning", "woningen") +
-          " zonder geregistreerd label."
-        : "."),
-    9,
-    PDF_INK,
-  );
-  y += 4;
+  if (metEfg) {
+    kop("EFG-regels");
+    tekst(efgTekst(u), 9, PDF_INK);
+    tekst(EFG_TOELICHTING, 8);
+    tekst(
+      aantal(u.efg.aantal, "woning", "woningen") +
+        " (" +
+        pct(u.efg.pct) +
+        " van de beoordeelde woningen)" +
+        (u.efg.geenLabelApart !== null
+          ? "; daarnaast " +
+            aantal(u.efg.geenLabelApart, "woning", "woningen") +
+            " zonder geregistreerd label."
+          : "."),
+      9,
+      PDF_INK,
+    );
+    y += 4;
+  }
 
   kop(
     "Label verloopt of verliep binnen " +
@@ -277,22 +286,24 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     y += 4;
   }
 
-  kop("Woningen onder de EFG-regels (" + u.efg.woningen.length + ")");
-  if (u.efg.woningen.length)
-    y =
-      tabel(lib, doc, {
-        startY: y,
-        head: [["Adres", "Label", "Registratie"]],
-        body: u.efg.woningen.map((w) => [
-          w.adres,
-          w.klasse ?? "geen label",
-          nlDatum(w.registratiedatum),
-        ]),
-        ...stijl,
-      }) + 8;
-  else {
-    tekst("Geen woningen.");
-    y += 4;
+  if (metEfg) {
+    kop("Woningen onder de EFG-regels (" + u.efg.woningen.length + ")");
+    if (u.efg.woningen.length)
+      y =
+        tabel(lib, doc, {
+          startY: y,
+          head: [["Adres", "Label", "Registratie"]],
+          body: u.efg.woningen.map((w) => [
+            w.adres,
+            w.klasse ?? "geen label",
+            nlDatum(w.registratiedatum),
+          ]),
+          ...stijl,
+        }) + 8;
+    else {
+      tekst("Geen woningen.");
+      y += 4;
+    }
   }
 
   // verduurzamingsraming (oudere opgeslagen analyses hebben die niet)
@@ -424,7 +435,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
 }
 
 /** Staafdiagram met jsPDF: één kleur (paars), "geen label" grijs, aantallen boven de staven */
-function staafdiagram(doc: Doc, u: AnalyseUitkomst, y0: number): number {
+function staafdiagram(doc: Doc, u: AnalyseUitkomst, y0: number, metEfg: boolean): number {
   const M = PDF_M,
     B = PDF_W - 2 * M,
     H = 48;
@@ -445,8 +456,10 @@ function staafdiagram(doc: Doc, u: AnalyseUitkomst, y0: number): number {
     const x = M + i * stap + (stap - staaf) / 2;
     const geen = d.klasse === "geen label";
     if (h > 0) {
-      // EFG-labels en "geen label" in papaya, de overige in indigo
-      doc.setFillColor(...(isWaarschuwingsKlasse(d.klasse, u) ? PDF_PAPAYA : PDF_PUR));
+      // EFG-labels en "geen label" in papaya, de overige in indigo; zonder EFG-regels in de PDF
+      // alleen "geen label"
+      const papaya = metEfg ? isWaarschuwingsKlasse(d.klasse, u) : geen;
+      doc.setFillColor(...(papaya ? PDF_PAPAYA : PDF_PUR));
       doc.roundedRect(x, basis - h, staaf, h + 0.01, 0.8, 0.8, "F");
       doc.rect(x, basis - Math.min(h, 1), staaf, Math.min(h, 1), "F"); // rechte voet op de basislijn
     }

@@ -15,8 +15,8 @@ import { maakPortefeuillePdf } from "@/lib/wws/pdf/portefeuille";
 import { portefeuilleAdressenQuery, portefeuilleStore } from "../tellingStore";
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
-import { RamingVinkje } from "./RamingVinkje";
-import { ramingInPdf } from "./ramingKeuze";
+import { PdfOpties } from "./PdfOpties";
+import { pdfOpties } from "./pdfKeuzes";
 
 /**
  * Eén analyse over meerdere portefeuilles (bijv. van meerdere eigenaren). Een adres dat in meer
@@ -219,14 +219,14 @@ export function CombiAnalyse({
                     eigenaar: eigenaren.length ? eigenaren.join(", ") : null,
                     delen: delen.map((p) => p.naam),
                     uitkomst,
-                    metRaming: ramingInPdf(),
+                    ...pdfOpties(),
                   }),
                 )
               }
             >
               {download.bezig === "pdf-combi" ? "PDF maken…" : "PDF"}
             </Button>
-            <RamingVinkje />
+            <PdfOpties />
           </section>
 
           <p className="text-sm text-muted-foreground">

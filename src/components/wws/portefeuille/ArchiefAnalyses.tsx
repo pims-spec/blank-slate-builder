@@ -31,8 +31,8 @@ import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { HernoemAnalyseDialoog } from "./HernoemAnalyseDialoog";
 import { PortefeuilleLijst } from "./PortefeuilleLijst";
-import { RamingVinkje } from "./RamingVinkje";
-import { ramingInPdf } from "./ramingKeuze";
+import { PdfOpties } from "./PdfOpties";
+import { pdfOpties } from "./pdfKeuzes";
 import { RijActies } from "../RijActies";
 import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
 
@@ -79,7 +79,7 @@ export function ArchiefAnalyses({
       eigenaar: eigenaren.length ? eigenaren.join(", ") : null,
       delen: a.soort === "combi" ? a.portefeuilleNamen : null,
       uitkomst: u,
-      metRaming: ramingInPdf(),
+      ...pdfOpties(),
     };
   };
 
@@ -249,7 +249,7 @@ export function ArchiefAnalyses({
                 >
                   PDF
                 </Button>
-                <RamingVinkje />
+                <PdfOpties />
               </div>
               <AnalyseWeergave uitkomst={bekijk.u} />
             </>
