@@ -344,6 +344,21 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
   de samenvatting, maar in een eigen lijst "Portefeuilles in deze analyse (n)", elk op een eigen
   regel met een opsommingsteken; vanaf 9 in twee kolommen (`lijstInKolommen`). Een te lange
   naam eindigt op "…".
+- **In het archief** staan de portefeuilles van een gecombineerde analyse uitklapbaar:
+  "13 portefeuilles ▾", standaard dicht (`PortefeuilleLijst.tsx`), in de rij en in het venster
+  Bekijken. Zoeken op de naam van een portefeuille blijft werken.
+- **Verduurzamingsraming in de PDF** (vinkje naast de PDF-knop, `RamingVinkje.tsx`): standaard
+  aan. De keuze is een gemak per gebruiker en staat alleen in de eigen browser
+  (`ramingKeuze.ts`, localStorage); de PDF-knop in het archief volgt dezelfde keuze. Uit: de
+  sectie "Verduurzamingsraming" valt weg (`metRaming: false`).
+- **Geen adressen dubbel in de PDF:** "Woningen zonder geregistreerd label" toont alleen de
+  adressen die EP-Online wel kent maar zonder geldige labelklasse (`zonderLabelAdressen`), met
+  een zin over het aantal niet gevonden adressen. Die staan alleen onder "Te controleren". Het
+  risicoprofiel telt ongewijzigd beide soorten als "Geen geregistreerd label".
+- **Grafiek "Woningen per labelklasse"** (scherm en PDF): de labels onder de EFG-regels van die
+  analyse en "geen label" in papaya (`isWaarschuwingsKlasse`), de overige indigo. Bewust geen
+  legenda (wens); schermlezers horen "onder de EFG-regels". Getallen boven de staven blijven
+  inkt (wit haalt op papaya te weinig contrast).
 
 **Archief.** Tabblad "Portefeuille-analyses" (`/archief?tab=analyses`): alle opgeslagen analyses,
 enkel en gecombineerd, met zoeken, bekijken, PDF en verwijderen (maker of admin). De kijkrol kan
