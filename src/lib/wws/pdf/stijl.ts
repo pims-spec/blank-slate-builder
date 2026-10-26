@@ -97,15 +97,15 @@ const zelfdeKleur = (a: unknown, b: RGB) =>
  * - indigo kopvlak → geen vlak, stille tekst;
  * - Frost (subkop en totaal) → licht grijs vlak; een totaal in indigo blijft indigo;
  * - rasterlijnen → alleen een haarlijn aan de onderkant.
- * Tabellen met theme "plain" (sleutel–waarde) houden hun vorm.
+ * Tabellen met theme "plain" (sleutel–waarde) houden hun vorm; alleen een kopregel krijgt de stijl.
  */
 export function huisstijlTabel(opts: UserOptions): UserOptions {
-  if (opts.theme === "plain") return opts;
+  const plain = opts.theme === "plain";
   const eigen = opts.didParseCell;
   return {
     ...opts,
     theme: "plain",
-    alternateRowStyles: {},
+    ...(plain ? {} : { alternateRowStyles: {} }),
     didParseCell: (d) => {
       eigen?.(d);
       const s = d.cell.styles;
@@ -122,6 +122,7 @@ export function huisstijlTabel(opts: UserOptions): UserOptions {
         s.lineWidth = { bottom: 0.3 };
         return;
       }
+      if (plain) return;
       if (zelfdeKleur(s.fillColor, PDF_SOFT) || zelfdeKleur(s.fillColor, PDF_ALT))
         s.fillColor = PDF_ALT;
       else if (zelfdeKleur(s.fillColor, PDF_PUR)) {
@@ -134,11 +135,23 @@ export function huisstijlTabel(opts: UserOptions): UserOptions {
   };
 }
 
-/** Sectiekop zoals in de app: inkt en halfvet, gewoon gespeld; bron-getrouw indigo hoofdletters */
-export function sectieKop(doc: Doc, t: string, x: number, y: number) {
+/** Hoek van een kaart: 12px in de huisstijl, bron-getrouw de oorspronkelijke maat */
+export const kaartHoek = (bron: number) => (bronModus ? bron : PDF_KAART_HOEK);
+
+/** Rand van een kaart: een haarlijn in de huisstijl, bron-getrouw de lila rand */
+export function kaartRand(doc: Doc, bron: RGB, bronDikte: number) {
+  doc.setDrawColor(...(bronModus ? bron : PDF_LINE));
+  doc.setLineWidth(bronModus ? bronDikte : 0.2);
+}
+
+/**
+ * Sectiekop zoals in de app: inkt en halfvet, gewoon gespeld. Bron-getrouw indigo hoofdletters,
+ * zoals in wws-site.html (`bronGrootte`: de lettergrootte van de bron).
+ */
+export function sectieKop(doc: Doc, t: string, x: number, y: number, bronGrootte = 11) {
   doc.setFont("helvetica", "bold");
   if (bronModus) {
-    doc.setFontSize(11);
+    doc.setFontSize(bronGrootte);
     doc.setTextColor(...PDF_PUR);
     doc.text(t.toUpperCase(), x, y);
   } else {

@@ -113,12 +113,12 @@ describe("bewuste afwijkingen in de PDF's", () => {
     };
     for (const maak of Object.values(pdfs)) {
       const tekst = (await pdfTekst(maak().blob)).flat().join(" ");
-      expect(tekst).toContain("UITGANGSPUNT VERBETERADVIES");
+      expect(tekst).toContain("Uitgangspunt verbeteradvies");
       expect(tekst).toContain("bevestigd door Test Gebruiker op 15 oktober 2026");
-      expect(tekst).toContain("OPTIES UIT HET ENERGIEADVIES VERGELEKEN");
+      expect(tekst).toContain("Opties uit het energieadvies vergeleken");
       expect(tekst).toContain("Gekozen optie: label E naar B");
       const bron = (await pdfTekst(maak(true).blob)).flat().join(" ");
-      expect(bron).not.toContain("UITGANGSPUNT VERBETERADVIES");
+      expect(bron).not.toMatch(/uitgangspunt verbeteradvies/i);
     }
   });
 

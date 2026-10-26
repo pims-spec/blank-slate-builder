@@ -236,7 +236,7 @@ function huurPdf(lib: PdfLib, x: HuurPdfInvoer) {
       columnStyles: {
         2: { halign: "right", cellWidth: 16 },
         3: { halign: "right", cellWidth: 24 },
-        4: { cellWidth: 34 },
+        4: { cellWidth: 38 }, // "GoHome-inschatting" op één regel
       },
     }) + 3;
   tekst(

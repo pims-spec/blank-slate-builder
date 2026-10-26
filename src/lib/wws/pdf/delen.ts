@@ -27,6 +27,8 @@ import {
   PDF_WARN_INK,
   facSummary,
   isBronModus,
+  kaartHoek,
+  kaartRand,
   pdfM2,
   pdfTxt,
   sectieKop,
@@ -52,9 +54,8 @@ export function pdfGaugeCard(doc: Doc, y: number, R: WwsResultaat, normen: Norme
     SOFT = PDF_SOFT,
     SEGC = PDF_SEGC;
   const cardH = 30;
-  const hoek = isBronModus() ? 5 : PDF_KAART_HOEK;
   doc.setFillColor(...SOFT);
-  doc.roundedRect(M, y, W - 2 * M, cardH, hoek, hoek, "F");
+  doc.roundedRect(M, y, W - 2 * M, cardH, kaartHoek(5), kaartHoek(5), "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...PUR);
@@ -148,7 +149,7 @@ export function pdfWozCapNote(doc: Doc, y: number, R: WwsResultaat, normen: Norm
     y = 20;
   }
   doc.setFillColor(...PDF_WARN_BG);
-  doc.roundedRect(M, y, W - 2 * M, h, 4, 4, "F");
+  doc.roundedRect(M, y, W - 2 * M, h, kaartHoek(4), kaartHoek(4), "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(...PDF_WARN_INK);
@@ -822,10 +823,7 @@ export function pdfPlattegrondBlok(doc: Doc, y: number, img?: string | null, max
       doc.addPage();
       y = 20;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PUR);
-    doc.text("PLATTEGROND", M, y);
+    sectieKop(doc, "Plattegrond", M, y);
     y += 5.5;
     const x = M + (maxW - w) / 2;
     doc.addImage(img, "JPEG", x, y, w, h);
@@ -965,7 +963,7 @@ export function pdfCategorieKaarten(doc: Doc, y: number, route: PdfRoute): numbe
       y = 20;
     }
     doc.setFillColor(...SOFT);
-    doc.roundedRect(M, y, W - 2 * M, cardH, 4, 4, "F");
+    doc.roundedRect(M, y, W - 2 * M, cardH, kaartHoek(4), kaartHoek(4), "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...INK);
@@ -1015,7 +1013,7 @@ export function pdfOptiePagina(
   let y = pdfBanner(doc, badge || "Advies, optie " + idx, titel, sub);
   y = pdfGaugeCard(doc, y, route.eind, normen);
   doc.setFillColor(...SOFT);
-  doc.roundedRect(M, y, W - 2 * M, 22, 5, 5, "F");
+  doc.roundedRect(M, y, W - 2 * M, 22, kaartHoek(5), kaartHoek(5), "F");
   const kc = [
     ["NU", String(route.start.totaal)],
     ["DOEL", String(route.doel)],
@@ -1055,10 +1053,7 @@ export function pdfOptiePagina(
     y,
   );
   y += 10;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(...PUR);
-  doc.text("MAATREGELEN PER ONDERDEEL", M, y);
+  sectieKop(doc, "Maatregelen per onderdeel", M, y);
   y += 6.5;
   y = pdfCategorieKaarten(doc, y, route);
   let R: WwsResultaat | null = null;
@@ -1067,10 +1062,7 @@ export function pdfOptiePagina(
       doc.addPage();
       y = 20;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PUR);
-    doc.text("VOLLEDIGE PUNTENTELLING MET DEZE OPTIE", M, y);
+    sectieKop(doc, "Volledige puntentelling met deze optie", M, y);
     y += 5.5;
     const body = pdfTellingBody(lib, doc, y, meta, route.input, normen, { skipGauge: true });
     y = body.y;
@@ -1102,10 +1094,7 @@ export function pdfVerduurzamingPagina(lib: PdfLib, doc: Doc, EA: unknown) {
   const ea = los(EA);
   const H = ea["huidig"] ? los(ea["huidig"]) : null;
   if (H) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PUR);
-    doc.text("HUIDIGE ENERGIESTATUS", M, y);
+    sectieKop(doc, "Huidige energiestatus", M, y);
     y += 4;
     const rows: string[][] = [];
     if (H["label"]) rows.push(["Energielabel", H["label"] as string]);
@@ -1144,10 +1133,7 @@ export function pdfVerduurzamingPagina(lib: PdfLib, doc: Doc, EA: unknown) {
       doc.addPage();
       y = 20;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PUR);
-    doc.text("AANBEVOLEN MAATREGELEN", M, y);
+    sectieKop(doc, "Aanbevolen maatregelen", M, y);
     y += 4;
     const splits = (l: string): string[] => doc.splitTextToSize(l, W - 2 * M - 14);
     mr.forEach((m, i) => {
@@ -1171,7 +1157,7 @@ export function pdfVerduurzamingPagina(lib: PdfLib, doc: Doc, EA: unknown) {
         y = 20;
       }
       doc.setFillColor(...SOFT);
-      doc.roundedRect(M, y, W - 2 * M, cardH, 4, 4, "F");
+      doc.roundedRect(M, y, W - 2 * M, cardH, kaartHoek(4), kaartHoek(4), "F");
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10.5);
       doc.setTextColor(...INK);
@@ -1222,10 +1208,7 @@ export function pdfEnergieAdviesKeuze(
       doc.addPage();
       y = 20;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PUR);
-    doc.text(t, M, y);
+    sectieKop(doc, t, M, y);
     y += 5;
   };
   const alinea = (t: string, kleur: RGB = INK, grootte = 9.5) => {
@@ -1242,7 +1225,7 @@ export function pdfEnergieAdviesKeuze(
   };
   const uitgangspunt = uitgangspuntTekst(input);
   if (uitgangspunt) {
-    kop("UITGANGSPUNT VERBETERADVIES");
+    kop("Uitgangspunt verbeteradvies");
     alinea(uitgangspunt);
     alinea(REGISTRATIE_MELDING, MUT, 8.5);
     y += 3;
@@ -1251,7 +1234,7 @@ export function pdfEnergieAdviesKeuze(
   if (!opties.length) return y;
   const gekozen = input.energieAdvies?.gekozenOptie;
   kop(
-    opties.length > 1 ? "OPTIES UIT HET ENERGIEADVIES VERGELEKEN" : "OPTIE UIT HET ENERGIEADVIES",
+    opties.length > 1 ? "Opties uit het energieadvies vergeleken" : "Optie uit het energieadvies",
   );
   const plusTekst = (n: number) => (n > 0 ? "+" : "") + n;
   y =
@@ -1421,9 +1404,8 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
     doc.addPage();
     y = 20;
   }
-  doc.setDrawColor(...CARDBORDER);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(M, y, cardW, cardH, 4, 4, "S");
+  kaartRand(doc, CARDBORDER, 0.4);
+  doc.roundedRect(M, y, cardW, cardH, kaartHoek(4), kaartHoek(4), "S");
   let ty = y + 11;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
@@ -1508,9 +1490,8 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
     "WOZ-waarde",
     "De berekening voor het puntenaantal op basis van de WOZ-waarde bestaat uit twee onderdelen.",
   );
-  doc.setDrawColor(...CARDBORDER);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(M, y, cardW, cardH2, 4, 4, "S");
+  kaartRand(doc, CARDBORDER, 0.4);
+  doc.roundedRect(M, y, cardW, cardH2, kaartHoek(4), kaartHoek(4), "S");
   let wy = y + 11;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
@@ -1687,9 +1668,9 @@ export function pdfSamenvattingPagina(
     doc.addPage();
     y = 20;
   }
-  doc.setDrawColor(...CARDBORDER);
+  kaartRand(doc, CARDBORDER, doc.getLineWidth());
   doc.setFillColor(...SOFT);
-  doc.roundedRect(M, y, W - 2 * M, cardH, 5, 5, "FD");
+  doc.roundedRect(M, y, W - 2 * M, cardH, kaartHoek(5), kaartHoek(5), "FD");
   let by = y + 13;
   const items: [string, number][] = [
     ["Huidige status", R.totaal],

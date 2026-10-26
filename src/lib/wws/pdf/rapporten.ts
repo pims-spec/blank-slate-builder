@@ -44,6 +44,7 @@ import {
   binnenTekenset,
   nieuwDoc,
   pdfTxt,
+  sectieKop,
   tabel,
   voettekst,
   type PdfLib,
@@ -381,10 +382,7 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   // Disclaimer, op een eigen pagina
   doc.addPage();
   y = 20;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(...PDF_PUR);
-  doc.text("DISCLAIMER", M, y);
+  sectieKop(doc, "Disclaimer", M, y, 13);
   y += 8;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
