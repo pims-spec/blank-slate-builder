@@ -30,6 +30,7 @@ import {
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { HernoemAnalyseDialoog } from "./HernoemAnalyseDialoog";
+import { PortefeuilleLijst } from "./PortefeuilleLijst";
 import { RijActies } from "../RijActies";
 import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
 
@@ -169,9 +170,7 @@ export function ArchiefAnalyses({
                       </Badge>
                     )}
                     {a.soort === "combi" && (
-                      <div className="text-xs text-muted-foreground">
-                        {a.portefeuilleNamen.join(", ")}
-                      </div>
+                      <PortefeuilleLijst namen={a.portefeuilleNamen} className="mt-0.5" />
                     )}
                   </td>
                   <td className="px-3 py-2">{eigenaarNamen(a, klantNamen).join(", ") || "—"}</td>
@@ -230,9 +229,10 @@ export function ArchiefAnalyses({
           {bekijk && (
             <>
               {bekijk.a.soort === "combi" && (
-                <p className="text-sm text-muted-foreground">
-                  Gecombineerd: {bekijk.a.portefeuilleNamen.join(", ")}
-                </p>
+                <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                  <span>Gecombineerd:</span>
+                  <PortefeuilleLijst namen={bekijk.a.portefeuilleNamen} className="text-sm" />
+                </div>
               )}
               <div>
                 <Button

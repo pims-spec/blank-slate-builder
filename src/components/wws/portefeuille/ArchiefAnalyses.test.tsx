@@ -98,7 +98,22 @@ describe("Archief: portefeuille-analyses", () => {
     const tabel = await screen.findByRole("table", { name: "Portefeuille-analyses" });
     expect(within(tabel).getAllByText("Amstel Wonen")).toHaveLength(2);
     expect(within(tabel).getByText("Gecombineerd")).toBeInTheDocument();
-    expect(within(tabel).getByText("Oost, West")).toBeInTheDocument();
+    // de portefeuilles van de gecombineerde: dicht alleen het aantal, uitgeklapt elk op een regel
+    const lijstKnop = within(tabel).getByRole("button", { name: "2 portefeuilles" });
+    expect(lijstKnop).toHaveAttribute("aria-expanded", "false");
+    expect(within(tabel).queryByRole("listitem")).not.toBeInTheDocument();
+    fireEvent.click(lijstKnop);
+    expect(
+      within(tabel)
+        .getAllByRole("listitem")
+        .map((l) => l.textContent),
+    ).toEqual(["Oost", "West"]);
+    // zoeken op de naam van een portefeuille vindt de gecombineerde analyse, ook dichtgeklapt
+    fireEvent.change(screen.getByLabelText("Zoeken in portefeuille-analyses"), {
+      target: { value: "west" },
+    });
+    expect(within(tabel).getByText("Oost en West")).toBeInTheDocument();
+    expect(within(tabel).queryByText("Anna")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Zoeken in portefeuille-analyses"), {
       target: { value: "bas" },
     });
@@ -129,7 +144,13 @@ describe("Archief: portefeuille-analyses", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Bekijken" })[1]!);
     const dialoog = await screen.findByRole("dialog");
     expect(store.analyseUitkomst).toHaveBeenCalledWith("combi", "c1");
-    expect(within(dialoog).getByText("Gecombineerd: Oost, West")).toBeInTheDocument();
+    expect(within(dialoog).getByText("Gecombineerd:")).toBeInTheDocument();
+    fireEvent.click(within(dialoog).getByRole("button", { name: "2 portefeuilles" }));
+    expect(
+      within(dialoog)
+        .getAllByRole("listitem")
+        .map((l) => l.textContent),
+    ).toEqual(["Oost", "West"]);
     fireEvent.click(within(dialoog).getByRole("button", { name: "PDF" }));
     await waitFor(() => expect(bewaar).toHaveBeenCalled());
     expect(bewaar.mock.calls[0]![0]).toBe("Portefeuille-analyse_Oost_en_West_2026-10-16.pdf");
