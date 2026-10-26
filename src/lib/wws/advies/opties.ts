@@ -157,6 +157,8 @@ export function adviesOpties(
   opties: AdviesOpties = {},
 ): AdviesOptie[] {
   const D = adviesDoelen(N);
+  // labelstappen tellen in de opties nooit als lastig (zoals de adviesrapporten)
+  const ro: AdviesOpties = { ...opties, labelNietLastig: true };
   const begin = normaliseer(input);
   const start = calc(begin, N).totaal;
   const regLabel =
@@ -178,19 +180,19 @@ export function adviesOpties(
   const hoogste = () => vorige?.eind.totaal ?? start;
 
   if (start < D.middenhuur) {
-    const r = berekenRoute(input, N, inst, D.middenhuur, undefined, opties);
+    const r = berekenRoute(input, N, inst, D.middenhuur, undefined, ro);
     if (r.gehaald && r.eind.totaal === D.middenhuur) voeg("middenhuur", D.middenhuur, r);
   }
   for (const soort of ["klein", "ruim"] as const) {
     const doel = D[soort];
     if (hoogste() >= doel) continue;
-    const r = berekenRoute(input, N, inst, doel, vorige, opties);
+    const r = berekenRoute(input, N, inst, doel, vorige, ro);
     if (r.gehaald) {
       voeg(soort, doel, r);
       continue;
     }
     // niet haalbaar: het hoogst haalbare, als dat meer is dan wat er al is
-    const max = berekenRoute(input, N, inst, 9999, vorige, opties);
+    const max = berekenRoute(input, N, inst, 9999, vorige, ro);
     if (max.eind.totaal > hoogste())
       voeg("max", max.eind.totaal, { ...max, doel: max.eind.totaal });
     break;

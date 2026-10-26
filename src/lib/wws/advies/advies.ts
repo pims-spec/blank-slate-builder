@@ -65,6 +65,11 @@ export interface AdviesOpties {
    * haalbaarheid, zonder eenvoudsniveau per voorziening. Standaard: eenvoudigste eerst.
    */
   brongetrouw?: boolean;
+  /**
+   * Labelstappen tellen nooit als lastig (ook niet bij 3 of meer stappen). Voor de adviesopties
+   * (opties.ts), zoals de GoHome-adviesrapporten; de route in het adviesvenster gebruikt dit niet.
+   */
+  labelNietLastig?: boolean;
 }
 
 const vandaagVan = (o: AdviesOpties) => o.vandaag ?? new Date().toISOString().slice(0, 10);
@@ -96,6 +101,8 @@ export function kandidaten(
   brongetrouw = false,
   /** Niet brongetrouw: beginpunt en gekozen optie uit het energieadvies (adviesStart()) */
   start?: AdviesStart,
+  /** Labelstappen niet als lastig overslaan (AdviesOpties.labelNietLastig) */
+  labelNietLastig = false,
 ): Kandidaat[] {
   const x = normaliseer(x0);
   const base = calc(x, N).exact;
@@ -114,7 +121,8 @@ export function kandidaten(
     const mh = brongetrouw ? m.h : (niveauVan(N, m.key) ?? m.h);
     for (const c of m.gen(x, ctx)) {
       const h = c.h || mh || "gemiddeld";
-      if (!alles && h === "lastig" && !inst.lastig) continue;
+      if (!alles && h === "lastig" && !inst.lastig && !(labelNietLastig && m.key === "label"))
+        continue;
       const y = pasToe(c.a, x);
       const g = r2(calc(y, N).exact - base);
       if (g > 0.009)
@@ -222,6 +230,7 @@ interface KernOpties {
   metNaarLabel: boolean;
   vandaag: string;
   brongetrouw: boolean;
+  labelNietLastig?: boolean;
 }
 
 /** Het gedeelde deel van runAdvies() en berekenRouteVoorDoel(). */
@@ -238,7 +247,18 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
   const start = calc(x, N);
   const stappen: Stap[] = [];
   let guard = 0;
-  const eerste = kandidaten(begin, N, inst, true, undefined, vandaag, brongetrouw, aStart);
+  const labelNietLastig = !brongetrouw && !!o.labelNietLastig;
+  const eerste = kandidaten(
+    begin,
+    N,
+    inst,
+    true,
+    undefined,
+    vandaag,
+    brongetrouw,
+    aStart,
+    labelNietLastig,
+  );
 
   // Optie 2 bouwt voort op optie 1: die maatregelen gaan eerst en blijven staan.
   if (baseOptie) {
@@ -392,7 +412,17 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
   }
 
   while (calc(x, N).totaal < doel && guard++ < 40) {
-    const c = kandidaten(x, N, inst, false, origLabel, vandaag, brongetrouw, aStart);
+    const c = kandidaten(
+      x,
+      N,
+      inst,
+      false,
+      origLabel,
+      vandaag,
+      brongetrouw,
+      aStart,
+      labelNietLastig,
+    );
     if (!c.length) break;
     const best = c[0]!;
     x = pasToe(best.apply, x);
@@ -620,6 +650,7 @@ export function berekenRoute(
     metNaarLabel: true,
     vandaag: vandaagVan(opties),
     brongetrouw: !!opties.brongetrouw,
+    labelNietLastig: !!opties.labelNietLastig,
   });
   return {
     start: k.start,

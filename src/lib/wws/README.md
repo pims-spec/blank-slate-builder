@@ -752,6 +752,11 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
   - **Ruime marge vrije sector**: 195 punten; niet haalbaar → **Maximaal haalbaar**.
   - De marges (+2 en +9 boven de middenhuur) staan in Normen (`normen.adviesDoelen`,
     `ADVIES_DOELEN_STANDAARD`). Een woning op of boven de ruime marge krijgt geen opties.
+- **Labelstappen nooit lastig in de opties** (`AdviesOpties.labelNietLastig`): ook een sprong
+  van 3 of meer stappen (bijvoorbeeld G → A, met de maatregelen van de energieadviseur) gaat
+  automatisch mee, zoals in de rapporten. Een extra toilet, balkon of bad blijft lastig. De route
+  in het adviesvenster blijft zoals hij was. IJking op de 50 CBRE-woningen onder 186 punten:
+  48 halen 186 en 44 de vrije sector (rapporten: 49 en 46; zonder deze regel 36 en 29).
 - **Energielabel afmelden** (`afmeldStap` in `advies.ts`): met een bevestigd advieslabel
   (`energieAdvies.uitgangspunt`) dat punten oplevert, is de eerste stap "Energielabel afmelden:
   label D naar label B (zonder werkzaamheden)". Kosten standaard € 350 (`kosten.afmelden`,

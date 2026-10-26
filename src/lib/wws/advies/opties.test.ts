@@ -192,6 +192,29 @@ describe("adviesOpties", () => {
   });
 });
 
+describe("labelstappen in de opties niet lastig", () => {
+  it("label G: de opties nemen een grote labelsprong mee, de route in het venster niet", () => {
+    const x = woning("D");
+    x.energie.label = "G";
+    const route = berekenAdvies(x, N, inst(), { vandaag: VANDAAG });
+    const sprong = (o: string) => /naar A/.test(o);
+    expect(route.stappen.some((s) => s.key === "label" && sprong(s.o))).toBe(false);
+    const opties = adviesOpties(x, N, inst(), { vandaag: VANDAAG });
+    expect(
+      opties.some((o) => o.route.stappen.some((s) => s.key === "label" && /naar A/.test(s.o))),
+    ).toBe(true);
+    // brongetrouw blijft het oude gedrag
+    const bron = berekenRoute(x, N, inst(), 9999, undefined, {
+      vandaag: VANDAAG,
+      brongetrouw: true,
+      labelNietLastig: true,
+    });
+    expect(
+      bron.stappen.some((s) => s.key === "label" && /\(([3-9]) stappen\)|naar A/.test(s.o)),
+    ).toBe(false);
+  });
+});
+
 describe("doelzin", () => {
   const route = (
     stappen: { key: string; delen: string[]; naarLabel?: string }[],
