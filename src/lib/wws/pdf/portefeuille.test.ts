@@ -128,6 +128,23 @@ describe("PDF portefeuille-analyse", () => {
     expect(t).not.toContain("1053 ZD 2 B");
   });
 
+  it("verduurzamingsraming uitgevinkt: de sectie valt weg, de rest blijft", async () => {
+    const u = analyseer([adres(1, "F", "2019-05-05")], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
+    const tekst = async (metRaming?: boolean) =>
+      (
+        await pdfTekst(
+          maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u, metRaming }).blob,
+        )
+      )
+        .flat()
+        .join(" ");
+    expect(await tekst()).toContain("Verduurzamingsraming");
+    const zonder = await tekst(false);
+    expect(zonder).not.toContain("Verduurzamingsraming");
+    expect(zonder).toContain("EFG-regels");
+    expect(zonder).toContain("Risicoprofiel");
+  });
+
   it("EFG met toelichting; te controleren als lijst met reden", async () => {
     const u = analyseer(
       [

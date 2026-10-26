@@ -35,6 +35,8 @@ export interface PortefeuillePdfInvoer {
   /** Bij een gecombineerde analyse: de namen van de portefeuilles */
   delen?: readonly string[] | null;
   uitkomst: AnalyseUitkomst;
+  /** De verduurzamingsraming opnemen (standaard ja) */
+  metRaming?: boolean;
 }
 
 const pct = (p: number) => p.toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%";
@@ -283,7 +285,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   }
 
   // verduurzamingsraming (oudere opgeslagen analyses hebben die niet)
-  const r = u.raming;
+  const r = x.metRaming === false ? undefined : u.raming;
   if (r) {
     kop("Verduurzamingsraming");
     tekst(RAMING_UITLEG, 8);
