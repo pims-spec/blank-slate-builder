@@ -80,7 +80,7 @@ export const KEUKEN_ELEMENTEN: readonly FotoElement[] = [
     sleutel: "vaatwasser",
     naam: "Inbouw vaatwasmachine",
     kenmerken:
-      "Vaatwasser onder het aanrecht. Zichtbaar: een eigen front met bedieningspaneel. Volledig geïntegreerd achter een keukenfront: aanwijzingen zijn een front van ca. 60 cm breed (soms 45 cm) zonder plintonderbreking of met een eigen plintstuk, een greep die hoger of anders geplaatst is dan bij de kastjes ernaast, het ontbreken van een scharnierzijde/naad zoals bij de andere deuren, een bedieningsrand aan de bovenkant van het front, en de plaats direct naast de spoelbak. Eén aanwijzing alleen is niet genoeg voor 'aanwezig'.",
+      "Vaatwasser onder het aanrecht. Zichtbaar: een eigen front met bedieningspaneel. Volledig geïntegreerd achter een keukenfront: kijk eerst naar de grepen. Een draaideur heeft de greep aan de zijkant (tegenover de scharnieren); een vaatwasser klapt naar beneden open en heeft daarom één greep horizontaal in het midden, bovenaan een hoog front. Een hoog onderkastfront (van plint tot aanrecht, niet opgedeeld) met als enige een gecentreerde greep bovenaan, tussen deuren met de greep aan de zijkant, en direct onder of naast de spoelbak, is doorslaggevend: 'aanwezig'. Laden hebben ook een gecentreerde greep, maar zijn lager en gestapeld; tel die niet. Andere aanwijzingen (samen met de plaats bij de spoelbak 'waarschijnlijk_aanwezig'): een front van ca. 60 cm breed (soms 45 cm) met een eigen plintstuk, het ontbreken van een scharnierzijde of naad zoals bij de andere deuren, een bedieningsrand aan de bovenkant van het front. Bij een greeploze keuken is de greep geen aanwijzing.",
     inbouw: true,
   },
   {
