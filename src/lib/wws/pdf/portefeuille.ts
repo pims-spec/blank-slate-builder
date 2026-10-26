@@ -100,22 +100,18 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   pdfVoorblad(
     doc,
     "Label-analyse",
+    // geen dubbele gegevens: de eigenaar alleen hier, de portefeuille(s) alleen op pagina 2;
+    // van de datums alleen de peildatum van de EP-Online-gegevens
     [
-      [combi ? "Analyse" : "Portefeuille", past(x.portefeuille)],
-      ...(combi ? ([["Portefeuilles", String(x.delen!.length)]] as [string, string][]) : []),
       ...(x.eigenaar ? ([["Eigenaar", past(x.eigenaar)]] as [string, string][]) : []),
-      ["Analysedatum", langeDatum(u.datum)],
       ["Adressen", String(u.aantalAdressen)],
       // korte labels: de kolom met labels is 32 mm breed (wws-site.html)
       ["Peildatum", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
       ["Bron", "EP-Online (RVO)"],
     ],
     {
-      // de naam van de analyse als kop; bij een combinatie het aantal portefeuilles eronder
+      // de naam van de analyse als kop; de eigenaar staat al in de kaart
       titel: x.portefeuille,
-      sub: [combi ? x.delen!.length + " portefeuilles" : "", x.eigenaar ?? ""]
-        .filter(Boolean)
-        .join(" · "),
     },
   );
   doc.addPage();
@@ -125,7 +121,6 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     "GoHome energielabels",
     "Portefeuille-analyse",
     (combi ? x.delen!.length + " portefeuilles: " : "Portefeuille: ") + x.portefeuille,
-    "Analyse per " + langeDatum(u.datum),
   );
 
   const stijl = {
@@ -169,8 +164,6 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         ...(combi
           ? [["Portefeuilles", String(x.delen!.length) + " (zie de lijst hieronder)"]]
           : []),
-        ...(x.eigenaar ? [[combi ? "Eigenaren" : "Eigenaar", x.eigenaar]] : []),
-        ["Datum van de analyse", langeDatum(u.datum)],
         ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
         ["Adressen", u.aantalAdressen + " (waarvan " + u.aantalBeoordeeld + " beoordeeld)"],
         ["Venster verloopdatum", "± " + u.vensterMaanden + " maanden rond de analysedatum"],

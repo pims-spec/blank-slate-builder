@@ -57,8 +57,6 @@ describe("PDF portefeuille-analyse", () => {
     const volgorde = [
       "Portefeuille-analyse",
       "TEST Oost",
-      "Amstel Wonen",
-      "Datum van de analyse 15 oktober 2026",
       "Peildatum EP-Online-gegevens 14 oktober 2026",
       "Woningen per labelklasse",
       "Risicoprofiel",
@@ -76,6 +74,14 @@ describe("PDF portefeuille-analyse", () => {
       "1053 ZD 4 Niet gevonden bij EP-Online",
       "Bron: EP-Online (RVO), opgehaald op 14 oktober 2026",
     ];
+    // geen dubbele gegevens: eigenaar alleen op het voorblad, geen analysedatum
+    const paginas = (await pdfTekst(pdf.blob)).map((x) => x.join(" ").replace(/\s+/g, " "));
+    expect(paginas[0]).toContain("Eigenaar Amstel Wonen");
+    expect(paginas[0]).not.toMatch(/Portefeuille TEST Oost/);
+    const rest = paginas.slice(1).join(" ");
+    expect(rest).not.toContain("Amstel Wonen");
+    expect(rest).toContain("Portefeuille TEST Oost");
+    expect(paginas.join(" ")).not.toMatch(/Analysedatum|Datum van de analyse|Analyse per/);
     let vanaf = 0;
     for (const stuk of volgorde) {
       const i = t.indexOf(stuk, vanaf);
@@ -200,13 +206,15 @@ describe("PDF portefeuille-analyse", () => {
     const voorblad = paginas[0]!.join(" ").replace(/\s+/g, " ");
     expect(voorblad).toContain("GoHome");
     expect(voorblad).toContain("LABEL-ANALYSE");
-    expect(voorblad).toContain("Analysedatum 15 oktober 2026");
+    expect(voorblad).not.toContain("Analysedatum");
     expect(voorblad).toContain("Adressen 1");
     expect(voorblad).toContain("Peildatum 14 oktober 2026");
     expect(voorblad).toContain("Bron EP-Online (RVO)");
     expect(voorblad).not.toContain("Eigenaar");
     expect(voorblad).not.toContain("Pagina");
-    expect(voorblad).toMatch(/Portefeuille Portefeuille met een heel lange naam .*…/);
+    // de naam alleen als kop (na twee regels "…"), niet nog eens in de kaart
+    expect(voorblad).toMatch(/LABEL-ANALYSE Portefeuille met een heel lange naam .*…/);
+    expect(voorblad).not.toContain("Portefeuille Portefeuille");
     expect(voorblad.length).toBeLessThan(lang.length + 150);
     const rest = paginas.slice(1).flat().join(" ").replace(/\s+/g, " ");
     expect(rest).toContain("Pagina 2 van " + paginas.length);
@@ -222,18 +230,16 @@ describe("PDF portefeuille-analyse", () => {
       uitkomst: u,
     });
     const p = (await pdfTekst(pdf.blob)).map((x) => x.join(" ").replace(/\s+/g, " "));
-    // voorblad: de naam van de analyse als kop, het aantal portefeuilles eronder
-    expect(p[0]).toContain(
-      "LABEL-ANALYSE Oost en West 2 portefeuilles · Amstel Wonen, Rijn Vastgoed",
-    );
-    expect(p[0]).toContain("Analyse Oost en West");
-    expect(p[0]).toContain("Portefeuilles 2");
+    // voorblad: de naam van de analyse als kop en de eigenaren; de portefeuilles pas op pagina 2
+    expect(p[0]).toContain("LABEL-ANALYSE Oost en West Eigenaar Amstel Wonen, Rijn Vastgoed");
+    expect(p[0]).not.toMatch(/Portefeuilles|portefeuilles/);
     expect(p[1]).toContain("2 portefeuilles: Oost en West");
     // geen komma-opsomming meer, maar een lijst met elke portefeuille op een eigen regel
     expect(p[1]).not.toContain("Oost, West");
     expect(p[1]).toContain("Portefeuilles 2 (zie de lijst hieronder)");
     expect(p[1]).toContain("Portefeuilles in deze analyse (2) • Oost • West");
-    expect(p[1]).toContain("Eigenaren Amstel Wonen, Rijn Vastgoed");
+    expect(p[1]).toContain("Analyse Oost en West");
+    expect(p[1]).not.toContain("Amstel Wonen");
     expect(pdf.bestandsnaam).toBe("Portefeuille-analyse_Oost_en_West_2026-10-15.pdf");
   });
 

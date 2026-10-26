@@ -339,11 +339,14 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
   die kolom mag worden gewijzigd (kolomrecht); de analyse zelf blijft een vaste momentopname.
   De naam wordt opgeschoond en is 1 tot 200 tekens (`geldigeAnalyseNaam` in `combi.ts`). Een
   analyse van één portefeuille heeft geen eigen naam; die toont de portefeuillenaam.
-- **PDF van een gecombineerde analyse:** de naam van de analyse is de kop op het voorblad, met
-  "13 portefeuilles · eigenaar" eronder. De portefeuilles staan niet meer als komma-opsomming in
-  de samenvatting, maar in een eigen lijst "Portefeuilles in deze analyse (n)", elk op een eigen
-  regel met een opsommingsteken; vanaf 9 in twee kolommen (`lijstInKolommen`). Een te lange
-  naam eindigt op "…".
+- **PDF van een gecombineerde analyse:** de naam van de analyse is de kop op het voorblad. De
+  portefeuilles staan niet meer als komma-opsomming in de samenvatting, maar in een eigen lijst
+  "Portefeuilles in deze analyse (n)", elk op een eigen regel met een opsommingsteken; vanaf 9 in
+  twee kolommen (`lijstInKolommen`). Een te lange naam eindigt op "…".
+- **Geen dubbele gegevens in de portefeuille-PDF** (wens): de eigenaar staat alleen op het
+  voorblad, de portefeuille(s) alleen op pagina 2. Van de datums staat alleen de peildatum van de
+  EP-Online-gegevens erin; de analysedatum (voorblad, samenvatting en "Analyse per …" onder de
+  titel) is weggelaten. De bestandsnaam houdt de analysedatum.
 - **In het archief** staan de portefeuilles van een gecombineerde analyse uitklapbaar:
   "13 portefeuilles ▾", standaard dicht (`PortefeuilleLijst.tsx`), in de rij en in het venster
   Bekijken. Zoeken op de naam van een portefeuille blijft werken.
