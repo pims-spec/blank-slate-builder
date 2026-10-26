@@ -226,6 +226,15 @@ describe("bewuste afwijkingen in de PDF's", () => {
       expect(bron).toContain("Rapportage puntentelling");
     });
 
+    it("voorblad zonder adres of naam: het soort rapport één keer, als kop", async () => {
+      const leeg = { ...legeMeta() };
+      const blob = maakTellingPdf(LIB_HUISSTIJL, { meta: leeg, input, normen: N }).blob;
+      const voorblad = (await pdfTekst(blob))[0]!.join(" ");
+      expect(voorblad).toContain("Rapportage puntentelling");
+      expect(voorblad).not.toContain("RAPPORTAGE PUNTENTELLING");
+      expect(voorblad.match(/rapportage puntentelling/gi)).toHaveLength(1);
+    });
+
     it("sectiekoppen gewoon gespeld en tabelkoppen in kleine hoofdletters; bron-getrouw niet", async () => {
       const nu = (await pdfTekst(pdf(false))).flat().join(" ");
       expect(nu).toContain("Punten per onderdeel");

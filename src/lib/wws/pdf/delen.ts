@@ -614,12 +614,16 @@ export function pdfVoorblad(
   pdfWoordmerk(doc, X, 28, 20);
 
   let y = 112;
+  // zonder kop (bv. een telling zonder adres) is het soort rapport zelf de kop, zonder bovenkopje
+  const eigenKop = kop?.titel?.trim();
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...PDF_PUR);
-  doc.text(pdfTxt(titel).toUpperCase(), X, y);
+  if (eigenKop) {
+    doc.setFontSize(9);
+    doc.setTextColor(...PDF_PUR);
+    doc.text(pdfTxt(titel).toUpperCase(), X, y);
+  }
   y += 13;
-  const kopTekst = kop?.titel?.trim() || titel;
+  const kopTekst = eigenKop || titel;
   doc.setFontSize(30);
   doc.setTextColor(...PDF_INK);
   // hoogstens twee regels; een langere kop (portefeuillenaam) eindigt op "…"

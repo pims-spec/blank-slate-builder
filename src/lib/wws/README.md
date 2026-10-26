@@ -223,7 +223,8 @@ daarmee vervangen.
   worden meegeleverd. De vormgeving volgt de app (`pdf/stijl.ts`, `pdf/delen.ts`):
   - **Voorblad** (`pdfVoorblad`, voor alle rapporten): grijs canvas #F2F2F7, het woordmerk
     "GoHome advice", het soort rapport als bovenkopje in indigo, een grote kop (adres of
-    portefeuille; na twee regels "…") en de gegevens in een witte kaart met haarlijnen. De
+    portefeuille; na twee regels "…") en de gegevens in een witte kaart met haarlijnen. Zonder
+    adres of naam is het soort rapport zelf de kop, zonder bovenkopje. De
     lila vorm met de grote wordmark uit de bron is vervallen.
   - **Kopregel** (`pdfBanner`): geen gekleurde balk meer; woordmerk links, het soort rapport
     rechts, een haarlijn eronder.
