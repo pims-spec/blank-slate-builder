@@ -223,7 +223,17 @@ export interface AnalyseUitkomst {
     geenLabelApart: number | null;
     woningen: EfgRegel[];
   };
+  /**
+   * Woningen zonder geregistreerd label: EP-Online geeft geen label, maar het adres bestaat (of
+   * de BAG is nog niet gecontroleerd; dan met een opmerking). Ontbreekt bij analyses van vóór
+   * deze indeling.
+   */
+  zonderLabel?: { adres: string; opmerking: string | null }[];
   teControleren: {
+    /**
+     * Adres niet gevonden: bij EP-Online en (sinds `zonderLabel` bestaat) ook niet in de BAG.
+     * Oudere analyses: alles wat EP-Online niet vond.
+     */
     nietGevonden: string[];
     meerdere: string[];
     fout: string[];
@@ -244,6 +254,10 @@ export interface AnalyseUitkomst {
 export function isWaarschuwingsKlasse(klasse: string, u: Pick<AnalyseUitkomst, "instellingen">) {
   return klasse === "geen label" || (u.instellingen?.efg?.klassen ?? []).includes(klasse);
 }
+
+/** De reden bij "Te controleren" voor niet gevonden adressen (oudere analyses: alleen EP-Online) */
+export const nietGevondenReden = (u: Pick<AnalyseUitkomst, "zonderLabel">) =>
+  u.zonderLabel ? "Adres niet gevonden (EP-Online en BAG)" : "Niet gevonden bij EP-Online";
 
 /** De analyse van een portefeuille op `datum`, met een venster van `maanden` (standaard 3) */
 export function analyseer(
@@ -320,6 +334,25 @@ export function analyseer(
   efgWoningen.sort((x, y) => sorteer(x.adres, y.adres));
 
   const lijst = (f: (a: AnalyseAdres) => boolean) => uniek.filter(f).map(adresTekst).sort(sorteer);
+  // EP-Online zegt "niet gevonden" bij een adres zonder label én bij een adres dat niet bestaat;
+  // de BAG maakt het verschil
+  const bestaatNiet = (a: AnalyseAdres) =>
+    a.resultaat?.status === "niet_gevonden" && a.bag?.status === "niet_gevonden";
+  const zonderLabel = beoordeeld
+    .filter((a) => categorie(a.resultaat!, datum, maanden, normen.verouderdVoor) === "geen_label")
+    .filter((a) => !bestaatNiet(a))
+    .map((a) => ({
+      adres: adresTekst(a),
+      opmerking:
+        a.resultaat!.status !== "niet_gevonden"
+          ? null
+          : !a.bag
+            ? "BAG nog niet opgehaald"
+            : a.bag.status === "fout"
+              ? "BAG-controle mislukt"
+              : null,
+    }))
+    .sort((x, y) => sorteer(x.adres, y.adres));
   const gesorteerd = (r: AdresRegel[] | undefined) =>
     [...(r ?? [])].sort((x, y) => sorteer(x.adres, y.adres));
   const opgehaald = uniek
@@ -359,8 +392,9 @@ export function analyseer(
       geenLabelApart: normen.efg.geenLabel === "apart" ? efgGeenLabel : null,
       woningen: efgWoningen,
     },
+    zonderLabel,
     teControleren: {
-      nietGevonden: lijst((a) => a.resultaat?.status === "niet_gevonden"),
+      nietGevonden: lijst(bestaatNiet),
       meerdere: lijst((a) => a.resultaat?.status === "meerdere"),
       fout: lijst((a) => a.resultaat?.status === "fout"),
       nietOpgehaald: lijst((a) => !a.resultaat),

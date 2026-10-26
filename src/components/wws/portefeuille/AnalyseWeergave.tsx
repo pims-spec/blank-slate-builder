@@ -1,5 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { EFG_TOELICHTING, efgTekst, type AnalyseUitkomst } from "@/lib/wws/portefeuille/analyse";
+import {
+  EFG_TOELICHTING,
+  efgTekst,
+  nietGevondenReden,
+  type AnalyseUitkomst,
+} from "@/lib/wws/portefeuille/analyse";
 import { nlDatum } from "@/lib/wws/portefeuille/datum";
 import { aantal, periode } from "@/lib/wws/portefeuille/tekst";
 import { AdresLijstDialoog, type Doorklik } from "./AdresLijstDialoog";
@@ -186,7 +191,7 @@ export function AnalyseWeergave({
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             {(
               [
-                ["Niet gevonden bij EP-Online", c.nietGevonden],
+                [nietGevondenReden(u), c.nietGevonden],
                 ["Niet eenduidig (meerdere labels)", c.meerdere],
                 ["Ophalen mislukt", c.fout],
                 ["Nog niet opgehaald", c.nietOpgehaald],

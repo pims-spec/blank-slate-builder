@@ -6,6 +6,7 @@ import {
   categorie,
   efgOmschrijving,
   isWaarschuwingsKlasse,
+  nietGevondenReden,
   portefeuilleNormen,
   verloopdatum,
   type AnalyseAdres,
@@ -170,13 +171,48 @@ describe("analyse van een portefeuille", () => {
       ["1053 ZD 3", "2026-09-01", "verlopen"],
       ["1053 ZD 2", "2026-11-20", "verloopt"],
     ]);
+    // niet gevonden bij EP-Online, BAG nog niet opgehaald: zonder label, met opmerking
+    expect(u.zonderLabel).toEqual([{ adres: "1053 ZD 6", opmerking: "BAG nog niet opgehaald" }]);
     expect(u.teControleren).toEqual({
-      nietGevonden: ["1053 ZD 6"],
+      nietGevonden: [],
       meerdere: ["1053 ZD 7"],
       fout: ["1053 ZD 8"],
       nietOpgehaald: ["1053 ZD 9"],
     });
     expect(u.epOpgehaaldVan).toBe("2026-10-14T09:00:00Z");
+  });
+
+  it("niet gevonden bij EP-Online: de BAG beslist tussen 'zonder label' en 'te controleren'", () => {
+    const nietGevonden = { ...label(null, null), status: "niet_gevonden" as const };
+    const bag = (status: "gevonden" | "niet_gevonden" | "fout") => ({
+      status,
+      oppervlakte: null,
+      bouwjaar: null,
+    });
+    const u = analyseer(
+      [
+        { ...adres(1, nietGevonden), bag: bag("gevonden") }, // bestaat: geen label
+        { ...adres(2, nietGevonden), bag: bag("niet_gevonden") }, // bestaat niet: controleren
+        { ...adres(3, nietGevonden), bag: bag("fout") }, // onbekend: zonder label, met opmerking
+        { ...adres(4, nietGevonden), bag: null }, // nog niet opgehaald: idem
+        adres(5, { ...label(null, null), status: "gevonden" }), // EP-Online zonder klasse
+      ],
+      D,
+      3,
+      N,
+    );
+    expect(u.zonderLabel).toEqual([
+      { adres: "1053 ZD 1", opmerking: null },
+      { adres: "1053 ZD 3", opmerking: "BAG-controle mislukt" },
+      { adres: "1053 ZD 4", opmerking: "BAG nog niet opgehaald" },
+      { adres: "1053 ZD 5", opmerking: null },
+    ]);
+    expect(u.teControleren.nietGevonden).toEqual(["1053 ZD 2"]);
+    expect(nietGevondenReden(u)).toBe("Adres niet gevonden (EP-Online en BAG)");
+    // het risicoprofiel telt ze allemaal als "geen geregistreerd label"
+    expect(u.risico.find((r) => r.categorie === "geen_label")!.aantal).toBe(5);
+    // oudere analyse zonder deze indeling
+    expect(nietGevondenReden({})).toBe("Niet gevonden bij EP-Online");
   });
 
   it("doorklik: per klasse en per risicocategorie de adressen; samen de beoordeelde", () => {

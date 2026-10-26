@@ -34,6 +34,12 @@ function adres(
   };
 }
 
+/** Niet gevonden bij EP-Online én niet in de BAG: hoort onder "Te controleren" */
+const onbekend = (hn: number): AnalyseAdres => ({
+  ...adres(hn, null, null, "niet_gevonden"),
+  bag: { status: "niet_gevonden", oppervlakte: null, bouwjaar: null },
+});
+
 describe("PDF portefeuille-analyse", () => {
   it("samenvatting, grafiek, risico, EFG, beide lijsten en de bronvermelding, in die volgorde", async () => {
     const u = analyseer(
@@ -41,7 +47,7 @@ describe("PDF portefeuille-analyse", () => {
         adres(1, "A", "2023-03-01"),
         adres(2, "C", "2016-11-20"),
         adres(3, "F", "2019-05-05"),
-        adres(4, null, null, "niet_gevonden"),
+        onbekend(4),
       ],
       "2026-10-15",
       3,
@@ -69,9 +75,10 @@ describe("PDF portefeuille-analyse", () => {
       "1053 ZD 3",
       // niet gevonden: niet bij "zonder label", alleen onder "Te controleren"
       "Woningen zonder geregistreerd label (0)",
-      "1 adres niet gevonden bij EP-Online; die staan onder ‘Te controleren’.",
+      "1 adres niet gevonden bij EP-Online en in de BAG; die staan onder ‘Te controleren’.",
       "Te controleren (1)",
-      "1053 ZD 4 Niet gevonden bij EP-Online",
+      "1 niet gevonden (EP-Online en BAG)",
+      "1053 ZD 4 Adres niet gevonden (EP-Online en BAG)",
       "Bron: EP-Online (RVO), opgehaald op 14 oktober 2026",
     ];
     // geen dubbele gegevens: eigenaar alleen op het voorblad, geen analysedatum
@@ -164,7 +171,7 @@ describe("PDF portefeuille-analyse", () => {
     const u = analyseer(
       [
         adres(1, "A", "2023-03-01"),
-        adres(4, null, null, "niet_gevonden"),
+        onbekend(4),
         adres(5, null, null, "meerdere"),
         adres(6, null, null, "fout"),
         { ...adres(7, null, null), resultaat: null },
@@ -180,7 +187,7 @@ describe("PDF portefeuille-analyse", () => {
       "Het kabinet wil dat huurwoningen",
       "Te controleren (4)",
       "ADRES REDEN",
-      "1053 ZD 4 Niet gevonden bij EP-Online",
+      "1053 ZD 4 Adres niet gevonden (EP-Online en BAG)",
       "1053 ZD 5 Niet eenduidig (meerdere labels)",
       "1053 ZD 6 Ophalen mislukt",
       "1053 ZD 7 Nog niet opgehaald",
@@ -289,12 +296,7 @@ describe("PDF portefeuille-analyse", () => {
       resultaat: { ...adres(5, null, null).resultaat!, status: "gevonden", energieklasse: null },
     };
     const u = analyseer(
-      [
-        adres(1, "A", "2023-03-01"),
-        zonderKlasse,
-        adres(6, null, null, "niet_gevonden"),
-        adres(7, null, null, "niet_gevonden"),
-      ],
+      [adres(1, "A", "2023-03-01"), zonderKlasse, onbekend(6), onbekend(7)],
       "2026-10-15",
       3,
       PORTEFEUILLE_STANDAARD,
@@ -308,7 +310,7 @@ describe("PDF portefeuille-analyse", () => {
       .join(" ")
       .replace(/\s+/g, " ");
     expect(t).toContain(
-      "Woningen zonder geregistreerd label (1) ADRES 1053 ZD 5 Daarnaast 2 adressen niet gevonden bij EP-Online; die staan onder ‘Te controleren’.",
+      "Woningen zonder geregistreerd label (1) ADRES 1053 ZD 5 Daarnaast 2 adressen niet gevonden bij EP-Online en in de BAG; die staan onder ‘Te controleren’.",
     );
     // vanaf de kop "Woningen zonder geregistreerd label (" (de raming ervoor noemt alle adressen)
     const lijsten = t.slice(t.indexOf("Woningen zonder geregistreerd label ("));
@@ -318,11 +320,7 @@ describe("PDF portefeuille-analyse", () => {
 
   it("grafiek: staven onder de EFG-regels en 'geen' in papaya, de rest indigo", () => {
     const u = analyseer(
-      [
-        adres(1, "A", "2023-03-01"),
-        adres(2, "F", "2019-05-05"),
-        adres(4, null, null, "niet_gevonden"),
-      ],
+      [adres(1, "A", "2023-03-01"), adres(2, "F", "2019-05-05"), onbekend(4)],
       "2026-10-15",
       3,
       PORTEFEUILLE_STANDAARD,
@@ -347,5 +345,35 @@ describe("PDF portefeuille-analyse", () => {
     expect(kleuren.filter((k) => k === "255,124,58")).toHaveLength(2);
     // A in indigo (de enige indigo vulling in deze PDF)
     expect(kleuren.filter((k) => k === "91,65,255")).toHaveLength(1);
+  });
+
+  it("geen label bij EP-Online maar het adres bestaat: onder 'zonder label', met BAG-opmerking", async () => {
+    const nietGevonden = (
+      hn: number,
+      bag: NonNullable<AnalyseAdres["bag"]> | null,
+    ): AnalyseAdres => ({
+      ...adres(hn, null, null, "niet_gevonden"),
+      bag,
+    });
+    const u = analyseer(
+      [
+        nietGevonden(1, { status: "gevonden", oppervlakte: 70, bouwjaar: 1990 }),
+        nietGevonden(2, null),
+        onbekend(3),
+      ],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    const t = (await pdfTekst(maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u }).blob))
+      .slice(1)
+      .flat()
+      .join(" ")
+      .replace(/\s+/g, " ");
+    expect(t).toContain(
+      "Woningen zonder geregistreerd label (2) ADRES 1053 ZD 1 1053 ZD 2 (BAG nog niet opgehaald) Daarnaast 1 adres niet gevonden bij EP-Online en in de BAG",
+    );
+    expect(t).toContain("Te controleren (1)");
+    expect(t).toContain("1053 ZD 3 Adres niet gevonden (EP-Online en BAG)");
   });
 });

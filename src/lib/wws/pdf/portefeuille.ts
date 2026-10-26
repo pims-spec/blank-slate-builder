@@ -8,6 +8,7 @@ import {
   EFG_TOELICHTING,
   efgTekst,
   isWaarschuwingsKlasse,
+  nietGevondenReden,
   type AnalyseUitkomst,
 } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
@@ -57,6 +58,10 @@ const dag = (iso: string | null) =>
  * labelklasse); de niet gevonden adressen horen bij "Te controleren".
  */
 export function zonderLabelAdressen(u: AnalyseUitkomst): string[] {
+  // nieuwe analyses: EP-Online geeft geen label, maar het adres bestaat (BAG); met opmerking
+  if (u.zonderLabel)
+    return u.zonderLabel.map((z) => z.adres + (z.opmerking ? ` (${z.opmerking})` : ""));
+  // oudere analyses: zonder BAG-onderscheid alleen de adressen die EP-Online wel kent
   const nietGevonden = new Set(u.teControleren.nietGevonden);
   const geen = u.risico.find((r) => r.categorie === "geen_label");
   return (geen?.adressen ?? []).map((a) => a.adres).filter((a) => !nietGevonden.has(a));
@@ -337,10 +342,9 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     }
   }
 
-  // woningen zonder geregistreerd label: alleen de adressen die EP-Online wel kent, maar zonder
-  // geldige labelklasse. De niet gevonden adressen staan onder "Te controleren", zodat geen adres
-  // twee keer in de PDF staat. Oudere opgeslagen analyses hebben de adressen per categorie niet;
-  // dan blijft deze lijst leeg.
+  // woningen zonder geregistreerd label: EP-Online geeft geen label, maar het adres bestaat. Een
+  // adres dat ook de BAG niet kent staat alleen onder "Te controleren", zodat geen adres twee keer
+  // in de PDF staat (zie zonderLabelAdressen voor oudere analyses).
   const nietGevonden = u.teControleren.nietGevonden;
   const zonderLabel = zonderLabelAdressen(u);
   kop("Woningen zonder geregistreerd label (" + zonderLabel.length + ")");
@@ -357,7 +361,10 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     tekst(
       (zonderLabel.length ? "Daarnaast " : "") +
         aantal(nietGevonden.length, "adres", "adressen") +
-        " niet gevonden bij EP-Online; die staan onder ‘Te controleren’.",
+        (u.zonderLabel
+          ? " niet gevonden bij EP-Online en in de BAG"
+          : " niet gevonden bij EP-Online") +
+        "; die staan onder ‘Te controleren’.",
     );
   y += 4;
 
@@ -368,7 +375,9 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     kop("Te controleren (" + controle + ")");
     tekst(
       [
-        c.nietGevonden.length && c.nietGevonden.length + " niet gevonden bij EP-Online",
+        c.nietGevonden.length &&
+          c.nietGevonden.length +
+            (u.zonderLabel ? " niet gevonden (EP-Online en BAG)" : " niet gevonden bij EP-Online"),
         c.meerdere.length && c.meerdere.length + " niet eenduidig (meerdere labels)",
         c.fout.length && c.fout.length + " ophalen mislukt",
         c.nietOpgehaald.length && c.nietOpgehaald.length + " nog niet opgehaald",
@@ -384,7 +393,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         head: [["Adres", "Reden"]],
         body: (
           [
-            [c.nietGevonden, "Niet gevonden bij EP-Online"],
+            [c.nietGevonden, nietGevondenReden(u)],
             [c.meerdere, "Niet eenduidig (meerdere labels)"],
             [c.fout, "Ophalen mislukt"],
             [c.nietOpgehaald, "Nog niet opgehaald"],
