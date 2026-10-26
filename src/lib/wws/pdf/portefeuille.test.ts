@@ -130,7 +130,7 @@ describe("PDF portefeuille-analyse", () => {
 
   it("verduurzamingsraming uitgevinkt: de sectie valt weg, de rest blijft", async () => {
     const u = analyseer([adres(1, "F", "2019-05-05")], "2026-10-15", 3, PORTEFEUILLE_STANDAARD);
-    const tekst = async (metRaming?: boolean) =>
+    const tekst = async (metRaming = true) =>
       (
         await pdfTekst(
           maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u, metRaming }).blob,
