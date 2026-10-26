@@ -2,7 +2,8 @@ import { useState, type ReactNode } from "react";
 import {
   EFG_TOELICHTING,
   efgTekst,
-  nietGevondenReden,
+  NIET_GEVONDEN_REDEN,
+  teControlerenLijsten,
   type AnalyseUitkomst,
 } from "@/lib/wws/portefeuille/analyse";
 import { nlDatum } from "@/lib/wws/portefeuille/datum";
@@ -39,7 +40,7 @@ export function AnalyseWeergave({
   /** Knop om BAG-gegevens op te halen, in de verduurzamingsraming (alleen actuele analyse) */
   ramingActie?: ReactNode;
 }) {
-  const c = u.teControleren;
+  const c = teControlerenLijsten(u);
   const aantalControle =
     c.nietGevonden.length + c.meerdere.length + c.fout.length + c.nietOpgehaald.length;
   const [doorklik, setDoorklik] = useState<Doorklik | null>(null);
@@ -191,7 +192,7 @@ export function AnalyseWeergave({
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             {(
               [
-                [nietGevondenReden(u), c.nietGevonden],
+                [NIET_GEVONDEN_REDEN, c.nietGevonden],
                 ["Niet eenduidig (meerdere labels)", c.meerdere],
                 ["Ophalen mislukt", c.fout],
                 ["Nog niet opgehaald", c.nietOpgehaald],

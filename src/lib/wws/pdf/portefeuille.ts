@@ -8,7 +8,9 @@ import {
   EFG_TOELICHTING,
   efgTekst,
   isWaarschuwingsKlasse,
-  nietGevondenReden,
+  NIET_GEVONDEN_REDEN,
+  teControlerenLijsten,
+  zonderLabelLijst,
   type AnalyseUitkomst,
 } from "../portefeuille/analyse";
 import { langeDatum, nlDatum } from "../portefeuille/datum";
@@ -54,19 +56,9 @@ const tijdstip = (iso: string | null) =>
 const dag = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("nl-NL", { dateStyle: "long" }) : "–";
 
-/** "1 oktober 2026" of "1 t/m 15 oktober 2026" */
-/**
- * De adressen in "geen geregistreerd label" die EP-Online wel kent (gevonden zonder geldige
- * labelklasse); de niet gevonden adressen horen bij "Te controleren".
- */
+/** De regels van "Woningen zonder geregistreerd label" in de PDF, met de opmerking erachter */
 export function zonderLabelAdressen(u: AnalyseUitkomst): string[] {
-  // nieuwe analyses: EP-Online geeft geen label, maar het adres bestaat (BAG); met opmerking
-  if (u.zonderLabel)
-    return u.zonderLabel.map((z) => z.adres + (z.opmerking ? ` (${z.opmerking})` : ""));
-  // oudere analyses: zonder BAG-onderscheid alleen de adressen die EP-Online wel kent
-  const nietGevonden = new Set(u.teControleren.nietGevonden);
-  const geen = u.risico.find((r) => r.categorie === "geen_label");
-  return (geen?.adressen ?? []).map((a) => a.adres).filter((a) => !nietGevonden.has(a));
+  return zonderLabelLijst(u).map((z) => z.adres + (z.opmerking ? ` (${z.opmerking})` : ""));
 }
 
 /**
@@ -81,6 +73,7 @@ export function lijstInKolommen(namen: readonly string[], drempel = 8): string[]
     .map((n, i) => (namen[i + helft] !== undefined ? [n, namen[i + helft]!] : [n]));
 }
 
+/** "1 oktober 2026" of "1 t/m 15 oktober 2026" */
 export function opgehaaldTekst(van: string | null, tot: string | null): string {
   if (!van) return "nog niet opgehaald";
   return periode(van, tot, dag);
@@ -355,8 +348,9 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
 
   // woningen zonder geregistreerd label: EP-Online geeft geen label, maar het adres bestaat. Een
   // adres dat ook de BAG niet kent staat alleen onder "Te controleren", zodat geen adres twee keer
-  // in de PDF staat (zie zonderLabelAdressen voor oudere analyses).
-  const nietGevonden = u.teControleren.nietGevonden;
+  // in de PDF staat (oudere analyses: zie zonderLabelLijst).
+  const c = teControlerenLijsten(u);
+  const nietGevonden = c.nietGevonden;
   const zonderLabel = zonderLabelAdressen(u);
   kop("Woningen zonder geregistreerd label (" + zonderLabel.length + ")");
   if (zonderLabel.length)
@@ -372,23 +366,17 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
     tekst(
       (zonderLabel.length ? "Daarnaast " : "") +
         aantal(nietGevonden.length, "adres", "adressen") +
-        (u.zonderLabel
-          ? " niet gevonden bij EP-Online en in de BAG"
-          : " niet gevonden bij EP-Online") +
-        "; die staan onder ‘Te controleren’.",
+        " niet gevonden bij EP-Online en in de BAG; die staan onder ‘Te controleren’.",
     );
   y += 4;
 
-  const c = u.teControleren;
   const controle =
     c.nietGevonden.length + c.meerdere.length + c.fout.length + c.nietOpgehaald.length;
   if (controle) {
     kop("Te controleren (" + controle + ")");
     tekst(
       [
-        c.nietGevonden.length &&
-          c.nietGevonden.length +
-            (u.zonderLabel ? " niet gevonden (EP-Online en BAG)" : " niet gevonden bij EP-Online"),
+        c.nietGevonden.length && c.nietGevonden.length + " niet gevonden (EP-Online en BAG)",
         c.meerdere.length && c.meerdere.length + " niet eenduidig (meerdere labels)",
         c.fout.length && c.fout.length + " ophalen mislukt",
         c.nietOpgehaald.length && c.nietOpgehaald.length + " nog niet opgehaald",
@@ -404,7 +392,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         head: [["Adres", "Reden"]],
         body: (
           [
-            [c.nietGevonden, nietGevondenReden(u)],
+            [c.nietGevonden, NIET_GEVONDEN_REDEN],
             [c.meerdere, "Niet eenduidig (meerdere labels)"],
             [c.fout, "Ophalen mislukt"],
             [c.nietOpgehaald, "Nog niet opgehaald"],

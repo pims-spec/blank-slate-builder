@@ -255,9 +255,36 @@ export function isWaarschuwingsKlasse(klasse: string, u: Pick<AnalyseUitkomst, "
   return klasse === "geen label" || (u.instellingen?.efg?.klassen ?? []).includes(klasse);
 }
 
-/** De reden bij "Te controleren" voor niet gevonden adressen (oudere analyses: alleen EP-Online) */
-export const nietGevondenReden = (u: Pick<AnalyseUitkomst, "zonderLabel">) =>
-  u.zonderLabel ? "Adres niet gevonden (EP-Online en BAG)" : "Niet gevonden bij EP-Online";
+/** De reden bij "Te controleren" voor een adres dat EP-Online en de BAG niet kennen */
+export const NIET_GEVONDEN_REDEN = "Adres niet gevonden (EP-Online en BAG)";
+
+/**
+ * "Te controleren" zoals getoond. Oudere analyses (zonder `zonderLabel`) weten niet wat de BAG
+ * zei; hun niet gevonden adressen staan onder "zonder label" (zie zonderLabelLijst).
+ */
+export function teControlerenLijsten(
+  u: Pick<AnalyseUitkomst, "zonderLabel" | "teControleren">,
+): AnalyseUitkomst["teControleren"] {
+  return u.zonderLabel ? u.teControleren : { ...u.teControleren, nietGevonden: [] };
+}
+
+/**
+ * "Woningen zonder geregistreerd label" zoals getoond, met een opmerking per adres. Oudere
+ * analyses: alle adressen zonder geregistreerd label; die EP-Online niet vond krijgen
+ * "BAG niet gecontroleerd".
+ */
+export function zonderLabelLijst(
+  u: Pick<AnalyseUitkomst, "zonderLabel" | "teControleren" | "risico">,
+): { adres: string; opmerking: string | null }[] {
+  if (u.zonderLabel) return u.zonderLabel;
+  const nietGevonden = new Set(u.teControleren.nietGevonden);
+  // nog oudere analyses hebben de adressen per categorie niet; dan de niet gevonden adressen
+  const geen = u.risico.find((r) => r.categorie === "geen_label")?.adressen?.map((a) => a.adres);
+  return (geen ?? u.teControleren.nietGevonden).map((adres) => ({
+    adres,
+    opmerking: nietGevonden.has(adres) ? "BAG niet gecontroleerd" : null,
+  }));
+}
 
 /** De analyse van een portefeuille op `datum`, met een venster van `maanden` (standaard 3) */
 export function analyseer(

@@ -6,10 +6,12 @@ import {
   categorie,
   efgOmschrijving,
   isWaarschuwingsKlasse,
-  nietGevondenReden,
+  teControlerenLijsten,
+  zonderLabelLijst,
   portefeuilleNormen,
   verloopdatum,
   type AnalyseAdres,
+  type AnalyseUitkomst,
   type LabelResultaat,
 } from "./analyse";
 import { isIsoDatum, plusJaren, plusMaanden } from "./datum";
@@ -208,11 +210,29 @@ describe("analyse van een portefeuille", () => {
       { adres: "1053 ZD 5", opmerking: null },
     ]);
     expect(u.teControleren.nietGevonden).toEqual(["1053 ZD 2"]);
-    expect(nietGevondenReden(u)).toBe("Adres niet gevonden (EP-Online en BAG)");
+    expect(teControlerenLijsten(u).nietGevonden).toEqual(["1053 ZD 2"]);
+    expect(zonderLabelLijst(u)).toBe(u.zonderLabel);
     // het risicoprofiel telt ze allemaal als "geen geregistreerd label"
     expect(u.risico.find((r) => r.categorie === "geen_label")!.aantal).toBe(5);
-    // oudere analyse zonder deze indeling
-    expect(nietGevondenReden({})).toBe("Niet gevonden bij EP-Online");
+    // oudere opgeslagen analyse (zonder BAG-indeling): niet gevonden onder "zonder label", met
+    // de opmerking "BAG niet gecontroleerd"; niet meer onder "te controleren"
+    const { zonderLabel: _weg, ...zonder } = u;
+    const oud: AnalyseUitkomst = {
+      ...zonder,
+      teControleren: {
+        ...u.teControleren,
+        nietGevonden: ["1053 ZD 1", "1053 ZD 2", "1053 ZD 3", "1053 ZD 4"],
+      },
+    };
+    expect(teControlerenLijsten(oud).nietGevonden).toEqual([]);
+    expect(teControlerenLijsten(oud).meerdere).toEqual(u.teControleren.meerdere);
+    expect(zonderLabelLijst(oud)).toEqual([
+      { adres: "1053 ZD 1", opmerking: "BAG niet gecontroleerd" },
+      { adres: "1053 ZD 2", opmerking: "BAG niet gecontroleerd" },
+      { adres: "1053 ZD 3", opmerking: "BAG niet gecontroleerd" },
+      { adres: "1053 ZD 4", opmerking: "BAG niet gecontroleerd" },
+      { adres: "1053 ZD 5", opmerking: null },
+    ]);
   });
 
   it("doorklik: per klasse en per risicocategorie de adressen; samen de beoordeelde", () => {

@@ -419,4 +419,30 @@ describe("PDF portefeuille-analyse", () => {
     expect(met).toContain("Onder de EFG-regels");
     expect(met).toContain("Woningen onder de EFG-regels (1)");
   });
+
+  it("oude opgeslagen analyse (zonder BAG-indeling): niet gevonden onder 'zonder label'", async () => {
+    const { zonderLabel: _weg, ...oud } = analyseer(
+      [
+        adres(1, "A", "2023-03-01"),
+        adres(2, null, null, "niet_gevonden"),
+        adres(3, null, null, "meerdere"),
+      ],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    // zo zag een opname van vóór de BAG-indeling eruit: alle niet gevonden adressen in teControleren
+    const u = { ...oud, teControleren: { ...oud.teControleren, nietGevonden: ["1053 ZD 2"] } };
+    const t = (await pdfTekst(maakPortefeuillePdf(LIB, { portefeuille: "TEST", uitkomst: u }).blob))
+      .slice(1)
+      .flat()
+      .join(" ")
+      .replace(/\s+/g, " ");
+    expect(t).toContain(
+      "Woningen zonder geregistreerd label (1) ADRES 1053 ZD 2 (BAG niet gecontroleerd)",
+    );
+    expect(t).toContain("Te controleren (1)");
+    expect(t).toContain("1053 ZD 3 Niet eenduidig (meerdere labels)");
+    expect(t).not.toMatch(/Niet gevonden bij EP-Online|niet gevonden \(EP-Online en BAG\)/);
+  });
 });

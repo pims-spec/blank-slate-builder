@@ -365,7 +365,9 @@ portefeuilles; "Alle portefeuilles van eigenaar" voegt die van een GoHome-eigena
   onder "Te controleren" als "Adres niet gevonden (EP-Online en BAG)". BAG nog niet opgehaald
   (of mislukt): onder zonder label, met die opmerking (keuze van de gebruiker). Elk adres staat
   maar in één lijst; het risicoprofiel telt ze allemaal als "Geen geregistreerd label". Oudere
-  analyses (zonder `zonderLabel`) houden de vorige indeling: alleen EP-Online.
+  opgeslagen analyses (zonder `zonderLabel`) weten niet wat de BAG zei: hun niet gevonden adressen
+  staan ook onder "zonder label", met "BAG niet gecontroleerd" (`zonderLabelLijst`,
+  `teControlerenLijsten`; scherm en PDF).
 - **Grafiek "Woningen per labelklasse"** (scherm en PDF): de labels onder de EFG-regels van die
   analyse en "geen label" in papaya (`isWaarschuwingsKlasse`), de overige indigo. Bewust geen
   legenda (wens); schermlezers horen "onder de EFG-regels". Getallen boven de staven blijven
