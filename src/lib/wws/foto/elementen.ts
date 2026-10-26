@@ -1,9 +1,15 @@
-// De elementen die de fotobeoordeling van een keuken of badkamer zoekt, met per element wat
+// De elementen die de fotobeoordeling van een keuken, badkamer of toiletruimte zoekt, met per element wat
 // zichtbaar bewijs is. De sleutels volgen de telling (KeukenVoorzKey, SanVoorzKey en de
-// sanitairvelden van FacBadkamer); groepen met een keuze (kookplaat, oven, kraan in de keuken,
+// sanitairvelden van FacBadkamer en FacToilet); groepen met een keuze (kookplaat, oven, kraan in de keuken,
 // toilet) zijn één element met een "soort".
 
-export type FotoRuimte = "keuken" | "badkamer";
+export type FotoRuimte = "keuken" | "badkamer" | "toilet";
+
+export const RUIMTE_NAAM: Record<FotoRuimte, string> = {
+  keuken: "keuken",
+  badkamer: "badkamer",
+  toilet: "toiletruimte",
+};
 
 export interface FotoElement {
   sleutel: string;
@@ -187,7 +193,23 @@ export const BADKAMER_ELEMENTEN: readonly FotoElement[] = [
   },
 ];
 
+export const TOILET_ELEMENTEN: readonly FotoElement[] = [
+  {
+    sleutel: "toilet",
+    naam: "Toilet",
+    kenmerken:
+      "Toilet in deze ruimte. Hangend: aan de wand, vloer eronder vrij (vaak met inbouwreservoir en drukplaat in de wand). Staand: pot op de vloer.",
+    soorten: ["staand", "hangend"],
+  },
+  {
+    sleutel: "fontein",
+    naam: "Fontein (handenwasbakje)",
+    kenmerken: "Klein wasbakje met kraan in de toiletruimte.",
+  },
+];
+
 export const ELEMENTEN: Record<FotoRuimte, readonly FotoElement[]> = {
   keuken: KEUKEN_ELEMENTEN,
   badkamer: BADKAMER_ELEMENTEN,
+  toilet: TOILET_ELEMENTEN,
 };

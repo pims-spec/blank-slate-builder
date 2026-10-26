@@ -114,7 +114,7 @@ reference/wws-site-pdf.cjs    letterlijke uitsnede van de PDF- en Excel-code, al
 - **Plattegrond.** Die komt in fase 4c uit Storage. De PDF-functies nemen hem al als parameter
   (`plattegrond`, een JPEG-data-URL).
 
-## Fotobeoordeling keuken en badkamer (in opbouw)
+## Fotobeoordeling keuken, badkamer en toiletruimte (in opbouw)
 
 `foto/elementen.ts` en `foto/beoordeling.ts`: welke elementen een foto-AI zoekt (sleutels zoals in
 de telling), de instructie, het JSON-schema van het antwoord en de controle daarvan (zod). Per

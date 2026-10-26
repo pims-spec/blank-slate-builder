@@ -1,9 +1,9 @@
-// De fotobeoordeling van een keuken of badkamer: de instructie, het antwoordschema (JSON Schema
+// De fotobeoordeling van een keuken, badkamer of toiletruimte: de instructie, het antwoordschema (JSON Schema
 // voor de dienst) en de controle van het antwoord (zod). Het antwoord van de AI is onbetrouwbare
 // data: alles wordt nagekeken, onbekende elementen of velden maken het antwoord ongeldig. Dezelfde
 // instructie en hetzelfde schema worden gebruikt in de vergelijkingstest en in de app.
 import * as z from "zod";
-import { ELEMENTEN, type FotoElement, type FotoRuimte } from "./elementen";
+import { ELEMENTEN, RUIMTE_NAAM, type FotoElement, type FotoRuimte } from "./elementen";
 
 export const STATUSSEN = ["aanwezig", "waarschijnlijk_aanwezig", "niet_vast_te_stellen"] as const;
 export type FotoStatus = (typeof STATUSSEN)[number];
@@ -40,7 +40,7 @@ function elementRegel(e: FotoElement): string {
 /** De instructie; de foto's gaan ervóór mee, elk voorafgegaan door "Foto n" */
 export function fotoPrompt(ruimte: FotoRuimte, nFotos: number): string {
   return [
-    `Je beoordeelt ${nFotos === 1 ? "een foto" : nFotos + " foto's"} van een ${ruimte} in een Nederlandse huurwoning, voor een puntentelling volgens het woningwaarderingsstelsel (WWS) van de Huurcommissie. Je stelt per element vast of het op de foto's te zien is. Je kent geen punten toe; de gebruiker controleert alles.`,
+    `Je beoordeelt ${nFotos === 1 ? "een foto" : nFotos + " foto's"} van een ${RUIMTE_NAAM[ruimte]} in een Nederlandse huurwoning, voor een puntentelling volgens het woningwaarderingsstelsel (WWS) van de Huurcommissie. Je stelt per element vast of het op de foto's te zien is. Je kent geen punten toe; de gebruiker controleert alles.`,
     "",
     "Statussen (kies per element precies één):",
     "- aanwezig: het element is duidelijk zichtbaar of herkenbaar aan doorslaggevende visuele kenmerken.",

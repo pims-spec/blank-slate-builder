@@ -37,6 +37,12 @@ describe("elementen", () => {
     const bad = new Set(ELEMENTEN.badkamer.map((e) => e.sleutel));
     for (const v of NORMEN.voorzSan) expect(bad.has(v.k), v.k).toBe(true);
   });
+
+  it("toiletruimte: toilet (staand of hangend) en fontein, zoals in de telling", () => {
+    expect(ELEMENTEN.toilet.map((e) => e.sleutel)).toEqual(["toilet", "fontein"]);
+    expect(ELEMENTEN.toilet[0]!.soorten).toEqual(["staand", "hangend"]);
+    expect(fotoPrompt("toilet", 1)).toContain("een foto van een toiletruimte");
+  });
 });
 
 describe("fotoPrompt en fotoSchema", () => {
