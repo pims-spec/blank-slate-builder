@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { standaardInstellingen, berekenAdvies, type AdviesInstellingen } from "../advies";
 import { MAATREGELEN } from "../advies/maatregelen";
 import { LABELS } from "../basis";
-import { normaliseer } from "../calc";
+import { normaliseer, zetBronAfronding } from "../calc";
 import { berekenDashboard, type DashboardVersie } from "../dashboard";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
 import { legeMeta } from "../opslag/doc";
@@ -52,10 +52,15 @@ const N = DEFAULT_NORMEN as unknown as Normen;
 
 const PEIL = new Date("2026-10-14T12:00:00Z");
 beforeAll(() => {
+  // de bron rondt buitenruimte en WOZ-m² anders af dan de app (zie calc.ts)
+  zetBronAfronding(true);
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(PEIL);
 });
-afterAll(() => vi.useRealTimers());
+afterAll(() => {
+  vi.useRealTimers();
+  zetBronAfronding(false);
+});
 
 /** De oude code, met een saveFile die de blob opvangt */
 function bron(ctx: Ref) {

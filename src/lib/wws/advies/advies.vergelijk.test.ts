@@ -12,6 +12,7 @@ import type { WwsInput } from "../types";
 import { berekenAdvies, berekenRoute, selectieResultaat } from "./advies";
 import { MAATREGELEN } from "./maatregelen";
 import type { AdviesInstellingen, Kosten, RouteResultaat } from "./types";
+import { zetBronAfronding } from "../calc";
 
 const require = createRequire(import.meta.url);
 type Ref = Record<string, unknown>;
@@ -37,10 +38,15 @@ const { maakAdvies } = require("../../../../reference/wws-site-advies.cjs") as {
 const PEIL = new Date("2026-10-14T12:00:00Z");
 const VANDAAG = "2026-10-14";
 beforeAll(() => {
+  // de bron rondt buitenruimte en WOZ-m² anders af dan de app (zie calc.ts)
+  zetBronAfronding(true);
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(PEIL);
 });
-afterAll(() => vi.useRealTimers());
+afterAll(() => {
+  vi.useRealTimers();
+  zetBronAfronding(false);
+});
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 

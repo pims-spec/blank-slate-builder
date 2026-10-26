@@ -68,6 +68,24 @@ De code volgt wws-site.html (bron van waarheid). Verschillen met de tekstspecifi
   gebruikt nu nog vandaag, net als de bron.
 - De migratie van zeer oude tellingen (zonder `facV`) is niet overgezet: de database is vers.
 
+## Bewuste afwijkingen in de rekenkern (afronding zoals de Huurprijscheck)
+
+Gevonden door 69 tellingen uit Huurprijscheck-bijlagen (CBRE-rapporten, Huurcommissie leidend)
+door `calc()` te halen. De bron rondde op twee plekken anders af:
+
+- **Buitenruimte (rubriek 8):** de privé-oppervlakte wordt eerst afgerond op hele m² (vanaf 0,5
+  omhoog), daarna × 0,35. Bijvoorbeeld 3,6 m²: 4 × 0,35 + 2 = 3,4 → 3,5 (de bron: 3,25).
+- **WOZ-m² (rubriek 11, deel 2):** de m² van vertrekken en overige ruimten (vanaf 2 m²) worden
+  onafgerond opgeteld en pas daarna afgerond. Bijvoorbeeld 60,3 + 6,4 = 66,7 → 67 m² (de bron:
+  60 + 6 = 66 m²).
+
+Daarmee komen 65 van de 69 totalen exact overeen. Open: bij 4 woningen met een WOZ-cap komt de
+Huurprijscheck 1 punt lager uit; die afronding is nog niet achterhaald. Bij de vloer van 186
+punten toont de Huurprijscheck de WOZ-punten zonder cap, de app met cap (totaal gelijk).
+
+De vergelijkingstests met wws-site.html (`*.vergelijk.test.ts`) zetten `zetBronAfronding(true)`,
+zodat ze de bron exact blijven volgen; de app zet dit nooit aan.
+
 ## PDF's en Excel-export (fase 4b)
 
 ```

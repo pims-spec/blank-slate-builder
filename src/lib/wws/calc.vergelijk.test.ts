@@ -4,7 +4,7 @@
 // rubrieken, toelichtingen, waarschuwingen, totalen en huurprijzen opleveren.
 import { createRequire } from "node:module";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { calc } from "./calc";
+import { calc, zetBronAfronding } from "./calc";
 import { DEFAULT_NORMEN, type Normen } from "./normen";
 import { genereer } from "./testdata";
 
@@ -17,10 +17,15 @@ const REF = require("../../../reference/wws-site-calc.cjs") as {
 
 const PEIL = new Date("2026-10-14T12:00:00Z");
 beforeAll(() => {
+  // de bron rondt buitenruimte en WOZ-m² anders af dan de app (zie calc.ts)
+  zetBronAfronding(true);
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(PEIL);
 });
-afterAll(() => vi.useRealTimers());
+afterAll(() => {
+  vi.useRealTimers();
+  zetBronAfronding(false);
+});
 
 describe("gelijk aan wws-site.html", () => {
   it("normbedragen zijn identiek aan DEFAULT_NORMEN", () => {

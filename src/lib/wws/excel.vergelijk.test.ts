@@ -9,6 +9,7 @@ import { DEFAULT_NORMEN, type Normen } from "./normen";
 import type { Telling } from "./opslag/types";
 import { bytesVan, willekeurigeMeta } from "./pdf/testhulp";
 import { genereer, rng } from "./testdata";
+import { zetBronAfronding } from "./calc";
 
 const require = createRequire(import.meta.url);
 const CALC = require("../../../reference/wws-site-calc.cjs") as {
@@ -21,10 +22,15 @@ const { maakPdfBron } = require("../../../reference/wws-site-pdf.cjs") as {
 
 const PEIL = new Date("2026-10-14T12:00:00Z");
 beforeAll(() => {
+  // de bron rondt buitenruimte en WOZ-m² anders af dan de app (zie calc.ts)
+  zetBronAfronding(true);
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(PEIL);
 });
-afterAll(() => vi.useRealTimers());
+afterAll(() => {
+  vi.useRealTimers();
+  zetBronAfronding(false);
+});
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 

@@ -176,6 +176,15 @@ export function huurVoorPunten(
   return (last + (i - (t.length - 1)) * (last - prev)) / 100;
 }
 
+/**
+ * Afronding zoals wws-site.html in plaats van zoals de Huurprijscheck (buitenruimte en WOZ-m²).
+ * Alleen voor de vergelijkingstests met de bron; de app zet dit nooit aan.
+ */
+let bronAfronding = false;
+export function zetBronAfronding(aan: boolean) {
+  bronAfronding = aan;
+}
+
 export function calc(
   input: WwsInput,
   N: Normen = DEFAULT_NORMEN as unknown as Normen,
@@ -473,8 +482,9 @@ export function calc(
     p8 = N.geenBuiten;
     t8 = "geen buitenruimte";
   } else {
+    // privé: eerst afronden op hele m² (zoals de Huurprijscheck; bewuste afwijking van de bron)
     p8 =
-      (bp > 0 ? N.buitenAanwezig + r2(bp) * N.buitenPerM2 : 0) +
+      (bp > 0 ? N.buitenAanwezig + (bronAfronding ? r2(bp) : m2r(bp)) * N.buitenPerM2 : 0) +
       (bg > 0 ? (r2(bg) * N.gemBuitenPerM2) / ba : 0);
     if (p8 > N.buitenMax) {
       p8 = N.buitenMax;
@@ -549,7 +559,12 @@ export function calc(
     wVal = num(W.waarde);
     wT = "WOZ " + eur(wVal) + " (beschikking " + W.jaar + ")";
   }
-  const m2woz = m2r(oppV + oppO + (num(P.typeI) * N.parkeer.m2TypeI) / pa);
+  // m² van vertrekken en overige ruimten onafgerond optellen, pas daarna afronden (zoals de
+  // Huurprijscheck; bewuste afwijking van de bron, die de al afgeronde totalen optelde)
+  const oppOraw = telt.reduce((s, o) => s + o.m, 0);
+  const m2woz = m2r(
+    (bronAfronding ? oppV + oppO : oppVraw + oppOraw) + (num(P.typeI) * N.parkeer.m2TypeI) / pa,
+  );
   const d2 = W.kleinCorop ? kg[2] : kg[1];
   let pW = q(wVal / kg[0] + (m2woz > 0 ? wVal / m2woz / d2 : 0));
   const pWstd = pW;

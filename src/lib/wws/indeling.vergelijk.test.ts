@@ -20,6 +20,7 @@ import { DEFAULT_NORMEN, type Normen } from "./normen";
 import type { Pve } from "./pve";
 import { genereer, rng } from "./testdata";
 import type { WwsInput } from "./types";
+import { zetBronAfronding } from "./calc";
 
 const require = createRequire(import.meta.url);
 type Ref = Record<string, unknown>;
@@ -51,10 +52,15 @@ const { maakIndeling } = require("../../../reference/wws-site-indeling.cjs") as 
 
 const PEIL = new Date("2026-10-14T12:00:00Z");
 beforeAll(() => {
+  // de bron rondt buitenruimte en WOZ-m² anders af dan de app (zie calc.ts)
+  zetBronAfronding(true);
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(PEIL);
 });
-afterAll(() => vi.useRealTimers());
+afterAll(() => {
+  vi.useRealTimers();
+  zetBronAfronding(false);
+});
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 const kloon = <T>(o: T): T => JSON.parse(JSON.stringify(o));

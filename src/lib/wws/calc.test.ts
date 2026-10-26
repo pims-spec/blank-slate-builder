@@ -1,7 +1,7 @@
 // Leesbare voorbeelden met met de hand nagerekende uitkomsten.
 // De volledige gelijkheid met wws-site.html staat in calc.vergelijk.test.ts.
 import { describe, expect, it } from "vitest";
-import { calc, huurVoorPunten } from "./calc";
+import { calc, huurVoorPunten, zetBronAfronding } from "./calc";
 import { ensureFac, m2r, q } from "./basis";
 import { legeInput } from "./legeInput";
 import type {
@@ -83,17 +83,47 @@ describe("voorbeeldappartement", () => {
     expect(p(r, 4)).toBe(37);
     expect(p(r, 5)).toBe(7.5); // 4 + 1,75 + 1 + 0,75
     expect(p(r, 6)).toBe(12.25); // hangend 3,75 + wastafel 1 + fontein 1 + douche 4 + extra (1,25 + 2×0,25 + 0,75)
-    expect(p(r, 8)).toBe(4.25); // 2 + 6,4 × 0,35 = 4,24 → 4,25
+    expect(p(r, 8)).toBe(4); // 6,4 → 6 m²: 2 + 6 × 0,35 = 4,1 → 4
   });
-  it("WOZ wordt (zoals in de bron) op kwarten afgerond", () => {
-    expect(p(r, 11)).toBe(q(300000 / 16954 + 300000 / 60 / 268)); // 56 + 4 m²
+  it("WOZ op kwarten; m² van vertrekken en overige ruimten onafgerond opgeteld", () => {
+    expect(p(r, 11)).toBe(q(300000 / 16954 + 300000 / 61 / 268)); // 56,4 + 4,4 = 60,8 → 61 m²
   });
   it("totaal, segment en huur", () => {
-    expect(r.totaal).toBe(Math.round(56 + 3 + 12 + 37 + 7.5 + 12.25 + 4.25 + p(r, 11)));
+    expect(r.totaal).toBe(Math.round(56 + 3 + 12 + 37 + 7.5 + 12.25 + 4 + p(r, 11)));
     expect(r.seg).toBe("midden");
     expect(r.maxHuur).toBe(huurVoorPunten(r.totaal));
     expect(heeftWarn(r, "Stopcontacten tellen tot maximaal 2 per wastafel")).toBe(true);
     expect(heeftWarn(r, "kleiner dan 2 m²")).toBe(true);
+  });
+});
+
+describe("afronding zoals de Huurprijscheck (bewuste afwijking van de bron)", () => {
+  // Uit de Huurprijscheck-bijlagen van de CBRE-rapporten (Huurcommissie leidend)
+  function woning(buiten: number) {
+    const i = legeInput();
+    i.vertrekken = [vertrek("woonkamer", 30.2), vertrek("slaapkamer", 30.1)];
+    i.overig = [overig("berging_in", 6.4)];
+    i.buiten.ruimten = buiten ? [{ soort: "balkon", groep: "priv", m2: buiten }] : [];
+    i.woz = { soort: "woz", waarde: 431000, jaar: "2026", nieuwbouw1519: false, kleinCorop: false };
+    return i;
+  }
+  it("buitenruimte: eerst afronden op hele m²", () => {
+    expect(p(reken(woning(3.6)), 8)).toBe(3.5); // 4 m²: 2 + 1,4 = 3,4 → 3,5
+    expect(p(reken(woning(29.5)), 8)).toBe(12.5); // 30 m²
+    expect(p(reken(woning(0.4)), 8)).toBe(2); // 0 m², wel een buitenruimte
+  });
+  it("WOZ-m²: vertrekken en overige ruimten onafgerond opgeteld (Aalbersestraat 88)", () => {
+    // 60,3 + 6,4 = 66,7 → 67 m² (de bron: 60 + 6 = 66 m², 49,75 punten)
+    expect(p(reken(woning(0)), 11)).toBe(49.5);
+  });
+  it("met de afronding van de bron (alleen voor de vergelijkingstests)", () => {
+    zetBronAfronding(true);
+    try {
+      expect(p(reken(woning(3.6)), 8)).toBe(3.25);
+      expect(p(reken(woning(0)), 11)).toBe(49.75);
+    } finally {
+      zetBronAfronding(false);
+    }
   });
 });
 
