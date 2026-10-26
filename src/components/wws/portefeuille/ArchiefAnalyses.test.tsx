@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { kiesInMenu, menuKeuzes } from "@/test/menu";
 import { rechtenVan, type AppRole } from "@/lib/rollen";
 import { PORTEFEUILLE_STANDAARD, analyseer } from "@/lib/wws/portefeuille/analyse";
 import type { ArchiefAnalyse } from "@/lib/wws/portefeuille/opslag";
@@ -63,6 +64,8 @@ const rij = (x: Partial<ArchiefAnalyse>): ArchiefAnalyse => ({
   ...x,
 });
 
+const meer = (naam: string) => screen.getByRole("button", { name: "Meer acties voor " + naam });
+
 function toon(rollen: AppRole[], userId = "u1") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -106,11 +109,16 @@ describe("Archief: portefeuille-analyses", () => {
   it("verwijderen alleen voor de maker (of admin); kijkrol alleen bekijken en PDF", async () => {
     const { unmount } = toon(["member"], "u1");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
-    expect(screen.getAllByRole("button", { name: "Verwijderen" })).toHaveLength(1);
+    // u1 maakte Oost: verwijderen; de gecombineerde is van u2: alleen delen (Oost is van u1)
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /Meer acties/ })).toHaveLength(2),
+    );
+    expect(await menuKeuzes(meer("Oost"))).toEqual(["Delen", "Verwijderen"]);
+    expect(await menuKeuzes(meer("Oost en West"))).toEqual(["Delen"]);
     unmount();
     toon(["viewer"], "u1");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
-    expect(screen.queryByRole("button", { name: "Verwijderen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Meer acties/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Bekijken" })).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: "PDF" })).toHaveLength(2);
   });
@@ -131,8 +139,8 @@ describe("Archief: portefeuille-analyses", () => {
     store.verwijderCombiAnalyse.mockResolvedValue(undefined);
     toon(["admin"], "u9");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
-    fireEvent.click(screen.getAllByRole("button", { name: "Verwijderen" })[1]!);
-    fireEvent.click(await screen.findByRole("button", { name: "Verwijderen", hidden: false }));
+    await kiesInMenu(meer("Oost en West"), "Verwijderen");
+    fireEvent.click(await screen.findByRole("button", { name: "Verwijderen" }));
     await waitFor(() => expect(store.verwijderCombiAnalyse).toHaveBeenCalledWith("c1"));
     expect(store.verwijderAnalyse).not.toHaveBeenCalled();
   });
@@ -140,8 +148,10 @@ describe("Archief: portefeuille-analyses", () => {
   it("delen: alleen portefeuilles die jij maakte; bij gecombineerd alleen die", async () => {
     toon(["member"], "u1");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
-    await waitFor(() => expect(screen.getAllByRole("button", { name: "Delen" })).toHaveLength(2));
-    fireEvent.click(screen.getAllByRole("button", { name: "Delen" })[1]!);
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /Meer acties/ })).toHaveLength(2),
+    );
+    await kiesInMenu(meer("Oost en West"), "Delen");
     const d = await screen.findByRole("dialog");
     expect(within(d).getByText("Portefeuille delen")).toBeInTheDocument();
     // gecombineerd Oost + West, maar u1 maakte alleen Oost: geen keuzelijst
@@ -158,12 +168,13 @@ describe("Archief: portefeuille-analyses", () => {
     const tabel = await screen.findByRole("table", { name: "Portefeuille-analyses" });
     expect(within(tabel).getByText("Portefeuille verwijderd")).toBeInTheDocument();
     expect(within(tabel).getByText("Amstel Wonen")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delen" })).not.toBeInTheDocument();
+    expect(await menuKeuzes(meer("Oud"))).toEqual(["Verwijderen"]);
     fireEvent.click(screen.getByRole("button", { name: "Bekijken" }));
     await waitFor(() => expect(store.analyseUitkomst).toHaveBeenCalledWith("verwijderd", "v1"));
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-    fireEvent.click(screen.getByRole("button", { name: "Verwijderen" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Verwijderen", hidden: false }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await kiesInMenu(meer("Oud"), "Verwijderen");
+    fireEvent.click(await screen.findByRole("button", { name: "Verwijderen" }));
     await waitFor(() => expect(store.verwijderBewaardeAnalyse).toHaveBeenCalledWith("v1"));
   });
 
@@ -171,13 +182,15 @@ describe("Archief: portefeuille-analyses", () => {
     const { unmount } = toon(["member"], "u1");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
     // de gecombineerde is van u2: u1 mag niet hernoemen
-    expect(screen.queryByRole("button", { name: "Hernoemen" })).not.toBeInTheDocument();
+    expect(await menuKeuzes(meer("Oost en West"))).not.toContain("Hernoemen");
     unmount();
     store.hernoemCombiAnalyse.mockResolvedValue("Oost + West 2026");
     toon(["member"], "u2");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
-    expect(screen.getAllByRole("button", { name: "Hernoemen" })).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Hernoemen" }));
+    // alleen bij de gecombineerde, niet bij Oost (één portefeuille)
+    await waitFor(() => expect(meer("Oost en West")).toBeInTheDocument());
+    expect(await menuKeuzes(meer("Oost en West"))).toContain("Hernoemen");
+    await kiesInMenu(meer("Oost en West"), "Hernoemen");
     const d = await screen.findByRole("dialog");
     const veld = within(d).getByLabelText("Naam");
     expect(veld).toHaveValue("Oost en West");
@@ -200,7 +213,7 @@ describe("Archief: portefeuille-analyses", () => {
     );
     toon(["admin"], "u9");
     await screen.findByRole("table", { name: "Portefeuille-analyses" });
-    fireEvent.click(screen.getByRole("button", { name: "Hernoemen" }));
+    await kiesInMenu(meer("Oost en West"), "Hernoemen");
     const d = await screen.findByRole("dialog");
     fireEvent.change(within(d).getByLabelText("Naam"), { target: { value: "Nieuw" } });
     fireEvent.click(within(d).getByRole("button", { name: "Opslaan" }));

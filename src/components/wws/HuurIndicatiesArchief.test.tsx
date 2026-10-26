@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { kiesInMenu } from "@/test/menu";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { huurNormen, standaardAntwoorden, type HuurWoning } from "@/lib/wws/huur";
 import { maakHuurIndicatie } from "@/lib/wws/huur/opslag";
@@ -105,9 +106,11 @@ describe("Archief: huurprijsindicaties", () => {
 
   it("verwijderen alleen eigen indicaties (of admin), na bevestiging", async () => {
     toon();
-    const knoppen = await screen.findAllByRole("button", { name: "Verwijder Teststraat 5" });
+    const knoppen = await screen.findAllByRole("button", {
+      name: "Meer acties voor Teststraat 5",
+    });
     expect(knoppen).toHaveLength(1);
-    fireEvent.click(knoppen[0]!);
+    await kiesInMenu(knoppen[0]!, "Verwijderen");
     fireEvent.click(await screen.findByRole("button", { name: "Verwijderen" }));
     await waitFor(() => expect(huur.verwijder).toHaveBeenCalledWith("i1"));
   });
@@ -116,6 +119,7 @@ describe("Archief: huurprijsindicaties", () => {
     toon({ magSchrijven: false, isAdmin: false });
     fireEvent.click((await screen.findAllByRole("button", { name: "Bekijk Teststraat 5" }))[0]!);
     expect(screen.queryByRole("button", { name: /^Verwijder/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Meer acties/ })).toBeNull();
     expect(screen.queryByText("Opnieuw berekenen met huidige tabel")).toBeNull();
     expect(screen.getAllByRole("button", { name: "PDF Teststraat 5" })).toHaveLength(2);
   });

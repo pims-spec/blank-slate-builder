@@ -180,6 +180,12 @@ daarmee vervangen.
     het grijze canvas zelf zijn ze wit.
   - Tabs zijn een grijze balk met een witte schuivende pil. Tabelkoppen zijn klein, halfvet en
     in hoofdletters.
+  - **Knoppen achter een rij in het archief** (`RijActies.tsx`, alle drie de tabbladen): de
+    vaste acties als knop op één regel ("Openen", of "Bekijken" en "PDF"); de overige ("Delen",
+    "Hernoemen", "Verwijderen") in een menu "⋯" met de naam "Meer acties voor …". Verwijderen
+    staat onderaan, apart, in de waarschuwingskleur. Zonder overige acties (kijkrol) is er geen
+    menu. Het menu is niet modaal, zodat een venster dat eruit opent de focus krijgt. Tests
+    openen het met `src/test/menu.ts`.
   - Het zijmenu is een zwevend glaspaneel (`gh-glass`).
   - Knoppen krimpen bij indrukken naar 0.97 (`gh-press`).
 - **Knoppen:**

@@ -34,6 +34,7 @@ import { useNormen } from "./NormenContext";
 import { maakArchiefExcel } from "@/lib/wws/excel";
 import type { Telling } from "@/lib/wws/opslag";
 import DelenDialoog from "./DelenDialoog";
+import { RijActies } from "./RijActies";
 import { dashboardVersiesQuery, klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
 import { useDownload } from "./useDownload";
 
@@ -169,27 +170,24 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
             </select>
           )}
         </td>
-        <td className="whitespace-nowrap px-3 py-1 text-right">
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/wws" search={openZoek}>
-              Openen
-            </Link>
-          </Button>
-          {magTellingBewerken(rechten, r.t.ownerId, userId) && (
-            <Button size="sm" variant="ghost" onClick={() => setTeDelen(r)}>
-              Delen
+        <td className="px-3 py-1">
+          <RijActies
+            naam={r.titel}
+            acties={
+              magTellingBewerken(rechten, r.t.ownerId, userId)
+                ? [
+                    { label: "Delen", onSelect: () => setTeDelen(r) },
+                    { label: "Verwijderen", gevaar: true, onSelect: () => setTeVerwijderen(r) },
+                  ]
+                : []
+            }
+          >
+            <Button asChild size="sm" variant="outline">
+              <Link to="/wws" search={openZoek}>
+                Openen
+              </Link>
             </Button>
-          )}
-          {magTellingBewerken(rechten, r.t.ownerId, userId) && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setTeVerwijderen(r)}
-            >
-              Verwijderen
-            </Button>
-          )}
+          </RijActies>
         </td>
       </tr>
     );

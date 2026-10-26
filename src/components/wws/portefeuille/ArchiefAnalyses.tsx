@@ -30,6 +30,7 @@ import {
 import { useDownload } from "../useDownload";
 import { AnalyseWeergave } from "./AnalyseWeergave";
 import { HernoemAnalyseDialoog } from "./HernoemAnalyseDialoog";
+import { RijActies } from "../RijActies";
 import { PortefeuilleDelenDialoog } from "./PortefeuilleDelenDialoog";
 
 const opgeslagen = (iso: string) =>
@@ -185,7 +186,22 @@ export function ArchiefAnalyses({
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-wrap justify-end gap-1">
+                    <RijActies
+                      naam={a.titel}
+                      acties={[
+                        deelbaar(a).length > 0 && { label: "Delen", onSelect: () => setDelen(a) },
+                        a.soort === "combi" &&
+                          magVerwijderen(a) && {
+                            label: "Hernoemen",
+                            onSelect: () => setHernoem(a),
+                          },
+                        magVerwijderen(a) && {
+                          label: "Verwijderen",
+                          gevaar: true,
+                          onSelect: () => setWeg(a),
+                        },
+                      ]}
+                    >
                       <Button size="sm" variant="outline" onClick={() => void bekijken(a)}>
                         Bekijken
                       </Button>
@@ -197,27 +213,7 @@ export function ArchiefAnalyses({
                       >
                         {download.bezig === "pdf-" + a.id ? "PDF maken…" : "PDF"}
                       </Button>
-                      {deelbaar(a).length > 0 && (
-                        <Button size="sm" variant="outline" onClick={() => setDelen(a)}>
-                          Delen
-                        </Button>
-                      )}
-                      {a.soort === "combi" && magVerwijderen(a) && (
-                        <Button size="sm" variant="outline" onClick={() => setHernoem(a)}>
-                          Hernoemen
-                        </Button>
-                      )}
-                      {magVerwijderen(a) && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setWeg(a)}
-                        >
-                          Verwijderen
-                        </Button>
-                      )}
-                    </div>
+                    </RijActies>
                   </td>
                 </tr>
               ))}

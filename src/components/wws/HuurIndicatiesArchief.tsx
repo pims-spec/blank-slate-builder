@@ -19,6 +19,7 @@ import { HUUR_DISCLAIMER, maakHuurPdf } from "@/lib/wws/pdf/huur";
 import { Bronnen, FactorTabel, MarkthuurKaart, WwsKaart } from "./HuurprijsIndicator";
 import { huurIndicatiesQuery, huurStore, klantenQuery } from "./tellingStore";
 import { useDownload } from "./useDownload";
+import { RijActies } from "./RijActies";
 
 interface Rechten {
   isAdmin?: boolean | undefined;
@@ -165,7 +166,16 @@ export function HuurIndicatiesArchief({
                       {euro(i.data.advies.bedrag)}
                     </td>
                     <td className="p-2">
-                      <div className="flex justify-end gap-1">
+                      <RijActies
+                        naam={adresVan(i)}
+                        acties={[
+                          magWeg(i) && {
+                            label: "Verwijderen",
+                            gevaar: true,
+                            onSelect: () => setTeVerwijderen(i),
+                          },
+                        ]}
+                      >
                         <Button
                           variant="outline"
                           size="sm"
@@ -175,7 +185,7 @@ export function HuurIndicatiesArchief({
                           Bekijken
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           aria-label={"PDF " + adresVan(i)}
                           disabled={!!download.bezig}
@@ -183,17 +193,7 @@ export function HuurIndicatiesArchief({
                         >
                           PDF
                         </Button>
-                        {magWeg(i) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            aria-label={"Verwijder " + adresVan(i)}
-                            onClick={() => setTeVerwijderen(i)}
-                          >
-                            Verwijderen
-                          </Button>
-                        )}
-                      </div>
+                      </RijActies>
                     </td>
                   </tr>
                 ))}

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { kiesInMenu, menuKeuzes } from "@/test/menu";
 import { rechtenVan, type AppRole } from "@/lib/rollen";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
@@ -80,9 +81,13 @@ describe("Archief", () => {
     toon(["member"], "bob");
     await screen.findByText("Eigen telling");
     expect(
-      within(rijVan("Eigen telling")).getByRole("button", { name: "Verwijderen" }),
-    ).toBeTruthy();
-    expect(within(rijVan("Van Anna")).queryByRole("button", { name: "Verwijderen" })).toBeNull();
+      await menuKeuzes(
+        within(rijVan("Eigen telling")).getByRole("button", {
+          name: "Meer acties voor Eigen telling",
+        }),
+      ),
+    ).toEqual(["Delen", "Verwijderen"]);
+    expect(within(rijVan("Van Anna")).queryByRole("button", { name: /Meer acties/ })).toBeNull();
     expect(within(rijVan("Van Anna")).getByText("gedeeld door Anna")).toBeTruthy();
     expect(await within(rijVan("Van Anna")).findByText("Zeta Vastgoed")).toBeTruthy();
   });
@@ -90,8 +95,13 @@ describe("Archief", () => {
   it("delen vanuit het archief: alleen eigen tellingen; collega aanvinken deelt", async () => {
     toon(["member"], "bob");
     await screen.findByText("Eigen telling");
-    expect(within(rijVan("Van Anna")).queryByRole("button", { name: "Delen" })).toBeNull();
-    fireEvent.click(within(rijVan("Eigen telling")).getByRole("button", { name: "Delen" }));
+    expect(within(rijVan("Van Anna")).queryByRole("button", { name: /Meer acties/ })).toBeNull();
+    await kiesInMenu(
+      within(rijVan("Eigen telling")).getByRole("button", {
+        name: "Meer acties voor Eigen telling",
+      }),
+      "Delen",
+    );
     const d = await screen.findByRole("dialog");
     expect(within(d).getByText("Telling delen")).toBeTruthy();
     fireEvent.click(await within(d).findByRole("checkbox", { name: /Cor/ }));
@@ -105,6 +115,7 @@ describe("Archief", () => {
     expect(screen.getByRole("columnheader", { name: /Bob/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Verwijderen" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Meer acties/ })).toBeNull();
     expect(screen.queryByText("Nieuwe telling")).toBeNull();
   });
 
