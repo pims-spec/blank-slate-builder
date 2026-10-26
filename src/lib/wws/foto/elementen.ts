@@ -171,7 +171,7 @@ export const BADKAMER_ELEMENTEN: readonly FotoElement[] = [
     sleutel: "kastruimte",
     naam: "Kastruimte (min. 40 cm breed en hoog)",
     kenmerken:
-      "Een vaste kast in de badkamer van minimaal 40 x 40 cm (spiegelkast, hoge kast). Het kastje onder de wastafel telt hier niet; dat is het wastafelkastje.",
+      "Kastruimte in de badkamer: een kast met deuren (spiegelkast, hoge kast) of een open vakkenkast, in beide gevallen minimaal 40 cm breed en 40 cm hoog. Schat de maat aan de hand van tegels, de wastafel of een deur; is de kast duidelijk kleiner, dan telt hij niet. Kun je de maat niet goed schatten, kies dan hoogstens waarschijnlijk_aanwezig. Het kastje onder de wastafel telt hier niet; dat is het wastafelkastje.",
   },
   {
     sleutel: "stopcontact",

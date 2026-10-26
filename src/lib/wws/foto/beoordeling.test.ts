@@ -57,6 +57,9 @@ describe("fotoPrompt en fotoSchema", () => {
     for (const e of KEUKEN_ELEMENTEN) expect(p).toContain(`- ${e.sleutel} (`);
     expect(p).toContain("Beschrijf geen personen");
     expect(p).toContain("telt als oven én als magnetron");
+    expect(fotoPrompt("badkamer", 1)).toContain(
+      "of een open vakkenkast, in beide gevallen minimaal 40 cm breed en 40 cm hoog",
+    );
   });
 
   it("schema: één platte lijst; element en soort uit vaste lijsten", () => {
