@@ -3,10 +3,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { GEMINI_URL, STANDAARD_GEMINI_FOTO_MODEL, zoekTekst } from "../ai/dienst";
 import { metLimiet } from "../ai/limiet";
-import { FotoVraag, MAX_FOTO_BASE64 } from "../ai/vragen";
+import {
+  FotoSorteerVraag,
+  FotoVraag,
+  MAX_FOTO_BASE64,
+  MAX_SORTEER_FOTO_BASE64,
+} from "../ai/vragen";
 import { fotoPrompt, fotoSchema, MAX_FOTOS } from "./beoordeling";
 import { ELEMENTEN } from "./elementen";
-import { beoordeelMetGemini } from "./gemini";
+import { beoordeelMetGemini, sorteerMetGemini } from "./gemini";
+import { MAX_WONING_FOTOS, sorteerPrompt, sorteerSchema } from "./sorteren";
 
 const b64 = (bytes: number[]) => btoa(String.fromCharCode(...bytes, ...new Array(30).fill(0)));
 /** Een JPEG van n base64-tekens (kop zonder opvulling, daarna nullen) */
@@ -221,5 +227,59 @@ describe("metLimiet (daglimiet)", () => {
       ok: false,
       fout: "geen_toegang",
     });
+  });
+});
+
+describe("sorteerMetGemini en FotoSorteerVraag", () => {
+  it("stuurt foto's met nummer, de sorteerinstructie en het schema; controleert het antwoord", async () => {
+    const goed = {
+      outputs: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            fotos: [
+              { foto: 1, soort: "keuken", reden: "Aanrecht." },
+              { foto: 2, soort: "anders", reden: "Slaapkamer." },
+            ],
+          }),
+        },
+      ],
+    };
+    const { fn, aanroepen } = nepFetch(200, goed);
+    const r = await sorteerMetGemini(fn, "s", undefined, [foto, foto]);
+    expect(r).toEqual({
+      ok: true,
+      data: [
+        { soort: "keuken", reden: "Aanrecht." },
+        { soort: "anders", reden: "Slaapkamer." },
+      ],
+    });
+    const body = JSON.parse(aanroepen[0]!.init.body as string);
+    expect(body.store).toBe(false);
+    expect(body.model).toBe(STANDAARD_GEMINI_FOTO_MODEL);
+    expect(body.input.at(-1)).toEqual({ type: "text", text: sorteerPrompt(2) });
+    expect(body.response_format.schema).toEqual(sorteerSchema());
+
+    const fout = nepFetch(200, { outputs: [{ type: "text", text: '{"fotos":[]}' }] });
+    expect(await sorteerMetGemini(fout.fn, "s", undefined, [foto])).toEqual({
+      ok: false,
+      fout: "onbruikbaar_antwoord",
+    });
+    const veel = nepFetch(429, {});
+    expect(await sorteerMetGemini(veel.fn, "s", undefined, [foto])).toEqual({
+      ok: false,
+      fout: "te_veel_verzoeken",
+    });
+  });
+
+  it("invoer: 1 tot 30 kleine foto's, geen ruimte nodig", () => {
+    expect(FotoSorteerVraag.safeParse({ fotos: [foto] }).success).toBe(true);
+    expect(FotoSorteerVraag.safeParse({ fotos: [] }).success).toBe(false);
+    expect(
+      FotoSorteerVraag.safeParse({ fotos: new Array(MAX_WONING_FOTOS + 1).fill(foto) }).success,
+    ).toBe(false);
+    expect(
+      FotoSorteerVraag.safeParse({ fotos: [jpegVan(MAX_SORTEER_FOTO_BASE64 + 4)] }).success,
+    ).toBe(false);
   });
 });

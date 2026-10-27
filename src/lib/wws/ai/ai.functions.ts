@@ -8,7 +8,8 @@
 // - bouwt de instructie zelf op (prompts.ts) en stuurt alleen afbeelding/tekst + instructie;
 // - geeft alleen eigen foutcodes terug, nooit de foutmelding van de dienst.
 import { createServerFn } from "@tanstack/react-start";
-import { beoordeelMetGemini } from "../foto/gemini";
+import { beoordeelMetGemini, sorteerMetGemini } from "../foto/gemini";
+import type { FotoSortering } from "../foto/sorteren";
 import type { Beoordeling } from "../foto/beoordeling";
 import { vereisSchrijfrol } from "../rollenMiddleware";
 import type { PlattegrondAntwoord } from "./antwoorden";
@@ -17,7 +18,13 @@ import { metLimiet, type AiAntwoord } from "./limiet";
 import { verwijderPatronen } from "./privacy";
 import { energieAdviesPrompt, indelingAIPrompt, platPrompt } from "./prompts";
 import { verwerkEnergieAdvies, verwerkPlattegrond } from "./verwerken";
-import { EnergieAdviesVraag, FotoVraag, PlattegrondVraag, VariantAfbeeldingVraag } from "./vragen";
+import {
+  EnergieAdviesVraag,
+  FotoSorteerVraag,
+  FotoVraag,
+  PlattegrondVraag,
+  VariantAfbeeldingVraag,
+} from "./vragen";
 import type { EnergieAdvies } from "../types";
 
 export type { AiAntwoord, AiServerFout } from "./limiet";
@@ -90,5 +97,15 @@ export const beoordeelFotos = createServerFn({ method: "POST" })
         data.ruimte,
         data.fotos,
       ),
+    ),
+  );
+
+/** Foto's van de woning sorteren (vóór beoordeelFotos per ruimte); telt als één keer "lezen" */
+export const sorteerFotos = createServerFn({ method: "POST" })
+  .middleware([vereisSchrijfrol])
+  .validator((d: unknown) => FotoSorteerVraag.parse(d))
+  .handler(async ({ data, context }): Promise<AiAntwoord<FotoSortering[]>> =>
+    metLimiet(context.supabase, "lezen", "GEMINI_API_KEY", () =>
+      sorteerMetGemini(fetch, env("GEMINI_API_KEY"), env("GEMINI_FOTO_MODEL"), data.fotos),
     ),
   );

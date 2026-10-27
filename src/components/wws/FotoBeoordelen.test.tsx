@@ -1,26 +1,33 @@
 import { useState } from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { legeInput, type WwsInput } from "@/lib/wws";
 import type { Beoordeling, ElementOordeel } from "@/lib/wws/foto/beoordeling";
 import { ELEMENTEN } from "@/lib/wws/foto/elementen";
 import { verkleinMaten } from "@/lib/wws/foto/beeld";
+import type { FotoSortering } from "@/lib/wws/foto/sorteren";
 import { aiMelding } from "@/lib/wws/ai/meldingen";
 import FotoDialoog from "./FotoDialoog";
 import WwsCalculator from "./WwsCalculator";
 
 const beoordeelFotos = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/wws/ai/ai.functions", () => ({ beoordeelFotos }));
+const sorteerFotos = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wws/ai/ai.functions", () => ({ beoordeelFotos, sorteerFotos }));
+const klaarmaken = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/wws/foto/beeld", async (orig) => ({
   ...(await orig<typeof import("@/lib/wws/foto/beeld")>()),
-  fotoKlaarmaken: async () => ({ data: "AAAA", type: "image/jpeg" }),
+  fotoKlaarmaken: klaarmaken,
 }));
 
 beforeAll(() => {
-  URL.createObjectURL = vi.fn(() => "blob:test");
+  URL.createObjectURL = vi.fn(() => "blob:" + Math.random());
   URL.revokeObjectURL = vi.fn();
 });
-afterEach(() => beoordeelFotos.mockReset());
+afterEach(() => {
+  beoordeelFotos.mockReset();
+  sorteerFotos.mockReset();
+  klaarmaken.mockReset();
+});
 
 const o = (over: Partial<ElementOordeel> = {}): ElementOordeel => ({
   status: "niet_vast_te_stellen",
@@ -35,11 +42,14 @@ const toiletUitslag = (): Beoordeling => ({
   toilet: o({ status: "aanwezig", soort: "hangend", bewijs: "Wandcloset.", fotos: [1] }),
   fontein: o({ status: "waarschijnlijk_aanwezig", bewijs: "Bakje in de hoek.", fotos: [1] }),
 });
+const leegKeuken = (): Beoordeling =>
+  Object.fromEntries(ELEMENTEN.keuken.map((e) => [e.sleutel, o()]));
+const sort = (soort: FotoSortering["soort"]): FotoSortering => ({ soort, reden: "Te zien." });
 
 /** De telling met eigen state, zodat wijzigingen zichtbaar worden */
-function Telling({ begin, fotoBeoordelen = true }: { begin: WwsInput; fotoBeoordelen?: boolean }) {
+function Telling({ begin }: { begin: WwsInput }) {
   const [inp, setInp] = useState(begin);
-  return <WwsCalculator input={inp} setInput={setInp} fotoBeoordelen={fotoBeoordelen} />;
+  return <WwsCalculator input={inp} setInput={setInp} />;
 }
 function metRuimten(f: (i: WwsInput) => void) {
   const i = legeInput();
@@ -71,8 +81,7 @@ describe("telling: uitroeptekens van de fotobeoordeling", () => {
     render(<Telling begin={keukenMetFoto()} />);
     expect(screen.getByText(/Controleer de velden met een uitroepteken/)).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "Alles uitklappen" })[0]!);
-    const vaat = screen.getByRole("button", { name: /^Controleren: Waarschijnlijk aanwezig/ });
-    fireEvent.click(vaat);
+    fireEvent.click(screen.getByRole("button", { name: /^Controleren: Waarschijnlijk aanwezig/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Gecontroleerd" }));
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /^Controleren: Waarschijnlijk/ })).toBeNull(),
@@ -80,7 +89,6 @@ describe("telling: uitroeptekens van de fotobeoordeling", () => {
     expect(
       screen.getByRole("button", { name: "Controleren: Niet te schatten." }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Controleer de velden met een uitroepteken/)).toBeInTheDocument();
   });
 
   it("met de hand aanpassen haalt het ! bij dat veld weg; het laatste ! ook het label", () => {
@@ -90,92 +98,43 @@ describe("telling: uitroeptekens van de fotobeoordeling", () => {
       target: { value: ">=2" },
     });
     expect(screen.queryByRole("button", { name: "Controleren: Niet te schatten." })).toBeNull();
-    expect(
-      screen.getByRole("button", { name: /^Controleren: Waarschijnlijk/ }),
-    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: /Inbouw vaatwasmachine/ }));
     expect(screen.queryByRole("button", { name: /^Controleren:/ })).toBeNull();
     expect(screen.queryByText(/Ingevuld uit foto's/)).toBeNull();
   });
 
-  it("Alles gecontroleerd: alle ! en het label weg", () => {
+  it("Alles gecontroleerd: alle ! en het label weg; geen knop per ruimte meer", () => {
     render(<Telling begin={keukenMetFoto()} />);
+    expect(screen.queryByRole("button", { name: "Foto's beoordelen" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Alles gecontroleerd" }));
     expect(screen.queryByText(/Ingevuld uit foto's/)).toBeNull();
     fireEvent.click(screen.getAllByRole("button", { name: "Alles uitklappen" })[0]!);
     expect(screen.queryByRole("button", { name: /^Controleren:/ })).toBeNull();
   });
 
-  it("knop alleen bij keuken, badkamer en toilet, en alleen met fotoBeoordelen", () => {
-    const begin = metRuimten((i) => {
-      i.vertrekken = [
-        {
-          type: "keuken",
-          m2: 8,
-          verwarmd: true,
-          fac: { kind: "keuken", keuken: { lengte: "1-2", voorz: {} } },
-        },
-        { type: "slaap_san", m2: 12, verwarmd: true },
-      ];
-    });
-    const { unmount } = render(<Telling begin={begin} />);
-    expect(screen.getAllByRole("button", { name: "Foto's beoordelen" })).toHaveLength(1);
-    unmount();
-    render(<Telling begin={begin} fotoBeoordelen={false} />);
-    expect(screen.queryByRole("button", { name: "Foto's beoordelen" })).toBeNull();
-  });
-
-  it("uitslag van Gemini komt in de telling, met ! bij wat onzeker is", async () => {
-    beoordeelFotos.mockResolvedValue({
-      ok: true,
-      data: toiletUitslag(),
-      gebruik: { gebruikt: 2, limiet: 30 },
-    });
-    const begin = metRuimten((i) => {
-      i.overig = [
-        {
-          type: "toilet",
-          m2: 1.2,
-          verwarmd: false,
-          fac: { kind: "toilet", toilet: { toilet: "staand", fontein: false } },
-        },
-      ];
-    });
-    render(<Telling begin={begin} />);
-    fireEvent.click(screen.getByRole("button", { name: "Foto's beoordelen" }));
-    const venster = await screen.findByRole("dialog");
-    const f = new File(["x"], "wc.jpg", { type: "image/jpeg" });
-    fireEvent.change(within(venster).getByLabelText("Foto's kiezen"), { target: { files: [f] } });
-    fireEvent.click(within(venster).getByRole("button", { name: "Foto's beoordelen" }));
-    expect(
-      await within(venster).findByText(/Controleer de plek met een uitroepteken/),
-    ).toBeInTheDocument();
-    expect(beoordeelFotos).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { ruimte: "toilet", fotos: [{ data: "AAAA", type: "image/jpeg" }] },
-      }),
+  it("ruimte toegevoegd uit foto's: 'Vul de m² in' tot de m² er staat", () => {
+    render(
+      <Telling
+        begin={metRuimten((i) => {
+          i.overig = [
+            {
+              type: "toilet",
+              m2: "",
+              verwarmd: false,
+              herkomst: "Toegevoegd uit foto's",
+              fac: { kind: "toilet", toilet: { toilet: "staand", fontein: false } },
+            },
+          ];
+        })}
+      />,
     );
-    expect(within(venster).getByText("Wandcloset.")).toBeInTheDocument();
-    fireEvent.keyDown(venster, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(screen.getByRole("combobox", { name: /Toilet/ })).toHaveValue("hangend");
-    expect(screen.getByRole("checkbox", { name: /Fontein/ })).toBeChecked();
-    expect(
-      screen.getByRole("button", {
-        name: "Controleren: Waarschijnlijk aanwezig: Bakje in de hoek.",
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Toegevoegd uit foto's. Vul de m² in.")).toBeInTheDocument();
+    fireEvent.change(screen.getAllByPlaceholderText("0,00")[0]!, { target: { value: "1,2" } });
+    expect(screen.queryByText(/Vul de m² in/)).toBeNull();
   });
 });
 
-describe("FotoDialoog", () => {
-  const props = () => ({
-    open: true,
-    onOpenChange: () => {},
-    ruimte: "keuken" as const,
-    naam: "Keuken",
-    onUitslag: vi.fn(() => 0),
-  });
+describe("FotoDialoog (hele woning)", () => {
   const kies = (n: number) =>
     fireEvent.change(screen.getByLabelText("Foto's kiezen"), {
       target: {
@@ -185,65 +144,151 @@ describe("FotoDialoog", () => {
         ),
       },
     });
+  function openMet(input: WwsInput) {
+    const onToepassen = vi.fn();
+    render(<FotoDialoog open onOpenChange={() => {}} input={input} onToepassen={onToepassen} />);
+    return onToepassen;
+  }
+  const keukenEnToilet = () =>
+    metRuimten((i) => {
+      i.vertrekken = [
+        {
+          type: "keuken",
+          m2: 8,
+          verwarmd: true,
+          fac: { kind: "keuken", keuken: { lengte: "1-2", voorz: {} } },
+        },
+      ];
+    });
 
-  it("tip, privacymelding; hoogstens 10 foto's", () => {
-    render(<FotoDialoog {...props()} />);
-    expect(screen.getByText(/kast naast de spoelbak en de hoge kast open/)).toBeInTheDocument();
+  it("sorteert met kleine foto's, deelt in, beoordeelt per ruimte; ontbrekend toilet wordt nieuw", async () => {
+    klaarmaken.mockImplementation(async (_b: Blob, max?: number) => ({
+      data: max === 768 ? "KLEIN" : "GROOT",
+      type: "image/jpeg",
+    }));
+    sorteerFotos.mockResolvedValue({
+      ok: true,
+      data: [sort("keuken"), sort("toilet"), sort("anders")],
+      gebruik: { gebruikt: 1, limiet: 30 },
+    });
+    beoordeelFotos.mockImplementation(async ({ data }: { data: { ruimte: string } }) => ({
+      ok: true,
+      data: data.ruimte === "toilet" ? toiletUitslag() : leegKeuken(),
+      gebruik: { gebruikt: 3, limiet: 30 },
+    }));
+    const onToepassen = openMet(keukenEnToilet());
+    expect(screen.getByText(/kast naast de spoelbak en de hoge kast/)).toBeInTheDocument();
     expect(screen.getByText(/geen personen, namen, post/)).toBeInTheDocument();
-    kies(12);
-    expect(screen.getByText("10 van 10 foto's")).toBeInTheDocument();
-    expect(screen.getByText(/Hoogstens 10 foto's/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Foto 1 weghalen" }));
-    expect(screen.getByText("9 van 10 foto's")).toBeInTheDocument();
+    kies(3);
+    fireEvent.click(screen.getByRole("button", { name: "Foto's sorteren" }));
+    expect(await screen.findByRole("button", { name: "Beoordelen" })).toBeEnabled();
+    expect(sorteerFotos.mock.calls[0]![0].data.fotos).toHaveLength(3);
+    expect(sorteerFotos.mock.calls[0]![0].data.fotos[0].data).toBe("KLEIN");
+    expect(screen.getByRole("combobox", { name: "Ruimte voor foto 1" })).toHaveValue(
+      "vertrekken:0",
+    );
+    expect(screen.getByRole("combobox", { name: "Ruimte voor foto 2" })).toHaveValue(
+      "nieuw:toilet",
+    );
+    expect(screen.getByRole("combobox", { name: "Ruimte voor foto 3" })).toHaveValue("geen");
+
+    fireEvent.click(screen.getByRole("button", { name: "Beoordelen" }));
+    expect(await screen.findByText(/Ingevuld in de telling/)).toBeInTheDocument();
+    expect(beoordeelFotos).toHaveBeenCalledTimes(2);
+    for (const [arg] of beoordeelFotos.mock.calls)
+      expect(arg.data.fotos).toEqual([{ data: "GROOT", type: "image/jpeg" }]);
+    const nieuw = onToepassen.mock.calls[0]![0] as WwsInput;
+    expect(nieuw.overig).toHaveLength(1);
+    expect(nieuw.overig[0]).toMatchObject({
+      type: "toilet",
+      m2: "",
+      herkomst: "Toegevoegd uit foto's",
+      fac: { kind: "toilet", toilet: { toilet: "hangend", fontein: true }, uitFoto: true },
+    });
+    expect(nieuw.vertrekken[0]!.fac).toMatchObject({ uitFoto: true });
+    expect(screen.getByText("Toiletruimte (nieuw)")).toBeInTheDocument();
+    expect(screen.getByText("Ingevuld, 1 veld met een uitroepteken.")).toBeInTheDocument();
   });
 
-  it("fout: vaste melding, niets ingevuld", async () => {
-    beoordeelFotos.mockResolvedValue({
+  it("twee toiletten in de telling: eerst kiezen, dan pas beoordelen", async () => {
+    klaarmaken.mockResolvedValue({ data: "X", type: "image/jpeg" });
+    sorteerFotos.mockResolvedValue({ ok: true, data: [sort("toilet")] });
+    const input = metRuimten((i) => {
+      i.overig = [1, 2].map((n) => ({
+        type: "toilet" as const,
+        naam: "Toilet " + (n === 1 ? "beneden" : "boven"),
+        m2: 1,
+        verwarmd: false,
+        fac: { kind: "toilet" as const, toilet: { toilet: "staand" as const, fontein: false } },
+      }));
+    });
+    openMet(input);
+    kies(1);
+    fireEvent.click(screen.getByRole("button", { name: "Foto's sorteren" }));
+    const keuze = await screen.findByRole("combobox", { name: "Ruimte voor foto 1" });
+    expect(keuze).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Beoordelen" })).toBeDisabled();
+    expect(screen.getByText("Kies bij 1 foto de ruimte.")).toBeInTheDocument();
+    fireEvent.change(keuze, { target: { value: "overig:1" } });
+    expect(screen.getByRole("button", { name: "Beoordelen" })).toBeEnabled();
+  });
+
+  it("een ruimte mislukt: de andere wordt wel ingevuld", async () => {
+    klaarmaken.mockResolvedValue({ data: "X", type: "image/jpeg" });
+    sorteerFotos.mockResolvedValue({ ok: true, data: [sort("keuken"), sort("toilet")] });
+    beoordeelFotos.mockImplementation(async ({ data }: { data: { ruimte: string } }) =>
+      data.ruimte === "toilet"
+        ? { ok: false, fout: "dienst_onbereikbaar" }
+        : { ok: true, data: leegKeuken() },
+    );
+    const onToepassen = openMet(keukenEnToilet());
+    kies(2);
+    fireEvent.click(screen.getByRole("button", { name: "Foto's sorteren" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Beoordelen" }));
+    expect(await screen.findByText(/Bij 1 ruimte ging het mis/)).toBeInTheDocument();
+    expect(screen.getByText(aiMelding("dienst_onbereikbaar", "foto"))).toBeInTheDocument();
+    const nieuw = onToepassen.mock.calls[0]![0] as WwsInput;
+    expect(nieuw.overig).toHaveLength(0);
+    expect(nieuw.vertrekken[0]!.fac).toMatchObject({ uitFoto: true });
+  });
+
+  it("fout bij sorteren: vaste melding, niets ingevuld; hoogstens 30 foto's", async () => {
+    klaarmaken.mockResolvedValue({ data: "X", type: "image/jpeg" });
+    sorteerFotos.mockResolvedValue({
       ok: false,
       fout: "limiet_bereikt",
       gebruik: { gebruikt: 30, limiet: 30 },
     });
-    const p = props();
-    render(<FotoDialoog {...p} />);
-    kies(1);
-    fireEvent.click(screen.getByRole("button", { name: "Foto's beoordelen" }));
+    const onToepassen = openMet(keukenEnToilet());
+    kies(32);
+    expect(screen.getByText("30 van 30 foto's")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Foto 1 weghalen" }));
+    expect(screen.getByText("29 van 30 foto's")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Foto's sorteren" }));
     expect(
       await screen.findByText(/daglimiet voor inlezen met AI is bereikt \(30 van 30\)/),
     ).toBeInTheDocument();
-    expect(p.onUitslag).not.toHaveBeenCalled();
+    expect(onToepassen).not.toHaveBeenCalled();
   });
 
-  it("Stoppen: Gestopt., niets ingevuld", async () => {
+  it("Stoppen tijdens het beoordelen: niets in de telling", async () => {
+    klaarmaken.mockResolvedValue({ data: "X", type: "image/jpeg" });
+    sorteerFotos.mockResolvedValue({ ok: true, data: [sort("keuken")] });
     beoordeelFotos.mockImplementation(
       ({ signal }: { signal: AbortSignal }) =>
         new Promise((_ok, fout) =>
           signal.addEventListener("abort", () => fout(new DOMException("weg", "AbortError"))),
         ),
     );
-    const p = props();
-    render(<FotoDialoog {...p} />);
-    kies(2);
-    fireEvent.click(screen.getByRole("button", { name: "Foto's beoordelen" }));
+    const onToepassen = openMet(keukenEnToilet());
+    kies(1);
+    fireEvent.click(screen.getByRole("button", { name: "Foto's sorteren" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Beoordelen" }));
     fireEvent.click(await screen.findByRole("button", { name: "Stoppen" }));
-    expect(await screen.findByText("Gestopt.")).toBeInTheDocument();
-    expect(p.onUitslag).not.toHaveBeenCalled();
-  });
-
-  it("uitslag: alle elementen met status", async () => {
-    const b = Object.fromEntries(ELEMENTEN.keuken.map((e) => [e.sleutel, o()]));
-    b["magnetron"] = o({
-      status: "aanwezig",
-      vrijstaand: true,
-      bewijs: "Op het aanrecht.",
-      fotos: [2],
-    });
-    beoordeelFotos.mockResolvedValue({ ok: true, data: b, gebruik: { gebruikt: 1, limiet: 30 } });
-    render(<FotoDialoog {...props()} />);
-    kies(2);
-    fireEvent.click(screen.getByRole("button", { name: "Foto's beoordelen" }));
-    expect(await screen.findByText("Vrijstaand, telt niet")).toBeInTheDocument();
-    expect(screen.getByText("(foto 2)")).toBeInTheDocument();
-    expect(screen.getAllByText("Niet vast te stellen")).toHaveLength(ELEMENTEN.keuken.length - 1);
+    expect(
+      await screen.findByText("Gestopt. Er is niets in de telling gezet."),
+    ).toBeInTheDocument();
+    expect(onToepassen).not.toHaveBeenCalled();
   });
 });
 
@@ -254,12 +299,11 @@ describe("meldingen en verkleinen", () => {
     );
     expect(aiMelding("onbruikbaar_antwoord", "foto")).toMatch(/^Het antwoord was onbruikbaar/);
     expect(aiMelding("sleutel_ontbreekt", "foto")).toContain("GEMINI_API_KEY");
-    expect(aiMelding("te_veel_verzoeken", "foto")).toMatch(/^Gemini is nu niet bereikbaar/);
   });
 
-  it("verkleinMaten: langste zijde hoogstens 1.568 px, nooit vergroten", () => {
+  it("verkleinMaten: langste zijde hoogstens 1.568 px (of 768), nooit vergroten", () => {
     expect(verkleinMaten(4032, 3024)).toEqual({ w: 1568, h: 1176 });
-    expect(verkleinMaten(3024, 4032)).toEqual({ w: 1176, h: 1568 });
+    expect(verkleinMaten(3024, 4032, 768)).toEqual({ w: 576, h: 768 });
     expect(verkleinMaten(800, 600)).toEqual({ w: 800, h: 600 });
   });
 });

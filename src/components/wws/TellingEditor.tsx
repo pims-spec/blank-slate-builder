@@ -41,6 +41,7 @@ import AdviesDialoog from "./AdviesDialoog";
 import EnergielabelOphalen from "./EnergielabelOphalen";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
+import FotoDialoog from "./FotoDialoog";
 import PlattegrondDialoog from "./PlattegrondDialoog";
 import NieuweTellingDialoog from "./NieuweTellingDialoog";
 import {
@@ -152,6 +153,7 @@ export default function TellingEditor({
   const [pveVraag, setPveVraag] = useState<PveVraag | null>(null);
   const [indelingOpen, setIndelingOpen] = useState(false);
   const [plattegrondOpen, setPlattegrondOpen] = useState(false);
+  const [fotosOpen, setFotosOpen] = useState(false);
   const [verwijderVraag, setVerwijderVraag] = useState(false);
   const [vergelijkOpen, setVergelijkOpen] = useState(false);
   /** Venster "Nieuwe telling" (postcode + huisnummer) — bij elke nieuwe, lege telling */
@@ -1068,7 +1070,7 @@ export default function TellingEditor({
 
       {!alleenLezen && (
         <section
-          aria-label="Plattegrond inlezen"
+          aria-label="Plattegrond en foto's inlezen"
           className="gh-card mt-5 flex flex-wrap items-center gap-2 p-3"
         >
           <PlattegrondKnoppen
@@ -1076,6 +1078,11 @@ export default function TellingEditor({
             onInlezen={() => setPlattegrondOpen(true)}
             onVerwijderen={plattegrondVerwijderen}
           />
+          {rechten.magSchrijven && (
+            <Button type="button" variant="outline" onClick={() => setFotosOpen(true)}>
+              Foto's beoordelen
+            </Button>
+          )}
         </section>
       )}
 
@@ -1366,7 +1373,6 @@ export default function TellingEditor({
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
         woningtypeElders
-        fotoBeoordelen={!alleenLezen && rechten.magSchrijven}
       />
       {!alleenLezen && (
         <PlattegrondDialoog
@@ -1375,6 +1381,14 @@ export default function TellingEditor({
           input={staat.input}
           meta={staat.meta}
           onOvernemen={plattegrondOvernemen}
+        />
+      )}
+      {!alleenLezen && rechten.magSchrijven && (
+        <FotoDialoog
+          open={fotosOpen}
+          onOpenChange={setFotosOpen}
+          input={staat.input}
+          onToepassen={(nieuw) => setInput(nieuw)}
         />
       )}
       <IndelingDialoog

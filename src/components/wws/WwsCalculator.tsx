@@ -36,13 +36,7 @@ import {
   zonderTypeNotitie,
 } from "@/lib/wws/ruimteInvoer";
 import type { Maat } from "@/lib/wws/types";
-import {
-  fotoAllesGecontroleerd,
-  fotoRuimteVoor,
-  fotoStand,
-  fotoVeldGecontroleerd,
-  pasFotosToe,
-} from "@/lib/wws/foto/invullen";
+import { fotoAllesGecontroleerd, fotoStand, fotoVeldGecontroleerd } from "@/lib/wws/foto/invullen";
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
 import { samenvattingVoorz } from "@/lib/wws/voorzSamenvatting";
 import {
@@ -53,7 +47,6 @@ import {
   segmentSchaal,
 } from "@/lib/wws/samenvatting";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import FotoDialoog from "./FotoDialoog";
 import { useNormen } from "./NormenContext";
 import Uitleg from "./Uitleg";
 
@@ -468,8 +461,6 @@ export interface WwsCalculatorProps {
   woningtypeVergrendeld?: { onOntgrendel: () => void } | undefined;
   /** Het woningtype staat elders (in de kaart "Woning" van de telling, zoals in de bron) */
   woningtypeElders?: boolean;
-  /** Knop "Foto's beoordelen" bij keuken, badkamer en toilet (vereist een schrijfrol) */
-  fotoBeoordelen?: boolean;
 }
 
 export default function WwsCalculator({
@@ -485,7 +476,6 @@ export default function WwsCalculator({
   wozExtra,
   woningtypeVergrendeld,
   woningtypeElders = false,
-  fotoBeoordelen = false,
 }: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
@@ -516,13 +506,6 @@ export default function WwsCalculator({
       }
       return n;
     });
-  // Fotobeoordeling: voor welke ruimte het venster open is
-  const [fotoVoor, setFotoVoor] = useState<{ groep: "vertrekken" | "overig"; i: number } | null>(
-    null,
-  );
-  const fotoRuimte = fotoVoor ? inp[fotoVoor.groep][fotoVoor.i] : undefined;
-  const fotoSoort = fotoRuimteVoor(fotoRuimte?.fac);
-
   const metFac = [
     ...inp.vertrekken.map((r, i) => (r.fac ? "vertrekken:" + i : "")),
     ...inp.overig.map((r, i) => (r.fac ? "overig:" + i : "")),
@@ -883,15 +866,6 @@ export default function WwsCalculator({
                     <span className="ml-auto text-xs text-muted-foreground">
                       {uitgeklapt[groep + ":" + i] ? "Inklappen" : "Uitklappen"}
                     </span>
-                  </button>
-                )}
-                {fotoBeoordelen && !alleenLezen && fotoRuimteVoor(r.fac) && (
-                  <button
-                    type="button"
-                    className={knopCls}
-                    onClick={() => setFotoVoor({ groep, i })}
-                  >
-                    Foto's beoordelen
                   </button>
                 )}
                 {r.fac.uitPve && (
@@ -1577,32 +1551,6 @@ export default function WwsCalculator({
           {kop && <p className="mt-4 text-xs text-muted-foreground">Normen: {N.naam}.</p>}
         </div>
       </aside>
-      {fotoVoor && fotoSoort && (
-        <FotoDialoog
-          open
-          onOpenChange={(o) => !o && setFotoVoor(null)}
-          ruimte={fotoSoort}
-          naam={
-            fotoRuimte?.naam ||
-            (fotoVoor.groep === "vertrekken" ? VERTREK_TYPES : OVERIG_TYPES).find(
-              (t) => t.k === fotoRuimte?.type,
-            )?.l ||
-            "ruimte"
-          }
-          onUitslag={(b) => {
-            // op de huidige stand van de ruimte toepassen (pasFotosToe wijzigt niets zelf)
-            const huidig = inp[fotoVoor.groep][fotoVoor.i]?.fac;
-            const r = huidig ? pasFotosToe(huidig, fotoSoort, b) : null;
-            if (!r) return 0;
-            wijzig((d) => {
-              const x = d[fotoVoor.groep][fotoVoor.i];
-              if (x?.fac && fotoRuimteVoor(x.fac) === fotoSoort) x.fac = r.fac;
-            });
-            zetUitgeklapt(fotoVoor.groep + ":" + fotoVoor.i, true);
-            return r.onzeker;
-          }}
-        />
-      )}
     </div>
   );
 }

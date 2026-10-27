@@ -65,6 +65,9 @@ export function ruimteOpmerking(
         "Kleiner dan 2 m²: geen oppervlaktepunten" +
         (r.type === "toilet" ? ". Het toilet zelf telt bij rubriek 6 (Sanitair)." : "."),
     };
+  // ruimte toegevoegd uit de fotobeoordeling: de m² moet de gebruiker nog invullen
+  if (r.herkomst === "Toegevoegd uit foto's" && !(num(r.m2) > 0))
+    return { tekst: "Toegevoegd uit foto's. Vul de m² in.", ingeschat: true };
   if (r.herkomst) return { tekst: r.herkomst, ingeschat: /ingeschat/.test(r.herkomst) };
   return null;
 }

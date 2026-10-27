@@ -9,6 +9,7 @@ import {
   type Beoordeling,
 } from "./beoordeling";
 import type { FotoRuimte } from "./elementen";
+import { controleerSortering, sorteerPrompt, sorteerSchema, type FotoSortering } from "./sorteren";
 
 export async function beoordeelMetGemini(
   fetchFn: typeof fetch,
@@ -32,4 +33,28 @@ export async function beoordeelMetGemini(
     return { ok: false, fout: "onbruikbaar_antwoord" };
   }
   return { ok: true, data: b };
+}
+
+/** Foto's van een woning sorteren: per foto keuken, badkamer, toilet of anders */
+export async function sorteerMetGemini(
+  fetchFn: typeof fetch,
+  sleutel: string | undefined,
+  model: string | undefined,
+  fotos: readonly Afbeelding[],
+): Promise<AiUitkomst<FotoSortering[]>> {
+  const r = await vraagGeminiJson(
+    fetchFn,
+    sleutel,
+    model,
+    sorteerPrompt(fotos.length),
+    fotos,
+    sorteerSchema(),
+  );
+  if (!r.ok) return r;
+  const s = controleerSortering(fotos.length, leesJson(r.data));
+  if (!s) {
+    console.warn("[ai] Gemini: onbruikbaar_antwoord (foto's sorteren)");
+    return { ok: false, fout: "onbruikbaar_antwoord" };
+  }
+  return { ok: true, data: s };
 }
