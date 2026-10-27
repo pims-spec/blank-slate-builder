@@ -25,6 +25,7 @@ import {
   buitenTekst,
   platToepassen,
   standaardKeuzes,
+  standaardVervangen,
   type PlatKeuzes,
 } from "@/lib/wws/plattegrond/toepassen";
 import type { NieuwBeeld } from "./plattegrondBeeld";
@@ -149,7 +150,7 @@ export function PlattegrondInlezen({
         return;
       }
       setR(r.data);
-      setK({ ...standaardKeuzes(r.data), vervangen: vastVervangen });
+      setK({ ...standaardKeuzes(r.data), vervangen: vastVervangen || standaardVervangen(input) });
       // runIndPlat() in de Blanco-start zegt "ga door" (daar heet de knop Doorgaan)
       setStatus(
         vastVervangen
@@ -324,7 +325,7 @@ export function PlattegrondInlezen({
               <Vink
                 aan={k.vervangen}
                 zet={(v) => setK({ ...k, vervangen: v })}
-                tekst="Bestaande ruimten vervangen (anders toevoegen)"
+                tekst="Bestaande ruimten vervangen (anders toevoegen). Al ingevulde voorzieningen blijven bij dezelfde soort ruimte."
               />
             )}
           </div>

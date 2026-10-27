@@ -5,6 +5,7 @@
 import { ensureFac, fmt, num, OVERIG_TYPES, overigType, r2, VERTREK_TYPES } from "../basis";
 import { normaliseer } from "../calc";
 import { bboxOk } from "../indeling";
+import { facIsOnbewerkt } from "../pve";
 import type { OverigeRuimte, Vertrek, WwsInput } from "../types";
 import type { PlattegrondAntwoord } from "../ai/antwoorden";
 
@@ -61,6 +62,15 @@ export function standaardKeuzes(R: PlattegrondAntwoord): PlatKeuzes {
   };
 }
 
+/**
+ * Staat "bestaande ruimten vervangen" standaard aan? Ja als de telling al ruimten met m² heeft:
+ * anders komen de ingelezen ruimten er dubbel bij. Een lege telling (of alleen soorten zonder m²)
+ * wordt aangevuld, zoals de bron.
+ */
+export function standaardVervangen(input: WwsInput): boolean {
+  return [...input.vertrekken, ...input.overig].some((r) => num(r.m2) > 0);
+}
+
 /** "1× toilet in toiletruimte, 1× douche" — of leeg als er niets gevonden is */
 export function sanitairTekst(R: PlattegrondAntwoord): string {
   const S = R.sanitair as Record<string, unknown>;
@@ -91,6 +101,9 @@ type Nieuw = (Vertrek | OverigeRuimte) & { herkomst: string; bbox?: unknown; _me
  *   alleen de aanrechtlengte uit de plattegrond.
  * - "raam" en "open_keuken" uit het antwoord gaan mee als `raam` en `openKeuken` (voor het
  *   indelingsadvies).
+ * - bij vervangen houdt een ingelezen ruimte de al ingevulde voorzieningen van een bestaande
+ *   ruimte met dezelfde voorziening (keuken, badkamer, toilet, …), in volgorde; de bron gooide
+ *   die weg.
  */
 export function platToepassen(
   input: WwsInput,
@@ -162,6 +175,15 @@ export function platToepassen(
     newO.forEach((r) => ensureFac("overig", r, true));
   }
   if (k.vervangen) {
+    if (!bronGetrouw) {
+      const oud = [...I.vertrekken, ...I.overig]
+        .map((r) => r.fac)
+        .filter((f): f is NonNullable<typeof f> => !!f && !facIsOnbewerkt(f));
+      [...newV, ...newO].forEach((r) => {
+        const i = oud.findIndex((f) => f.kind === r.fac?.kind);
+        if (i >= 0) r.fac = oud.splice(i, 1)[0];
+      });
+    }
     I.vertrekken = newV as Vertrek[];
     I.overig = newO as OverigeRuimte[];
   } else {

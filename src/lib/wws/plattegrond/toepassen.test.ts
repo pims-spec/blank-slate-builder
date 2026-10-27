@@ -3,7 +3,7 @@ import { facDefault } from "../basis";
 import { legeInput } from "../legeInput";
 import type { PlattegrondAntwoord } from "../ai/antwoorden";
 import type { FacBadkamer, FacKeuken, FacToilet } from "../types";
-import { platToepassen, standaardKeuzes } from "./toepassen";
+import { platToepassen, standaardKeuzes, standaardVervangen } from "./toepassen";
 
 const antwoord = (): PlattegrondAntwoord =>
   ({
@@ -67,5 +67,41 @@ describe("plattegrond overnemen: van de voorzieningen alleen de aanrechtlengte",
     // zonder aanrecht in het antwoord: keuken korter dan 1 m, niet de standaard 1–2 m
     const zonder = platToepassen(legeInput(), { ...R, keuken: {} }, k);
     expect((zonder.vertrekken[0]!.fac as FacKeuken).keuken.lengte).toBe("<1");
+  });
+
+  it("bestaande telling met m²: standaard vervangen, zodat de ruimten niet dubbel komen", () => {
+    const leeg = legeInput();
+    expect(standaardVervangen(leeg)).toBe(false);
+    leeg.vertrekken.push({ type: "slaapkamer", m2: "", verwarmd: true });
+    expect(standaardVervangen(leeg)).toBe(false); // alleen een soort zonder m²: aanvullen
+    leeg.vertrekken.push({ type: "woonkamer", m2: 20, verwarmd: true });
+    expect(standaardVervangen(leeg)).toBe(true);
+  });
+
+  it("vervangen: ingevulde voorzieningen blijven bij dezelfde soort ruimte", () => {
+    const i = legeInput();
+    const san = { ...(facDefault("badkamer") as FacBadkamer).san, bad: 1 };
+    i.vertrekken = [
+      { type: "woonkamer", m2: 20, verwarmd: true },
+      { type: "badkamer", m2: 5, verwarmd: true, fac: { kind: "badkamer", san } },
+    ];
+    i.overig = [{ type: "toilet", m2: 1, verwarmd: true, fac: facDefault("toilet", true) }];
+    const R = antwoord();
+    const ruimte = (soort: "vertrek" | "overig", type: string, m2: number) =>
+      ({ soort, type, naam: "", m2, bron: "afgelezen" }) as never;
+    R.ruimten = [
+      ruimte("vertrek", "woonkamer", 21),
+      ruimte("vertrek", "badkamer", 4.5),
+      ruimte("overig", "toilet", 1.1),
+    ];
+    const uit = platToepassen(i, R, { ...standaardKeuzes(R), vervangen: true });
+    expect(uit.vertrekken.map((r) => [r.type, r.m2])).toEqual([
+      ["woonkamer", "21"],
+      ["badkamer", "4,5"],
+    ]);
+    expect(uit.overig).toHaveLength(1);
+    expect((uit.vertrekken[1]!.fac as FacBadkamer).san.bad).toBe(1);
+    // het lege toilet blijft leeg (geen standaard)
+    expect((uit.overig[0]!.fac as FacToilet).toilet.toilet).toBe("geen");
   });
 });
