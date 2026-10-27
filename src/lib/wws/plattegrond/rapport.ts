@@ -55,6 +55,23 @@ export function rapportPlattegronden(input: {
   return uit;
 }
 
+/** Kleine plattegrond op de overzichtspagina: bij voorkeur 3D, dan 2D (zoals de CBRE-rapporten) */
+export const OVERZICHT_VOORKEUR: readonly RapportPlattegrondSoort[] = ["3d", "2d"];
+/** Kleine plattegrond bij de huidige situatie: bij voorkeur de situatie (meetrapport), dan 2D */
+export const SITUATIE_VOORKEUR: readonly RapportPlattegrondSoort[] = ["situatie", "2d"];
+
+/** De eerste plattegrond van de eerste soort uit de voorkeur; anders de eerste van de lijst */
+export function kiesPlattegrond<T extends { soort?: RapportPlattegrondSoort | undefined }>(
+  lijst: readonly T[],
+  voorkeur: readonly RapportPlattegrondSoort[],
+): T | undefined {
+  for (const s of voorkeur) {
+    const x = lijst.find((p) => p.soort === s);
+    if (x) return x;
+  }
+  return lijst[0];
+}
+
 /** "Plattegrond 1 - 2D"; een eigen titel zonder tekst wordt gewoon "Plattegrond 3" */
 export function paginaTitel(nr: number, p: Pick<RapportPlattegrond, "soort" | "titel">): string {
   const naam = p.soort === "eigen" ? (p.titel ?? "").trim() : SOORT_NAAM[p.soort];

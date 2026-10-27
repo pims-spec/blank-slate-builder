@@ -20,7 +20,7 @@ import {
   nieuwDoc,
   pdfTxt,
 } from "./stijl";
-import { INTER, bytesVan, pdfTekst, willekeurigeMeta } from "./testhulp";
+import { INTER, bytesVan, pdfOpmaak, pdfTekst, willekeurigeMeta } from "./testhulp";
 
 const LIB = { jsPDF, autoTable };
 /** Zoals in de app: met het ingesloten huisstijl-lettertype */
@@ -440,6 +440,43 @@ describe("bewuste afwijkingen in de PDF's", () => {
         .blob,
     );
     expect(bron.flat().join(" ")).not.toContain("Plattegrond 1 - 2D");
+  });
+
+  it("kleine plattegronden: rechts op het overzicht en naast 'Punten per onderdeel' (CBRE)", async () => {
+    const input = normaliseer(genereer(2));
+    const meta = willekeurigeMeta(2);
+    const inst = standaardInstellingen(N);
+    const rapportPlattegronden = [
+      { titel: "Plattegrond 1 - Situatie", img: KLEIN_JPEG, soort: "situatie" as const },
+      { titel: "Plattegrond 2 - 3D", img: KLEIN_JPEG, soort: "3d" as const },
+    ];
+    const pag = await pdfOpmaak(
+      maakAdviesPdf(LIB, { meta, input, normen: N, inst, rapportPlattegronden }).blob,
+    );
+    const huidig = pag.findIndex((p) => p.tekst.some((t) => t.s === "Huidige situatie"));
+    expect(pag[1]!.beelden).toBe(1); // overzicht
+    expect(pag[huidig]!.beelden).toBe(1);
+    // de tabel "Punten per onderdeel" blijft links van de plattegrond (rechts 70 mm + 6 mm)
+    const rechts = 210 - 14 - 70;
+    // de kop "Punten" van deze tabel komt direct na "Omvat" (de detailtabel eronder is weer breed)
+    const kolomPunten = (p: (typeof pag)[number]) => {
+      const i = p.tekst.findIndex((t) => t.s.toLowerCase() === "omvat");
+      expect(i).toBeGreaterThan(-1);
+      return [p.tekst[i]!, p.tekst[i + 1]!];
+    };
+    for (const t of kolomPunten(pag[huidig]!)) expect(t.x).toBeLessThan(rechts);
+    const woning = pag[huidig]!.tekst.find((t) => t.s.startsWith("energieprestatie"));
+    expect(woning!.x).toBeLessThan(rechts);
+    // zonder plattegrond: geen afbeelding, de tabel over de volle breedte
+    const zonder = await pdfOpmaak(maakAdviesPdf(LIB, { meta, input, normen: N, inst }).blob);
+    expect(zonder[1]!.beelden).toBe(0);
+    const h2 = zonder.findIndex((p) => p.tekst.some((t) => t.s === "Huidige situatie"));
+    expect(kolomPunten(zonder[h2]!)[1]!.x).toBeGreaterThan(rechts);
+    // de losse puntentelling: ook naast de tabel
+    const telling = await pdfOpmaak(
+      maakTellingPdf(LIB, { meta, input, normen: N, rapportPlattegronden }).blob,
+    );
+    expect(telling[1]!.beelden).toBe(1);
   });
 
   it("adresregel: straat + huisnummer, postcode plaats (de bron zette de postcode ervoor)", async () => {

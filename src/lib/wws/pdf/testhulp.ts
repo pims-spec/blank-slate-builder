@@ -30,6 +30,35 @@ export async function pdfTekst(blob: Blob): Promise<string[][]> {
   return paginas;
 }
 
+/**
+ * Per pagina: het aantal getekende afbeeldingen en de tekst met de x-positie (in mm vanaf links),
+ * om de plaats van kleine plattegronden naast tekst te controleren.
+ */
+export async function pdfOpmaak(
+  blob: Blob,
+): Promise<{ beelden: number; tekst: { s: string; x: number }[] }[]> {
+  const { OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const taak = getDocument({ data: await bytesVan(blob), verbosity: 0 });
+  const pdf = await taak.promise;
+  const uit: { beelden: number; tekst: { s: string; x: number }[] }[] = [];
+  const MM = 25.4 / 72;
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const ops = await page.getOperatorList();
+    const beelden = ops.fnArray.filter((f) => f === OPS.paintImageXObject).length;
+    const tc = await page.getTextContent();
+    const tekst = tc.items
+      .filter((it) => "str" in it && it.str.trim() !== "")
+      .map((it) => ({
+        s: (it as { str: string }).str,
+        x: (it as { transform: number[] }).transform[4]! * MM,
+      }));
+    uit.push({ beelden, tekst });
+  }
+  await taak.destroy();
+  return uit;
+}
+
 /** Willekeurige woninggegevens, met lange namen, toevoegingen, ² en – erin */
 export function willekeurigeMeta(seed: number): TellingMeta {
   const R = rng(seed + 13_000_003);

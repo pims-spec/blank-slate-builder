@@ -10,6 +10,7 @@ import { eur, fmt, LABELS, num, overigType, r2, vertrekType } from "../basis";
 import { calc, normaliseer } from "../calc";
 import type { Normen } from "../normen";
 import type { TellingMeta } from "../opslag/types";
+import type { RapportPlattegrondSoort } from "../plattegrond/rapport";
 import type { Fac, Maat, OverigeRuimte, Vertrek, WwsInput, WwsResultaat } from "../types";
 import {
   PDF_ALT,
@@ -167,6 +168,17 @@ export function pdfWaarschuwing(doc: Doc, y: number, t: string): number {
   return y + h + 6;
 }
 
+/** Maat van de kleine plattegrond naast "Punten per onderdeel": max 70 × 90 mm; null als onleesbaar */
+function zijbeeldMaat(doc: Doc, img: string): { w: number; h: number } | null {
+  try {
+    const props = doc.getImageProperties(img);
+    const schaal = Math.min(70 / props.width, 90 / props.height);
+    return { w: props.width * schaal, h: props.height * schaal };
+  } catch {
+    return null;
+  }
+}
+
 /** De volledige puntentelling: woning, punten per onderdeel, details en huurprijs — pdfTellingBody() */
 export function pdfTellingBody(
   lib: PdfLib,
@@ -175,7 +187,12 @@ export function pdfTellingBody(
   meta: TellingMeta,
   input: WwsInput,
   normen: Normen,
-  opts: { skipGauge?: boolean; zonderWoning?: boolean } = {},
+  opts: {
+    skipGauge?: boolean;
+    zonderWoning?: boolean;
+    /** Kleine plattegrond rechts naast "Punten per onderdeel" (JPEG data-URL), zoals CBRE */
+    zijbeeld?: string | null;
+  } = {},
 ): { y: number; R: WwsResultaat } {
   const W = PDF_W,
     M = PDF_M,
@@ -249,6 +266,17 @@ export function pdfTellingBody(
     ],
   ];
   h3("Punten per onderdeel");
+  // bewuste afwijking: een kleine plattegrond rechts ernaast (de CBRE-rapporten); de tabel wordt smaller
+  const zij = opts.zijbeeld ? zijbeeldMaat(doc, opts.zijbeeld) : null;
+  if (zij && y - 4 + zij.h > 270) {
+    doc.addPage();
+    y = 20;
+    sectieKop(doc, "Punten per onderdeel", M, y);
+    y += 4;
+  }
+  const zijTop = y - 4;
+  if (zij && opts.zijbeeld)
+    doc.addImage(opts.zijbeeld, "JPEG", PDF_W - M - zij.w, zijTop, zij.w, zij.h);
   y =
     tabel(lib, doc, {
       startY: y,
@@ -265,8 +293,9 @@ export function pdfTellingBody(
         1: { textColor: MUT },
         2: { halign: "right", cellWidth: 22, fontStyle: "bold" },
       },
-      margin: { top: 18, left: M, right: M, bottom: 22 },
+      margin: { top: 18, left: M, right: zij ? M + zij.w + 6 : M, bottom: 22 },
     }) + 8;
+  if (zij) y = Math.max(y, zijTop + zij.h + 8);
   // Details per onderdeel, indeling zoals de Huurprijscheck: categorie › ruimte › voorzieningen
   h3("Details van de puntentelling");
   type RijType = "sub" | "item" | "voorz" | "tot";
@@ -864,6 +893,8 @@ export function pdfPlattegrondBlok(doc: Doc, y: number, img?: string | null, max
 export interface PdfRapportPlattegrond {
   titel: string;
   img: string;
+  /** Voor de keuze van de kleine plattegronden (overzicht: 3D, huidige situatie: situatie) */
+  soort?: RapportPlattegrondSoort;
 }
 
 /**

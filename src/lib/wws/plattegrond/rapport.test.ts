@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   allePaden,
+  kiesPlattegrond,
+  OVERZICHT_VOORKEUR,
+  SITUATIE_VOORKEUR,
   MAX_RAPPORT_PLATTEGRONDEN,
   ongebruikteRapportPaden,
   paginaTitel,
@@ -52,6 +55,16 @@ describe("rapport-plattegronden", () => {
     expect(paginaTitel(3, { soort: "situatie" })).toBe("Plattegrond 3 - Situatie");
     expect(paginaTitel(4, { soort: "eigen", titel: "Zolder" })).toBe("Plattegrond 4 - Zolder");
     expect(paginaTitel(5, { soort: "eigen", titel: " " })).toBe("Plattegrond 5");
+  });
+
+  it("kleine plattegronden: 3D op het overzicht, de situatie bij de huidige situatie", () => {
+    const l = [{ soort: "2d" }, { soort: "situatie" }, { soort: "3d" }] as const;
+    expect(kiesPlattegrond(l, OVERZICHT_VOORKEUR)).toBe(l[2]);
+    expect(kiesPlattegrond(l, SITUATIE_VOORKEUR)).toBe(l[1]);
+    const alleen2d = [{ soort: "berging" }, { soort: "2d" }] as const;
+    expect(kiesPlattegrond(alleen2d, OVERZICHT_VOORKEUR)).toBe(alleen2d[1]);
+    expect(kiesPlattegrond([{ soort: "eigen" }], SITUATIE_VOORKEUR)?.soort).toBe("eigen");
+    expect(kiesPlattegrond([], SITUATIE_VOORKEUR)).toBeUndefined();
   });
 
   it("opruimen: alleen wat nergens meer gebruikt wordt", () => {

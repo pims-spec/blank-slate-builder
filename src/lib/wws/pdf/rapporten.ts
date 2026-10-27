@@ -18,6 +18,7 @@ import type { Dashboard } from "../dashboard";
 import type { Normen } from "../normen";
 import { weergaveAdres } from "../opslag/doc";
 import type { TellingMeta } from "../opslag/types";
+import { kiesPlattegrond, OVERZICHT_VOORKEUR, SITUATIE_VOORKEUR } from "../plattegrond/rapport";
 import type { WwsInput, WwsResultaat } from "../types";
 import {
   pdfBanner,
@@ -62,6 +63,13 @@ export interface PdfBestand {
 
 const vandaagLang = () => new Date().toLocaleDateString("nl-NL", { dateStyle: "long" });
 const naamVan = (meta: TellingMeta, anders: string) => meta.naam || weergaveAdres(meta) || anders;
+
+/** De kleine plattegrond: uit de plattegronden voor het rapport, anders de ingelezen plattegrond */
+const kleinePlattegrond = (
+  lijst: readonly PdfRapportPlattegrond[] | undefined,
+  voorkeur: Parameters<typeof kiesPlattegrond>[1],
+  ingelezen: string | null | undefined,
+): string | null => kiesPlattegrond(lijst ?? [], voorkeur)?.img ?? ingelezen ?? null;
 
 /** Disclaimertekst onderaan; de route- en adviesrapporten voegen de kosten-uitleg toe */
 const DISC_BASIS = (normen: Normen) =>
@@ -121,8 +129,11 @@ function tellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
     doc.text(doc.splitTextToSize(txt(versie.notitie), W - 2 * M), M, y);
     y += 6;
   }
-  y = pdfPlattegrondBlok(doc, y, x.plattegrond);
-  const body = pdfTellingBody(lib, doc, y, meta, input, normen);
+  // bewuste afwijking: de plattegrond klein naast "Punten per onderdeel" (zoals de CBRE-rapporten)
+  let zijbeeld: string | null = null;
+  if (x.bronGetrouw) y = pdfPlattegrondBlok(doc, y, x.plattegrond);
+  else zijbeeld = kleinePlattegrond(x.rapportPlattegronden, SITUATIE_VOORKEUR, x.plattegrond);
+  const body = pdfTellingBody(lib, doc, y, meta, input, normen, { zijbeeld });
   y = body.y;
   const R = body.R;
   if (y > 258) {
@@ -387,7 +398,10 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
     Rcur,
     opties.map((o, i): [string, PdfRoute] => ["Verbeteroptie " + (i + 1), o.route]),
     sections,
-    x.plattegrond,
+    // bewuste afwijking: bij voorkeur de 3D-plattegrond rechts op het overzicht (CBRE)
+    x.bronGetrouw
+      ? x.plattegrond
+      : kleinePlattegrond(x.rapportPlattegronden, OVERZICHT_VOORKEUR, x.plattegrond),
   );
 
   // Huidige situatie
@@ -400,10 +414,14 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
     vandaag,
   );
   if (!x.bronGetrouw) y = terugvalWaarschuwing(doc, y, cur, N);
-  y = pdfPlattegrondBlok(doc, y, x.plattegrond);
-  // bewuste afwijking: zonder het blok "Woning" (adres en opsteller staan op het voorblad)
+  // bewuste afwijking: zonder het blok "Woning" (adres en opsteller staan op het voorblad), en de
+  // plattegrond klein naast "Punten per onderdeel", bij voorkeur de situatie (CBRE)
   const zonderWoning = !x.bronGetrouw;
-  const body1 = pdfTellingBody(lib, doc, y, meta, cur, N, { zonderWoning });
+  if (x.bronGetrouw) y = pdfPlattegrondBlok(doc, y, x.plattegrond);
+  const zijbeeld = x.bronGetrouw
+    ? null
+    : kleinePlattegrond(x.rapportPlattegronden, SITUATIE_VOORKEUR, x.plattegrond);
+  const body1 = pdfTellingBody(lib, doc, y, meta, cur, N, { zonderWoning, zijbeeld });
   const R1 = body1.R;
 
   // De opties, elk met hun eigen volledige puntentelling

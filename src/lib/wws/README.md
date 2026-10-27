@@ -810,6 +810,12 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
   Dupliceren neemt ze niet mee (ze horen bij de map van het origineel). In de puntentelling-PDF
   achteraan en in het adviesrapport na "Energielabel en WOZ-waarde" (ook in de inhoudsopgave):
   elke plattegrond op een eigen pagina "Plattegrond 1 - 2D", zoals de CBRE-rapporten.
+- **Kleine plattegronden** (`kiesPlattegrond`), op dezelfde plek als de CBRE-rapporten:
+  op de overzichtspagina rechts naast de gegevens (bij voorkeur 3D, dan 2D), en bij de huidige
+  situatie en in de puntentelling-PDF rechts naast "Punten per onderdeel" (bij voorkeur de
+  situatie/het meetrapport, dan 2D); anders de eerste uit de lijst, anders de ingelezen
+  plattegrond. De tabel wordt daar smaller; de brede plattegrond boven de telling vervalt.
+  Brongetrouw blijft de brede plattegrond.
 - Brongetrouw blijft alles zoals de bron. Test: `pdf.afwijkingen.test.ts`.
 - **Brongetrouw** (`brongetrouw: true`, `bronGetrouw: true`): de twee oude opties, geen afmelden,
   geen doelzin en geen waarschuwing.

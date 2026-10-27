@@ -115,7 +115,7 @@ export async function rapportPlattegrondenVoorPdf(
   for (const p of rapportPlattegronden(input)) {
     try {
       const img = await jpegDataUrl(await plattegrondOpslag.haal(p.pad));
-      uit.push({ titel: paginaTitel(uit.length + 1, p), img });
+      uit.push({ titel: paginaTitel(uit.length + 1, p), img, soort: p.soort });
     } catch (e) {
       console.warn(
         "[plattegrond] rapport-plattegrond niet te lezen",
