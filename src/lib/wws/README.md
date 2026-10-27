@@ -806,7 +806,9 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
   voor het rapport, zonder de maten over te nemen ("Plattegrond toevoegen aan rapport" in de
   telling). Een of meer bestanden tegelijk: afbeeldingen (PNG/JPG/WebP) en PDF's; daarna kies je
   welke afbeeldingen en pagina's mee moeten (bijv. een meetrapport; hoogstens 30 tegelijk in het
-  venster). Een onleesbaar bestand wordt gemeld, de rest gaat door. Per plattegrond een soort: 2D, 3D, Situatie, Berging, Indelingsadvies of een eigen
+  venster). Een onleesbaar bestand wordt gemeld, de rest gaat door. De volgorde is vast, zoals de
+  CBRE-rapporten (`opVolgorde`): 2D, 3D, situatie, berging, indelingsadvies, eigen titel; binnen
+  een soort de volgorde van toevoegen. Zelf schuiven hoeft niet (en kan niet meer). Per plattegrond een soort: 2D, 3D, Situatie, Berging, Indelingsadvies of een eigen
   titel; hoogstens 8. In Storage in dezelfde map als de ingelezen plattegrond; de telling bewaart
   `input.rapportPlattegronden` (pad, maat, soort, titel). Uploaden gebeurt direct (de telling moet
   al opgeslagen zijn); weggehaalde plattegronden worden opgeruimd als geen versie ze gebruikt.

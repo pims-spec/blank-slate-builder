@@ -60,7 +60,7 @@ describe("RapportPlattegronden", () => {
     expect(screen.getByText(/Sla de telling eerst op/)).toBeInTheDocument();
   });
 
-  it("toont de paginatitels; volgorde wijzigen en verwijderen", () => {
+  it("toont de paginatitels; soort wijzigen en verwijderen", () => {
     const onWijzig = vi.fn();
     const onVerwijderd = vi.fn();
     render(
@@ -77,8 +77,7 @@ describe("RapportPlattegronden", () => {
     );
     expect(screen.getByText("Plattegrond 1 - 2D")).toBeInTheDocument();
     expect(screen.getByText("Plattegrond 2 - Zolder")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Plattegrond 2 omhoog" }));
-    expect(onWijzig).toHaveBeenLastCalledWith([lijst[1], lijst[0]]);
+    expect(screen.queryByRole("button", { name: /omhoog|omlaag/ })).toBeNull();
     fireEvent.click(screen.getAllByRole("button", { name: "Verwijderen" })[0]!);
     expect(onWijzig).toHaveBeenLastCalledWith([lijst[1]]);
     expect(onVerwijderd).toHaveBeenCalledWith(pad(1));
@@ -86,6 +85,34 @@ describe("RapportPlattegronden", () => {
       target: { value: "situatie" },
     });
     expect(onWijzig).toHaveBeenLastCalledWith([{ ...lijst[0], soort: "situatie" }, lijst[1]]);
+  });
+
+  it("na het kiezen van een soort staat de lijst vanzelf op de CBRE-volgorde", () => {
+    const onWijzig = vi.fn();
+    const sit: RapportPlattegrond = { pad: pad(3), breedte: 10, hoogte: 10, soort: "situatie" };
+    const drie: RapportPlattegrond = { pad: pad(4), breedte: 10, hoogte: 10, soort: "3d" };
+    render(
+      wrap(
+        <RapportPlattegronden
+          tellingId={T}
+          isNieuw={false}
+          alleenLezen={false}
+          lijst={[sit, drie]}
+          onWijzig={onWijzig}
+          onVerwijderd={() => {}}
+        />,
+      ),
+    );
+    // de situatie wordt 2D: die hoort vóór de 3D
+    fireEvent.change(screen.getByRole("combobox", { name: "Soort plattegrond 1" }), {
+      target: { value: "2d" },
+    });
+    expect(onWijzig).toHaveBeenLastCalledWith([{ ...sit, soort: "2d" }, drie]);
+    // de 3D wordt berging: achter de situatie
+    fireEvent.change(screen.getByRole("combobox", { name: "Soort plattegrond 2" }), {
+      target: { value: "berging" },
+    });
+    expect(onWijzig).toHaveBeenLastCalledWith([sit, { ...drie, soort: "berging" }]);
   });
 
   it("alleen lezen zonder plattegronden: niets", () => {

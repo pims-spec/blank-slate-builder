@@ -23,6 +23,7 @@ import {
 import {
   MAX_RAPPORT_PLATTEGRONDEN,
   MAX_TITEL,
+  opVolgorde,
   paginaTitel,
   SOORT_NAAM,
   SOORTEN,
@@ -57,13 +58,10 @@ export default function RapportPlattegronden(p: Props) {
   const [open, setOpen] = useState(false);
   const vol = p.lijst.length >= MAX_RAPPORT_PLATTEGRONDEN;
   if (p.alleenLezen && !p.lijst.length) return null;
-  const zet = (i: number, wijzig: Partial<RapportPlattegrond>) =>
-    p.onWijzig(p.lijst.map((x, j) => (j === i ? { ...x, ...wijzig } : x)));
-  const schuif = (i: number, d: -1 | 1) => {
-    const l = [...p.lijst];
-    [l[i], l[i + d]] = [l[i + d]!, l[i]!];
-    p.onWijzig(l);
-  };
+  // altijd op de vaste volgorde van de CBRE-rapporten: 2D, 3D, situatie, berging, indeling, eigen
+  const wijzig = (l: RapportPlattegrond[]) => p.onWijzig(opVolgorde(l));
+  const zet = (i: number, w: Partial<RapportPlattegrond>) =>
+    wijzig(p.lijst.map((x, j) => (j === i ? { ...x, ...w } : x)));
   return (
     <section aria-label="Plattegronden in het rapport" className="gh-card mt-3 space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -83,7 +81,7 @@ export default function RapportPlattegronden(p: Props) {
       <p className="text-xs text-muted-foreground">
         {p.isNieuw
           ? "Sla de telling eerst op; daarna kun je plattegronden toevoegen."
-          : "Alleen voor het rapport: de maten worden niet overgenomen. Elke plattegrond krijgt in de PDF een eigen pagina."}
+          : "Alleen voor het rapport: de maten worden niet overgenomen. Elke plattegrond krijgt in de PDF een eigen pagina, op volgorde: 2D, 3D, situatie, berging, indelingsadvies, eigen titel."}
         {vol && " Het maximum van " + MAX_RAPPORT_PLATTEGRONDEN + " plattegronden is bereikt."}
       </p>
       {p.lijst.length > 0 && (
@@ -108,46 +106,24 @@ export default function RapportPlattegronden(p: Props) {
                         soort === "eigen"
                           ? { ...rest, soort, titel: titel ?? "" }
                           : { ...rest, soort };
-                      p.onWijzig(l);
+                      wijzig(l);
                     }}
                     onTitel={(titel) => zet(i, { titel })}
                   />
                 )}
               </div>
               {!p.alleenLezen && (
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={i === 0}
-                    aria-label={"Plattegrond " + (i + 1) + " omhoog"}
-                    onClick={() => schuif(i, -1)}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={i === p.lijst.length - 1}
-                    aria-label={"Plattegrond " + (i + 1) + " omlaag"}
-                    onClick={() => schuif(i, 1)}
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      p.onWijzig(p.lijst.filter((_, j) => j !== i));
-                      p.onVerwijderd(x.pad);
-                    }}
-                  >
-                    Verwijderen
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    wijzig(p.lijst.filter((_, j) => j !== i));
+                    p.onVerwijderd(x.pad);
+                  }}
+                >
+                  Verwijderen
+                </Button>
               )}
             </li>
           ))}
@@ -159,7 +135,7 @@ export default function RapportPlattegronden(p: Props) {
         tellingId={p.tellingId}
         ruimte={MAX_RAPPORT_PLATTEGRONDEN - p.lijst.length}
         onToegevoegd={(nieuw) => {
-          p.onWijzig([...p.lijst, ...nieuw]);
+          wijzig([...p.lijst, ...nieuw]);
           setOpen(false);
         }}
       />

@@ -38,6 +38,37 @@ describe("rapport-plattegronden", () => {
     expect(rapportPlattegronden({ rapportPlattegronden: "geen lijst" })).toEqual([]);
   });
 
+  it("vaste volgorde zoals de CBRE-rapporten; binnen een soort de volgorde van toevoegen", () => {
+    const r = (n: number, soort: string, titel?: string) => ({
+      pad: pad(n),
+      breedte: 1,
+      hoogte: 1,
+      soort,
+      ...(titel ? { titel } : {}),
+    });
+    const lijst = rapportPlattegronden({
+      rapportPlattegronden: [
+        r(1, "eigen", "Zolder"),
+        r(2, "situatie"),
+        r(3, "3d"),
+        r(4, "indeling"),
+        r(5, "2d"),
+        r(6, "berging"),
+        r(7, "2d"),
+      ],
+    });
+    expect(lijst.map((p) => p.soort)).toEqual([
+      "2d",
+      "2d",
+      "3d",
+      "situatie",
+      "berging",
+      "indeling",
+      "eigen",
+    ]);
+    expect(lijst.slice(0, 2).map((p) => p.pad)).toEqual([pad(5), pad(7)]);
+  });
+
   it("hoogstens het maximum", () => {
     const veel = Array.from({ length: 12 }, (_, i) => ({
       pad: pad(i + 1),

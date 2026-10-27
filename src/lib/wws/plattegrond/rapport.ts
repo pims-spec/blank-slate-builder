@@ -22,8 +22,16 @@ export const SOORT_NAAM: Record<RapportPlattegrondSoort, string> = {
   eigen: "Eigen titel",
 };
 
-/** Keuzes in het venster, in deze volgorde */
+/**
+ * Keuzes in het venster, en de vaste volgorde in het rapport zoals de CBRE-rapporten: 2D, 3D,
+ * situatie, berging, indelingsadvies; een eigen titel achteraan
+ */
 export const SOORTEN = Object.keys(SOORT_NAAM) as RapportPlattegrondSoort[];
+
+/** Op de vaste volgorde van de soort; binnen een soort in de volgorde van toevoegen */
+export const opVolgorde = <T extends { soort: RapportPlattegrondSoort }>(
+  lijst: readonly T[],
+): T[] => [...lijst].sort((a, b) => SOORTEN.indexOf(a.soort) - SOORTEN.indexOf(b.soort));
 
 export const MAX_RAPPORT_PLATTEGRONDEN = 8;
 export const MAX_TITEL = 60;
@@ -32,8 +40,9 @@ const isSoort = (s: unknown): s is RapportPlattegrondSoort =>
   typeof s === "string" && Object.hasOwn(SOORT_NAAM, s);
 
 /**
- * De geldige rapport-plattegronden uit de invoer. Een telling is onbetrouwbare invoer: alleen
- * bekende soorten, geldige paden en positieve maten; een eigen titel wordt ingekort.
+ * De geldige rapport-plattegronden uit de invoer, op de vaste volgorde (opVolgorde). Een telling
+ * is onbetrouwbare invoer: alleen bekende soorten, geldige paden en positieve maten; een eigen
+ * titel wordt ingekort.
  */
 export function rapportPlattegronden(input: {
   rapportPlattegronden?: unknown;
@@ -52,7 +61,7 @@ export function rapportPlattegronden(input: {
     uit.push(p);
     if (uit.length === MAX_RAPPORT_PLATTEGRONDEN) break;
   }
-  return uit;
+  return opVolgorde(uit);
 }
 
 /** Kleine plattegrond op de overzichtspagina: bij voorkeur 3D, dan 2D (zoals de CBRE-rapporten) */
