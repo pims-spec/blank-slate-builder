@@ -23,23 +23,57 @@ async function openPdf(file: Blob) {
   return { pdf: await taak.promise, sluit: () => taak.destroy() };
 }
 
+type PdfDoc = Awaited<ReturnType<typeof openPdf>>["pdf"];
+
+/** Eén pagina van een geopende PDF naar een canvas van max 2200 px (witte achtergrond) */
+async function pdfPaginaNaarCanvas(pdf: PdfDoc, nr: number): Promise<HTMLCanvasElement> {
+  const page = await pdf.getPage(nr);
+  const vp0 = page.getViewport({ scale: 1 });
+  const scale = Math.min(4, MAX_ZIJDE / Math.max(vp0.width, vp0.height));
+  const vp = page.getViewport({ scale });
+  const c = document.createElement("canvas");
+  c.width = vp.width;
+  c.height = vp.height;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
+  return c;
+}
+
+/** Aantal pagina's van een PDF */
+export async function pdfAantalPaginas(file: Blob): Promise<number> {
+  const { pdf, sluit } = await openPdf(file);
+  const n = pdf.numPages;
+  await sluit();
+  return n;
+}
+
+/** Gekozen pagina's (1-based) van een PDF, elk als canvas van max 2200 px */
+export async function pdfPaginasNaarCanvassen(
+  file: Blob,
+  paginas: readonly number[],
+): Promise<HTMLCanvasElement[]> {
+  const { pdf, sluit } = await openPdf(file);
+  try {
+    const uit: HTMLCanvasElement[] = [];
+    for (const nr of paginas)
+      if (nr >= 1 && nr <= pdf.numPages) uit.push(await pdfPaginaNaarCanvas(pdf, nr));
+    return uit;
+  } finally {
+    await sluit();
+  }
+}
+
 /** Bestand (PNG/JPG/WebP of de eerste pagina van een PDF) naar een canvas van max 2200 px */
 export async function bestandNaarCanvas(file: File): Promise<HTMLCanvasElement> {
   if (file.type === "application/pdf") {
     const { pdf, sluit } = await openPdf(file);
-    const page = await pdf.getPage(1);
-    const vp0 = page.getViewport({ scale: 1 });
-    const scale = Math.min(4, MAX_ZIJDE / Math.max(vp0.width, vp0.height));
-    const vp = page.getViewport({ scale });
-    const c = document.createElement("canvas");
-    c.width = vp.width;
-    c.height = vp.height;
-    const ctx = c.getContext("2d")!;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, c.width, c.height);
-    await page.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
-    await sluit();
-    return c;
+    try {
+      return await pdfPaginaNaarCanvas(pdf, 1);
+    } finally {
+      await sluit();
+    }
   }
   let bron: CanvasImageSource;
   let w: number, h: number;

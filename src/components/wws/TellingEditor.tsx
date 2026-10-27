@@ -47,10 +47,17 @@ import {
   heeftPlattegrond,
   plattegrondOpslag,
   plattegrondVoorPdf,
+  rapportPlattegrondenVoorPdf,
   usePlattegrondUrl,
   type NieuwBeeld,
 } from "./plattegrondBeeld";
 import { bewaarBeeld, ruimOngebruiktOp, ruimOudBeeldOp } from "@/lib/wws/plattegrond/bewaren";
+import {
+  allePaden,
+  ongebruikteRapportPaden,
+  rapportPlattegronden,
+} from "@/lib/wws/plattegrond/rapport";
+import RapportPlattegronden from "./RapportPlattegronden";
 import { werkVersieBij } from "@/lib/wws/opslag/store";
 import VersieBeheer from "./VersieBeheer";
 import VersiesVergelijken from "./VersiesVergelijken";
@@ -157,6 +164,8 @@ export default function TellingEditor({
   const [nieuwBeeld, setNieuwBeeld] = useState<NieuwBeeld | null>(null);
   /** Pad van de plattegrond zoals die nu is opgeslagen (om na vervangen op te ruimen) */
   const opgeslagenPad = useRef<string | null>(null);
+  /** De rapport-plattegronden zoals laatst opgeslagen (om weggehaalde op te ruimen) */
+  const opgeslagenRapportPaden = useRef<string[]>([]);
   const plattegrond = usePlattegrondUrl(staat.input, nieuwBeeld);
   const { data: klanten = [] } = useQuery(klantenQuery());
   const download = useDownload();
@@ -203,6 +212,7 @@ export default function TellingEditor({
         setVersies([]);
         setNieuwBeeld(null);
         opgeslagenPad.current = null;
+        opgeslagenRapportPaden.current = [];
         setVraagAdres(rechten.magSchrijven);
         setDirty(false);
         setLaden("klaar");
@@ -235,6 +245,7 @@ export default function TellingEditor({
         setVersies(vs);
         setNieuwBeeld(null);
         opgeslagenPad.current = t.input.plattegrond?.pad ?? null;
+        opgeslagenRapportPaden.current = rapportPlattegronden(t.input).map((x) => x.pad);
         setDirty(false);
         setLaden("klaar");
       } catch (e) {
@@ -408,6 +419,30 @@ export default function TellingEditor({
     const nieuwPad = s.input.plattegrond?.pad ?? null;
     void ruimOudBeeldOp(plattegrondOpslag, opgeslagenPad.current, nieuwPad, vs);
     opgeslagenPad.current = nieuwPad;
+    // weggehaalde plattegronden voor het rapport, tenzij een versie ze nog gebruikt
+    const nu = rapportPlattegronden(s.input).map((x) => x.pad);
+    const weg = ongebruikteRapportPaden(
+      opgeslagenRapportPaden.current,
+      nu,
+      vs.map((v) => v.input),
+    );
+    opgeslagenRapportPaden.current = nu;
+    if (weg.length)
+      void plattegrondOpslag
+        .verwijder(weg)
+        .catch(() => console.warn("[plattegrond] rapport-plattegrond opruimen mislukt"));
+  }
+
+  /**
+   * Een rapport-plattegrond uit de lijst gehaald: een nog niet opgeslagen upload meteen weg (als
+   * niets hem gebruikt); een opgeslagen plattegrond pas na Opslaan (ruimOp).
+   */
+  function rapportPlattegrondWeg(pad: string) {
+    if (opgeslagenRapportPaden.current.includes(pad)) return;
+    if (versies.some((v) => allePaden(v.input).includes(pad))) return;
+    void plattegrondOpslag
+      .verwijder([pad])
+      .catch(() => console.warn("[plattegrond] rapport-plattegrond opruimen mislukt"));
   }
 
   async function opslaan() {
@@ -665,9 +700,13 @@ export default function TellingEditor({
     meta.naam = (meta.naam || weergaveAdres(meta) || "Naamloze telling") + " (kopie)";
     const input = structuredClone(staat.input);
     delete input.plattegrond;
+    // de plattegronden voor het rapport staan in de map van het origineel: niet mee
+    const hadRapportPlattegronden = rapportPlattegronden(input).length > 0;
+    delete input.rapportPlattegronden;
     const nieuwId = crypto.randomUUID();
     geladenId.current = nieuwId;
     opgeslagenPad.current = null;
+    opgeslagenRapportPaden.current = [];
     setId(nieuwId);
     setIsNieuw(true);
     setStaat({
@@ -686,7 +725,14 @@ export default function TellingEditor({
     // de kopie is nog niet opgeslagen; dat is de bedoeling, dus niet om bevestiging vragen
     zonderBlokkade.current = true;
     void navigate({ to: "/wws" });
-    toast("Telling gedupliceerd als ‘" + meta.naam + "’. Nog niet opgeslagen.");
+    toast(
+      "Telling gedupliceerd als ‘" +
+        meta.naam +
+        "’. Nog niet opgeslagen." +
+        (hadRapportPlattegronden
+          ? " De plattegronden voor het rapport gaan niet mee; voeg ze na het opslaan opnieuw toe."
+          : ""),
+    );
   }
 
   /** Verwijderen vanuit de editor — deleteCurrent(); eerst de afbeeldingen, dan de telling */
@@ -1035,6 +1081,15 @@ export default function TellingEditor({
 
       <PlattegrondBlok input={staat.input} nieuw={nieuwBeeld} />
 
+      <RapportPlattegronden
+        tellingId={id}
+        isNieuw={isNieuw}
+        alleenLezen={alleenLezen}
+        lijst={rapportPlattegronden(staat.input)}
+        onWijzig={(lijst) => setInput((i) => ({ ...i, rapportPlattegronden: lijst }))}
+        onVerwijderd={rapportPlattegrondWeg}
+      />
+
       <AlertDialog open={verwijderVraag} onOpenChange={setVerwijderVraag}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1171,6 +1226,7 @@ export default function TellingEditor({
               input: staat.input,
               normen: NORMEN,
               plattegrond: await plattegrondVoorPdf(staat.input, nieuwBeeld),
+              rapportPlattegronden: await rapportPlattegrondenVoorPdf(staat.input),
             }),
           )
         }
@@ -1228,6 +1284,7 @@ export default function TellingEditor({
                         normen: v.normen,
                         versie: v,
                         plattegrond: await plattegrondVoorPdf(v.input),
+                        rapportPlattegronden: await rapportPlattegrondenVoorPdf(v.input),
                       }),
                     )
                   }
@@ -1356,6 +1413,7 @@ export default function TellingEditor({
         input={staat.input}
         meta={staat.meta}
         plattegrond={() => plattegrondVoorPdf(staat.input, nieuwBeeld)}
+        rapportPlattegronden={() => rapportPlattegrondenVoorPdf(staat.input)}
         onEnergieAdvies={(a) => {
           setInput((i) => {
             const n = { ...i };

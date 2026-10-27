@@ -33,6 +33,7 @@ import {
 } from "@/lib/wws/advies/energieAdvies";
 import type { TellingMeta } from "@/lib/wws/opslag";
 import { maakAdviesPdf, maakRoutePdf } from "@/lib/wws/pdf/rapporten";
+import type { PdfRapportPlattegrond } from "@/lib/wws/pdf/delen";
 import { useNormen } from "./NormenContext";
 import { useDownload } from "./useDownload";
 import EnergieAdviesBlok from "./EnergieAdviesBlok";
@@ -129,6 +130,8 @@ interface Props {
   meta?: TellingMeta | undefined;
   /** De plattegrond voor de PDF's (JPEG-data-URL), pas opgehaald bij het downloaden */
   plattegrond?: (() => Promise<string | null>) | undefined;
+  /** De plattegronden alleen voor het rapport, pas opgehaald bij het downloaden */
+  rapportPlattegronden?: (() => Promise<PdfRapportPlattegrond[]>) | undefined;
   /** Verduurzamingsadvies uploaden/verwijderen in de werkversie (zonder: alleen tonen) */
   onEnergieAdvies?: ((advies: EnergieAdvies | null) => void) | undefined;
   /** "Toepassen op telling": de nieuwe invoer, het aantal maatregelen en de punten daarna */
@@ -148,6 +151,7 @@ export default function AdviesDialoog({
   input,
   meta,
   plattegrond,
+  rapportPlattegronden,
   onEnergieAdvies,
   onToepassen,
   isAdmin = false,
@@ -172,6 +176,7 @@ export default function AdviesDialoog({
             input={input}
             meta={meta}
             plattegrond={plattegrond}
+            rapportPlattegronden={rapportPlattegronden}
             onEnergieAdvies={onEnergieAdvies}
             onToepassen={onToepassen}
             bewerker={bewerker}
@@ -188,12 +193,16 @@ function AdviesInhoud({
   input,
   meta,
   plattegrond,
+  rapportPlattegronden,
   onEnergieAdvies,
   onToepassen,
   isAdmin,
   magToepassen,
   bewerker,
-}: Pick<Props, "input" | "meta" | "plattegrond" | "onEnergieAdvies" | "onToepassen"> & {
+}: Pick<
+  Props,
+  "input" | "meta" | "plattegrond" | "rapportPlattegronden" | "onEnergieAdvies" | "onToepassen"
+> & {
   isAdmin: boolean;
   magToepassen: boolean;
   bewerker: string;
@@ -724,6 +733,7 @@ function AdviesInhoud({
                       normen: NORMEN,
                       inst,
                       plattegrond: (await plattegrond?.()) ?? null,
+                      rapportPlattegronden: (await rapportPlattegronden?.()) ?? [],
                     }),
                   )
                 }

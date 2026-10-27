@@ -276,6 +276,14 @@ export interface WwsInput {
   plattegrond?: { pad: string; breedte: number; hoogte: number };
   /** Oude tellingen: afbeelding als data-URL in de telling zelf. Alleen nog lezen. */
   plattegrondImg?: string;
+  /** Plattegronden alleen voor het rapport (zonder maten); zie plattegrond/rapport.ts */
+  rapportPlattegronden?: {
+    pad: string;
+    breedte: number;
+    hoogte: number;
+    soort: "2d" | "3d" | "situatie" | "berging" | "indeling" | "eigen";
+    titel?: string;
+  }[];
 }
 
 // ---------- uitvoer ----------

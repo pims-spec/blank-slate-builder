@@ -26,6 +26,8 @@ import {
   pdfInvoer,
   pdfOptiePagina,
   pdfPlattegrondBlok,
+  pdfPlattegrondPaginas,
+  type PdfRapportPlattegrond,
   pdfSamenvattingPagina,
   pdfTellingBody,
   pdfEnergieAdviesKeuze,
@@ -81,6 +83,8 @@ export interface TellingPdfInvoer {
   versie?: { nr: number; createdAt: string; notitie?: string } | null;
   /** Plattegrond als JPEG data-URL (fase 4c) */
   plattegrond?: string | null;
+  /** Plattegronden alleen voor het rapport, elk op een eigen pagina (bewuste afwijking) */
+  rapportPlattegronden?: readonly PdfRapportPlattegrond[];
 }
 
 /** Rapportage puntentelling — makePdf() */
@@ -131,6 +135,7 @@ function tellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
   const disc =
     DISC_BASIS(normen) + (R.warn.length ? " Opmerkingen: " + R.warn.map(txt).join(" ") : "");
   doc.text(doc.splitTextToSize(disc, W - 2 * M), M, y);
+  if (!x.bronGetrouw) pdfPlattegrondPaginas(doc, x.rapportPlattegronden ?? []);
   voettekst(doc, 2);
   const base = bestandsBasis(naamVan(meta, "puntentelling"));
   return {
@@ -295,6 +300,8 @@ export interface AdviesPdfInvoer {
   /** De instellingen uit het adviesdialoog (kosten, uitgesloten maatregelen, marge, …) */
   inst: AdviesInstellingen;
   plattegrond?: string | null;
+  /** Plattegronden alleen voor het rapport: onderdeel "Woningplattegrond" (bewuste afwijking) */
+  rapportPlattegronden?: readonly PdfRapportPlattegrond[];
 }
 
 /** Huidige situatie plus twee verbeteropties — makeAdviesVolledigPdf() */
@@ -370,6 +377,8 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
     sections.push("Geen verbeteropties: de woning zit al ruim in de vrije sector");
   if (cur.energieAdvies) sections.push("Verduurzamingsopties");
   sections.push("Energielabel en WOZ-waarde");
+  const plattegronden = x.bronGetrouw ? [] : (x.rapportPlattegronden ?? []);
+  if (plattegronden.length) sections.push("Woningplattegrond");
   pdfSamenvattingPagina(
     doc,
     meta,
@@ -426,6 +435,9 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
 
   // Altijd: uitleg energielabel en WOZ-waarde
   pdfEnergieUitlegPagina(doc, N);
+
+  // Woningplattegrond: elke plattegrond op een eigen pagina, zoals de CBRE-rapporten
+  pdfPlattegrondPaginas(doc, plattegronden);
 
   // Disclaimer, op een eigen pagina
   doc.addPage();

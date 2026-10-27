@@ -800,6 +800,16 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
 - **Samenvatting:** past de kaart met de puntentotalen niet meer op de overzichtspagina, dan gaat
   het kopje "Samenvatting" mee naar de volgende pagina (de bron liet het kopje los staan).
 - **Energielabel en WOZ-waarde op één pagina:** compactere labelrijen (7 in plaats van 8,4 mm).
+- **Woningplattegrond** (`plattegrond/rapport.ts`, `pdfPlattegrondPaginas`): plattegronden alleen
+  voor het rapport, zonder de maten over te nemen ("Plattegrond toevoegen aan rapport" in de
+  telling). Afbeelding (PNG/JPG/WebP) of PDF; bij een PDF kies je de pagina's (bijv. een
+  meetrapport). Per plattegrond een soort: 2D, 3D, Situatie, Berging, Indelingsadvies of een eigen
+  titel; hoogstens 8. In Storage in dezelfde map als de ingelezen plattegrond; de telling bewaart
+  `input.rapportPlattegronden` (pad, maat, soort, titel). Uploaden gebeurt direct (de telling moet
+  al opgeslagen zijn); weggehaalde plattegronden worden opgeruimd als geen versie ze gebruikt.
+  Dupliceren neemt ze niet mee (ze horen bij de map van het origineel). In de puntentelling-PDF
+  achteraan en in het adviesrapport na "Energielabel en WOZ-waarde" (ook in de inhoudsopgave):
+  elke plattegrond op een eigen pagina "Plattegrond 1 - 2D", zoals de CBRE-rapporten.
 - Brongetrouw blijft alles zoals de bron. Test: `pdf.afwijkingen.test.ts`.
 - **Brongetrouw** (`brongetrouw: true`, `bronGetrouw: true`): de twee oude opties, geen afmelden,
   geen doelzin en geen waarschuwing.

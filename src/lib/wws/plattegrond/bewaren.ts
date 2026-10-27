@@ -6,6 +6,7 @@ import type { Bewerker, Versie } from "../opslag/types";
 import type { TellingStaat } from "../opslag/doc";
 import type { Normen } from "../normen";
 import { oudeAfbeeldingOpruimen, type PlattegrondOpslag } from "./opslag";
+import { allePaden } from "./rapport";
 
 export interface TeBewarenBeeld {
   bytes: Uint8Array;
@@ -62,9 +63,10 @@ export async function ruimOudBeeldOp(
 export async function ruimOngebruiktOp(
   opslag: PlattegrondOpslag,
   kandidaten: readonly (string | null | undefined)[],
-  inGebruik: readonly { plattegrond?: { pad: string } | undefined }[],
+  inGebruik: readonly Parameters<typeof allePaden>[0][],
 ): Promise<void> {
-  const gebruikt = new Set(inGebruik.map((x) => x.plattegrond?.pad).filter(Boolean));
+  // ook de plattegronden voor het rapport tellen als gebruikt
+  const gebruikt = new Set(inGebruik.flatMap((x) => allePaden(x)));
   const weg = [...new Set(kandidaten.filter((p): p is string => !!p && !gebruikt.has(p)))];
   if (!weg.length) return;
   try {

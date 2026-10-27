@@ -26,6 +26,9 @@ const LIB = { jsPDF, autoTable };
 /** Zoals in de app: met het ingesloten huisstijl-lettertype */
 const LIB_HUISSTIJL = { jsPDF, autoTable, lettertype: INTER };
 const N = DEFAULT_NORMEN as unknown as Normen;
+/** Een piepkleine JPEG (3 × 4 px) voor de plattegrondpagina's */
+const KLEIN_JPEG =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBARXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAA6ADAAQAAAABAAAABAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/+ICKElDQ19QUk9GSUxFAAEBAAACGGFwcGwEAAAAbW50clJHQiBYWVogB+YAAQABAAAAAAAAYWNzcEFQUEwAAAAAQVBQTAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1hcHBsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKZGVzYwAAAPwAAAAwY3BydAAAASwAAABQd3RwdAAAAXwAAAAUclhZWgAAAZAAAAAUZ1hZWgAAAaQAAAAUYlhZWgAAAbgAAAAUclRSQwAAAcwAAAAgY2hhZAAAAewAAAAsYlRSQwAAAcwAAAAgZ1RSQwAAAcwAAAAgbWx1YwAAAAAAAAABAAAADGVuVVMAAAAUAAAAHABEAGkAcwBwAGwAYQB5ACAAUAAzbWx1YwAAAAAAAAABAAAADGVuVVMAAAA0AAAAHABDAG8AcAB5AHIAaQBnAGgAdAAgAEEAcABwAGwAZQAgAEkAbgBjAC4ALAAgADIAMAAyADJYWVogAAAAAAAA9tUAAQAAAADTLFhZWiAAAAAAAACD3wAAPb////+7WFlaIAAAAAAAAEq/AACxNwAACrlYWVogAAAAAAAAKDgAABELAADIuXBhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbc2YzMgAAAAAAAQxCAAAF3v//8yYAAAeTAAD9kP//+6L///2jAAAD3AAAwG7/wAARCAAEAAMDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwACAgICAgIDAgIDBQMDAwUGBQUFBQYIBgYGBgYICggICAgICAoKCgoKCgoKDAwMDAwMDg4ODg4PDw8PDw8PDw8P/9sAQwECAgIEBAQHBAQHEAsJCxAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ/90ABAAB/9oADAMBAAIRAxEAPwD947bS4YoyvmO+XdssQT8zE46dBnA9Bip/7Ph9W/T/AAq3H90/U/zp9XB6Ib3P/9k=";
 
 /** Losse, gespatieerde letters: zo tekent jsPDF een tekst met een teken buiten zijn lettertype */
 const gespatieerd = (t: string) => /^(\S ){2,}\S$/.test(t);
@@ -409,6 +412,34 @@ describe("bewuste afwijkingen in de PDF's", () => {
     );
     expect(bron[0]).not.toContain("Opgesteld door");
     expect(bron.flat()).toContain("Bouwjaar");
+  });
+
+  it("woningplattegrond: elke plattegrond op een eigen pagina, in de inhoudsopgave", async () => {
+    const input = normaliseer(genereer(2));
+    const meta = willekeurigeMeta(2);
+    const inst = standaardInstellingen(N);
+    const rapportPlattegronden = [
+      { titel: "Plattegrond 1 - 2D", img: KLEIN_JPEG },
+      { titel: "Plattegrond 2 - Situatie", img: KLEIN_JPEG },
+    ];
+    const advies = await pdfTekst(
+      maakAdviesPdf(LIB, { meta, input, normen: N, inst, rapportPlattegronden }).blob,
+    );
+    const p1 = advies.findIndex((p) => p.includes("Plattegrond 1 - 2D"));
+    const p2 = advies.findIndex((p) => p.includes("Plattegrond 2 - Situatie"));
+    expect(p1).toBeGreaterThan(advies.findIndex((p) => p.includes("Deel 2")));
+    expect(p2).toBe(p1 + 1);
+    expect(advies.findIndex((p) => p.includes("Disclaimer"))).toBe(p2 + 1);
+    expect(advies[1]!.join(" ")).toContain("Woningplattegrond");
+    const telling = await pdfTekst(
+      maakTellingPdf(LIB, { meta, input, normen: N, rapportPlattegronden }).blob,
+    );
+    expect(telling.at(-1)).toContain("Plattegrond 2 - Situatie");
+    const bron = await pdfTekst(
+      maakAdviesPdf(LIB, { meta, input, normen: N, inst, rapportPlattegronden, bronGetrouw: true })
+        .blob,
+    );
+    expect(bron.flat().join(" ")).not.toContain("Plattegrond 1 - 2D");
   });
 
   it("adresregel: straat + huisnummer, postcode plaats (de bron zette de postcode ervoor)", async () => {

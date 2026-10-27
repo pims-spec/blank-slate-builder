@@ -860,6 +860,39 @@ export function pdfPlattegrondBlok(doc: Doc, y: number, img?: string | null, max
   }
 }
 
+/** Een plattegrond voor het rapport: de paginatitel en de afbeelding (JPEG data-URL) */
+export interface PdfRapportPlattegrond {
+  titel: string;
+  img: string;
+}
+
+/**
+ * Onderdeel "Woningplattegrond": elke plattegrond op een eigen pagina met de titel als kop en de
+ * afbeelding zo groot mogelijk zonder te vervormen ("Plattegrond 1 - 2D", zoals de CBRE-rapporten).
+ */
+export function pdfPlattegrondPaginas(doc: Doc, lijst: readonly PdfRapportPlattegrond[]) {
+  const W = PDF_W,
+    M = PDF_M;
+  for (const p of lijst) {
+    doc.addPage();
+    const y = pdfBanner(doc, "WWS-rapport", p.titel);
+    const maxW = W - 2 * M,
+      maxH = 276 - y;
+    try {
+      const props = doc.getImageProperties(p.img);
+      const schaal = Math.min(maxW / props.width, maxH / props.height);
+      const w = props.width * schaal,
+        h = props.height * schaal;
+      doc.addImage(p.img, "JPEG", M + (maxW - w) / 2, y, w, h);
+    } catch {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...PDF_MUT);
+      doc.text("Deze plattegrond kon niet worden weergegeven.", M, y + 4);
+    }
+  }
+}
+
 export const CATEGORIE_VAN_KEY: Record<string, string> = {
   label: "Energielabel",
   indexKlasse: "Energielabel",

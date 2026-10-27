@@ -96,4 +96,17 @@ describe("ruimOngebruiktOp", () => {
     await ruimOngebruiktOp(opslag, [a.pad, c.pad, null, a.pad], [{ plattegrond: c }, {}]);
     expect([...b.bestanden.keys()]).toEqual([c.pad]);
   });
+  it("een plattegrond voor het rapport telt ook als gebruikt", async () => {
+    const { ruimOngebruiktOp } = await import("./bewaren");
+    const b = nepBucket();
+    const opslag = maakPlattegrondOpslag(b.bucket);
+    const a = await opslag.bewaar(T, JPEG, { breedte: 1, hoogte: 1 });
+    const c = await opslag.bewaar(T, JPEG, { breedte: 1, hoogte: 1 });
+    await ruimOngebruiktOp(
+      opslag,
+      [a.pad, c.pad],
+      [{ rapportPlattegronden: [{ ...a, soort: "2d" }] }],
+    );
+    expect([...b.bestanden.keys()]).toEqual([a.pad]);
+  });
 });
