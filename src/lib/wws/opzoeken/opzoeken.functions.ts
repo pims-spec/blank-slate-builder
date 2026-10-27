@@ -1,5 +1,5 @@
-// Server functions voor adres (PDOK) en energielabel (EP-Online), plus een status-check van de
-// secrets voor beheerders. Elke aanroep vereist een ingelogde gebruiker; de rol wordt gecontroleerd
+// Server functions voor adres (PDOK), energielabel (EP-Online) en monumentstatus (Kadaster en
+// RCE), plus een status-check van de secrets voor beheerders. Elke aanroep vereist een ingelogde gebruiker; de rol wordt gecontroleerd
 // met de Supabase-client MET het token van die gebruiker (RLS geldt) — nooit de service role.
 import { createServerFn } from "@tanstack/react-start";
 import { STANDAARD_CLAUDE_MODEL, STANDAARD_GEMINI_MODEL } from "../ai/dienst";
@@ -11,6 +11,7 @@ import {
   zoekAdresBijPdok,
   zoekEnergielabelBijEpOnline,
 } from "./dienst";
+import { zoekMonumentStatus } from "./monument";
 
 export const zoekAdres = createServerFn({ method: "POST" })
   .middleware([vereisSchrijfrol])
@@ -23,6 +24,12 @@ export const zoekEnergielabel = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     zoekEnergielabelBijEpOnline(fetch, process.env["EP_ONLINE_API_KEY"], data),
   );
+
+/** Rijks- of gemeentelijk monument en beschermd stadsgezicht bij een adres (geen sleutel nodig) */
+export const zoekMonument = createServerFn({ method: "POST" })
+  .middleware([vereisSchrijfrol])
+  .validator((d: unknown) => EpVraagSchema.parse(d))
+  .handler(async ({ data }) => zoekMonumentStatus(fetch, data));
 
 /** Welke secrets zijn ingesteld (alleen aanwezig of niet — nooit de waarde), en welke modellen */
 export const serverStatus = createServerFn({ method: "POST" })

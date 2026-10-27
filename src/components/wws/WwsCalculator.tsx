@@ -458,6 +458,8 @@ export interface WwsCalculatorProps {
   energieExtra?: ReactNode;
   /** Onder de WOZ-velden (bv. de link naar het WOZ-waardeloket) */
   wozExtra?: ReactNode;
+  /** Onder de keuze "Monument" (bv. de monumentstatus opzoeken) */
+  monumentExtra?: ReactNode;
   /** Woningtype automatisch overgenomen (EP-Online): alleen-lezen met "wijzigen" */
   woningtypeVergrendeld?: { onOntgrendel: () => void } | undefined;
   /** Het woningtype staat elders (in de kaart "Woning" van de telling, zoals in de bron) */
@@ -475,6 +477,7 @@ export default function WwsCalculator({
   pasRuimteAan,
   energieExtra,
   wozExtra,
+  monumentExtra,
   woningtypeVergrendeld,
   woningtypeElders = false,
 }: WwsCalculatorProps = {}) {
@@ -1452,6 +1455,7 @@ export default function WwsCalculator({
                 opties={MONUMENT_KEUZES}
               />
             </Veld>
+            {monumentExtra}
             <Vink
               label={`Nieuwbouw in de middensector (+${N.opslag.nieuwbouwPct}%)`}
               checked={inp.opslag.nieuwbouw}

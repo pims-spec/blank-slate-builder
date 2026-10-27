@@ -48,11 +48,11 @@ export const EpVraagSchema = z.object({
 export type EpVraag = z.input<typeof EpVraagSchema>;
 
 /** Alleen de HTTP-status en onze code loggen — nooit de body of de URL (die bevat het adres) */
-function logFout(dienst: string, fout: OpzoekFout, status?: number) {
+export function logFout(dienst: string, fout: OpzoekFout, status?: number) {
   console.warn(`[opzoeken] ${dienst}: ${fout}${status ? ` (HTTP ${status})` : ""}`);
 }
 
-async function haalJson(
+export async function haalJson(
   fetchFn: typeof fetch,
   url: string,
   init: RequestInit,
@@ -72,7 +72,7 @@ async function haalJson(
   }
 }
 
-function foutVoorStatus(status: number): OpzoekFout {
+export function foutVoorStatus(status: number): OpzoekFout {
   if (status === 429) return "te_veel_verzoeken";
   if (status === 404) return "niet_gevonden";
   return "dienst_onbereikbaar";

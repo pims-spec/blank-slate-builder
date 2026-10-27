@@ -42,6 +42,7 @@ import EnergielabelOphalen from "./EnergielabelOphalen";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
 import FotoDialoog from "./FotoDialoog";
+import MonumentOpzoeken from "./MonumentOpzoeken";
 import PlattegrondDialoog from "./PlattegrondDialoog";
 import NieuweTellingDialoog from "./NieuweTellingDialoog";
 import {
@@ -1372,6 +1373,16 @@ export default function TellingEditor({
           </>
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
+        monumentExtra={
+          !alleenLezen && rechten.magSchrijven ? (
+            <MonumentOpzoeken
+              key={id}
+              meta={m}
+              keuze={staat.input.opslag.keuze}
+              zetKeuze={(k) => setInput((i) => ({ ...i, opslag: { ...i.opslag, keuze: k } }))}
+            />
+          ) : undefined
+        }
         woningtypeElders
       />
       {!alleenLezen && (
