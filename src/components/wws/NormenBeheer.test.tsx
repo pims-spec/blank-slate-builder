@@ -200,3 +200,19 @@ describe("Normen: verbeteradvies", () => {
     expect(opgeslagen.kosten["afmelden"]).toBe(350);
   });
 });
+
+describe("Normen: kopjes in- en uitklappen", () => {
+  it("alle secties staan standaard ingeklapt en gaan open met een klik op het kopje", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NormenBeheer normen={structuredClone(N)} />
+      </QueryClientProvider>,
+    );
+    const koppen = screen.getAllByRole("heading", { level: 2 });
+    expect(koppen.length).toBeGreaterThan(5);
+    for (const k of koppen) expect(k.closest("details")).not.toHaveAttribute("open");
+    const keuken = screen.getByRole("heading", { level: 2, name: "Keuken" });
+    fireEvent.click(keuken.closest("summary")!);
+    expect(keuken.closest("details")).toHaveAttribute("open");
+  });
+});

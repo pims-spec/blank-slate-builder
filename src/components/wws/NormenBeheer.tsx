@@ -693,12 +693,24 @@ export default function NormenBeheer({ normen }: { normen: Normen }) {
   );
 }
 
+/**
+ * Een kaart met normen, in- en uitklapbaar en standaard ingeklapt. De velden blijven ook
+ * ingeklapt in het formulier, dus opslaan neemt alles mee.
+ */
 function Sectie({ titel, children }: { titel: string; children: ReactNode }) {
   return (
-    <section className="gh-card p-4">
-      <h2 className="mb-3 text-base font-semibold">{titel}</h2>
-      {children}
-    </section>
+    <details className="group gh-card p-4">
+      <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+        <span
+          aria-hidden
+          className="text-muted-foreground transition-transform group-open:rotate-90"
+        >
+          ›
+        </span>
+        <h2 className="text-base font-semibold">{titel}</h2>
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
   );
 }
 
