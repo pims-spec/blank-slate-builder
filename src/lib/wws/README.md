@@ -79,9 +79,14 @@ door `calc()` te halen. De bron rondde op twee plekken anders af:
   onafgerond opgeteld en pas daarna afgerond. Bijvoorbeeld 60,3 + 6,4 = 66,7 → 67 m² (de bron:
   60 + 6 = 66 m²).
 
+- **WOZ-regel bij de vloer van 186:** zakt de woning door de cap onder 187, dan krijgt rubriek 11
+  het verschil tot 186 ("afgetopt tot 186 punten"), zodat de rubrieken optellen tot het totaal.
+  De bron liet de afgetopte WOZ staan (bijvoorbeeld 58 in plaats van 66,25).
+
 Daarmee komen 65 van de 69 totalen exact overeen. Open: bij 4 woningen met een WOZ-cap komt de
-Huurprijscheck 1 punt lager uit; die afronding is nog niet achterhaald. Bij de vloer van 186
-punten toont de Huurprijscheck de WOZ-punten zonder cap, de app met cap (totaal gelijk).
+Huurprijscheck 1 punt lager uit; die afronding is nog niet achterhaald. Bij 4 van de 6 woningen op
+de vloer van 186 wijkt de WOZ-regel 0,25 tot 0,5 punt af (de Huurprijscheck telt daar zelf ook niet
+precies op tot 186; totaal gelijk). Brongetrouw (`zetBronAfronding(true)`) rekent zoals de bron.
 
 De vergelijkingstests met wws-site.html (`*.vergelijk.test.ts`) zetten `zetBronAfronding(true)`,
 zodat ze de bron exact blijven volgen; de app zet dit nooit aan.
@@ -776,6 +781,9 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
 - **Uitleg WOZ-cap** (pagina "Energielabel en WOZ-waarde"): de bron schreef dat de cap geldt
   "wanneer de woning zich niet in de vrije sector bevindt"; de app schrijft "in de vrije sector"
   (zo rekent `calc()` ook). Brongetrouw blijft de oude tekst.
+- **Adresregel** (puntentelling, kaart "Woning"): "Straat huisnummer, postcode plaats". De bron
+  zette de postcode vóór het huisnummer ("IJdoornlaan, 1024 KM 251T-1, Amsterdam"); brongetrouw
+  blijft dat zo.
 - **Brongetrouw** (`brongetrouw: true`, `bronGetrouw: true`): de twee oude opties, geen afmelden,
   geen doelzin en geen waarschuwing.
 - Tests: `opties.test.ts`, `AdviesDialoog.test.tsx`, `NormenBeheer.test.tsx`,

@@ -202,13 +202,17 @@ export function pdfTellingBody(
   };
   // Woning
   h3("Woning");
-  const adres = [
-    meta.adres,
-    [meta.postcode, meta.huisnummer].filter(Boolean).join(" "),
-    meta.plaats,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  // bewuste afwijking: de bron zette de postcode vóór het huisnummer ("Straat, 1234 AB 12, Plaats")
+  const adres = isBronModus()
+    ? [meta.adres, [meta.postcode, meta.huisnummer].filter(Boolean).join(" "), meta.plaats]
+        .filter(Boolean)
+        .join(", ")
+    : [
+        [meta.adres, meta.huisnummer].filter(Boolean).join(" "),
+        [meta.postcode, meta.plaats].filter(Boolean).join(" "),
+      ]
+        .filter(Boolean)
+        .join(", ");
   y =
     tabel(lib, doc, {
       startY: y,

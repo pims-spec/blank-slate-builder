@@ -210,6 +210,13 @@ describe("WOZ-cap", () => {
     expect(r.totaal).toBe(186);
     expect(r.seg).toBe("midden");
   });
+  it("bij de vloer telt de WOZ-regel op tot 186 (zoals de Huurprijscheck)", () => {
+    const r = reken(basis(60, 1_500_000));
+    const som = r.rows.reduce((s, x) => s + x.p, 0);
+    expect(som).toBeCloseTo(186, 6);
+    expect(r.exact).toBe(186);
+    expect(r.rows.find((x) => x.nr === 11)!.t).toContain("(afgetopt tot 186 punten)");
+  });
 });
 
 describe("huurprijstabel 2026", () => {

@@ -177,7 +177,8 @@ export function huurVoorPunten(
 }
 
 /**
- * Afronding zoals wws-site.html in plaats van zoals de Huurprijscheck (buitenruimte en WOZ-m²).
+ * Afronding zoals wws-site.html in plaats van zoals de Huurprijscheck (buitenruimte, WOZ-m² en de
+ * WOZ-regel bij de vloer van 186).
  * Alleen voor de vergelijkingstests met de bron; de app zet dit nooit aan.
  */
 let bronAfronding = false;
@@ -599,6 +600,14 @@ export function calc(
       totaalExact = other + pW;
       if (Math.round(totaalExact) < N.grensMidden + 1 && !W.kleinCorop) floor186 = true;
     }
+  }
+  // Bij de vloer van 186: de WOZ-regel krijgt precies het verschil tot 186, zodat de rubrieken
+  // optellen tot het totaal (zoals de Huurprijscheck; bewuste afwijking van de bron, die de
+  // afgetopte WOZ liet staan)
+  if (floor186 && !bronAfronding) {
+    pW = r2(N.grensMidden - other);
+    capNote = " (afgetopt tot " + N.grensMidden + " punten)";
+    totaalExact = N.grensMidden;
   }
   add(11, "WOZ-waarde", pW, wT + capNote);
   add(

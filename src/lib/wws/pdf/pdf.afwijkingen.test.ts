@@ -378,4 +378,21 @@ describe("bewuste afwijkingen in de PDF's", () => {
     );
     expect(await tekst(true)).toContain("zich niet in de vrije sector bevindt");
   });
+
+  it("adresregel: straat + huisnummer, postcode plaats (de bron zette de postcode ervoor)", async () => {
+    const input = normaliseer(genereer(1));
+    const meta = {
+      ...legeMeta(),
+      adres: "IJdoornlaan",
+      huisnummer: "251T-1",
+      postcode: "1024 KM",
+      plaats: "Amsterdam",
+    };
+    const tekst = (b: boolean) =>
+      pdfTekst(maakTellingPdf(LIB, { meta, input, normen: N, bronGetrouw: b }).blob).then((p) =>
+        p.flat().join(" ").replace(/\s+/g, " "),
+      );
+    expect(await tekst(false)).toContain("IJdoornlaan 251T-1, 1024 KM Amsterdam");
+    expect(await tekst(true)).toContain("IJdoornlaan, 1024 KM 251T-1, Amsterdam");
+  });
 });
