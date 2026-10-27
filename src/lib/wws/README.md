@@ -156,6 +156,20 @@ De AI kent geen punten toe. Nog niet in de app: eerst een vergelijkingstest (Cla
 Claude Sonnet 5.5, Gemini 4 Argon, Gemini 3.8 Flash) met dezelfde instructie en hetzelfde schema,
 buiten de repo.
 
+## Meer verdiepingen (plattegrond inlezen)
+
+`plattegrond/verdiepingen.ts` (puur) en `PlattegrondInlezen`: hoogstens 4 tekeningen (losse
+bestanden of de pagina's van een PDF), elk met een verdieping (voorstel uit de bestandsnaam,
+anders op volgorde; gesorteerd van kelder naar zolder). Elke tekening gaat apart naar
+`leesPlattegrond` (de server is ongewijzigd; één AI-aanroep per tekening), met "Deze tekening is de
+… van de woning" voor de eigen toelichting. `voegVerdiepingenSamen`: één antwoord met alle ruimten
+(naam + "(1e verdieping)", zonder bbox), buitenruimten met de verdieping, het langste aanrecht,
+nameten per verdieping; de controletabel krijgt een kolom Verdieping. Daarna `platToepassen` zoals
+bij één tekening. In Storage komt één afbeelding met de tekeningen onder elkaar (`stapelMaten`,
+`stapelCanvassen`, met een kop per verdieping). Zonder bbox kun je ruimten niet op de tekening
+aanklikken; alleen het indelingsadvies gebruikt dat, en de Blanco-start daarvan blijft bij één
+tekening.
+
 ## Map inlezen (plattegrond en foto's in één keer)
 
 Knop "Map inlezen" in de telling (`MapDialoog.tsx`). Een map van de computer (Map kiezen met
@@ -167,8 +181,8 @@ Knop "Map inlezen" in de telling (`MapDialoog.tsx`). Een map van de computer (Ma
 - Herkennen: de foto's gaan door dezelfde sortering als de fotobeoordeling, met `metPlattegrond`
   (extra soort `plattegrond`). Eén AI-aanroep voor de hele map. Lukt dat niet, dan kijkt de
   gebruiker zelf na.
-- Nakijken: per bestand Plattegrond / Foto / Niet gebruiken; bij meer plattegronden wordt er één
-  ingelezen (voorkeur PDF, dan naam, dan Gemini).
+- Nakijken: per bestand Plattegrond / Foto / Niet gebruiken; elke plattegrond wordt als aparte
+  verdieping ingelezen (hoogstens 4).
 - Daarna de bestaande stappen: `PlattegrondInlezen` met de controletabel (de ruimten komen in de
   telling bij Overnemen), dan `FotosBeoordelen` vanaf de indeling, met de telling inclusief de
   nieuwe ruimten.
