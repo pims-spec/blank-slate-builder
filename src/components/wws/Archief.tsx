@@ -112,6 +112,8 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
     const gedeeld = r.t.ownerId !== userId && !rechten.zietAlles;
     const keuzes = versieKeuzes(r.t.id, versieData?.versies ?? []);
     const versie = gekozen[r.t.id] ?? "";
+    // gekozen versie: de opgeslagen punten van die versie in de kolom Punten
+    const gekozenKeuze = versie ? keuzes.find((k) => k.waarde === versie) : undefined;
     const openZoek = {
       id: r.t.id,
       ...(voorIndeling ? { indeling: true } : {}),
@@ -149,7 +151,16 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
         </td>
         <td className="px-3 py-2">{r.eigenaar || "—"}</td>
         {toonCollega && !groeperen && <td className="px-3 py-2">{r.collega || "—"}</td>}
-        <td className="px-3 py-2 text-right tabular-nums">{r.punten ?? "—"}</td>
+        <td className="px-3 py-2 text-right tabular-nums">
+          {gekozenKeuze ? (
+            <>
+              {gekozenKeuze.punten ?? "—"}
+              <div className="text-xs text-muted-foreground">v{gekozenKeuze.waarde}</div>
+            </>
+          ) : (
+            (r.punten ?? "—")
+          )}
+        </td>
         <td className="px-3 py-2">{r.seg ? SEGMENT_NAMEN[r.seg] : "—"}</td>
         <td className="px-3 py-2 text-muted-foreground">{datumTijd(r.t.gewijzigdOp)}</td>
         <td className="px-3 py-2">

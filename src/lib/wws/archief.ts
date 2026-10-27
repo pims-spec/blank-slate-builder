@@ -157,19 +157,29 @@ export const versiesTekst = (t: Pick<Telling, "aantalVersies" | "versieCount">) 
 
 /**
  * Keuzelijst in het archief bij een telling met meerdere versies: eerst de werkversie, dan de
- * versies van nieuw naar oud ("v2 — Na renovatie"). Aanvulling op de bron, die alleen het aantal
- * toont. `waarde` is "" (werkversie) of het versienummer.
+ * versies van nieuw naar oud ("v2 — Na renovatie · 152 punten"). Aanvulling op de bron, die alleen
+ * het aantal toont. `waarde` is "" (werkversie) of het versienummer; `punten` zijn de opgeslagen
+ * punten van de versie (null bij de werkversie of als ze onbekend zijn).
  */
 export function versieKeuzes(
   tellingId: string,
-  versies: readonly Pick<DashboardVersie, "tellingId" | "nr" | "notitie" | "createdAt">[],
-): { waarde: string; label: string }[] {
+  versies: readonly Pick<
+    DashboardVersie,
+    "tellingId" | "nr" | "notitie" | "createdAt" | "resultaat"
+  >[],
+): { waarde: string; label: string; punten: number | null }[] {
   const eigen = versies
     .filter((v) => v.tellingId === tellingId)
     .sort((a, b) => b.nr - a.nr)
-    .map((v) => ({
-      waarde: String(v.nr),
-      label: versieKeuzeLabel({ nr: v.nr, notitie: v.notitie ?? "", createdAt: v.createdAt ?? "" }),
-    }));
-  return [{ waarde: "", label: "Werkversie" }, ...eigen];
+    .map((v) => {
+      const punten = typeof v.resultaat?.totaal === "number" ? v.resultaat.totaal : null;
+      return {
+        waarde: String(v.nr),
+        label:
+          versieKeuzeLabel({ nr: v.nr, notitie: v.notitie ?? "", createdAt: v.createdAt ?? "" }) +
+          (punten != null ? " · " + punten + " punten" : ""),
+        punten,
+      };
+    });
+  return [{ waarde: "", label: "Werkversie", punten: null }, ...eigen];
 }

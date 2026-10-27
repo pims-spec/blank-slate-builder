@@ -203,7 +203,13 @@ describe("Archief", () => {
     tellingStore.lijst.mockResolvedValue([meer, een]);
     versiesLijst.mockResolvedValue({
       versies: [
-        { tellingId: "t1", nr: 1, notitie: "Begin", createdAt: "2026-03-04T10:00:00Z" },
+        {
+          tellingId: "t1",
+          nr: 1,
+          notitie: "Begin",
+          createdAt: "2026-03-04T10:00:00Z",
+          resultaat: { totaal: 97 },
+        },
         { tellingId: "t1", nr: 2, notitie: "Na renovatie", createdAt: "2026-05-01T10:00:00Z" },
         { tellingId: "t2", nr: 1, notitie: "Enige", createdAt: "2026-03-04T10:00:00Z" },
       ],
@@ -223,11 +229,14 @@ describe("Archief", () => {
     expect([...(keuze as HTMLSelectElement).options].map((o) => o.text)).toEqual([
       "Werkversie",
       "v2 — Na renovatie",
-      "v1 — Begin",
+      "v1 — Begin · 97 punten",
     ]);
     const open = () => JSON.parse(within(r).getByText("Openen").closest("a")!.dataset["search"]!);
     expect(open()).toEqual({ id: "t1" });
     fireEvent.change(keuze, { target: { value: "1" } });
     expect(open()).toEqual({ id: "t1", versie: 1 });
+    // de kolom Punten toont nu de punten van de gekozen versie
+    expect(within(r).getByText("97")).toBeTruthy();
+    expect(within(r).getByText("v1")).toBeTruthy();
   });
 });

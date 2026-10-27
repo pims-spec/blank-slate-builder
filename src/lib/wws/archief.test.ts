@@ -163,9 +163,23 @@ describe("versies in het archief", () => {
       { tellingId: "a", nr: 2, notitie: "Na renovatie", createdAt: "2026-05-01T10:00:00Z" },
     ]);
     expect(keuzes).toEqual([
-      { waarde: "", label: "Werkversie" },
-      { waarde: "2", label: "v2 — Na renovatie" },
-      { waarde: "1", label: "v1 — Begin" },
+      { waarde: "", label: "Werkversie", punten: null },
+      { waarde: "2", label: "v2 — Na renovatie", punten: null },
+      { waarde: "1", label: "v1 — Begin", punten: null },
+    ]);
+  });
+
+  it("keuzelijst: de opgeslagen punten van elke versie erbij", () => {
+    const keuzes = versieKeuzes("a", [
+      { tellingId: "a", nr: 1, notitie: "Begin", resultaat: { totaal: 140 } },
+      { tellingId: "a", nr: 2, notitie: "Na renovatie", resultaat: { totaal: 152 } },
+      { tellingId: "a", nr: 3, notitie: "Leeg", resultaat: null },
+    ]);
+    expect(keuzes).toEqual([
+      { waarde: "", label: "Werkversie", punten: null },
+      { waarde: "3", label: "v3 — Leeg", punten: null },
+      { waarde: "2", label: "v2 — Na renovatie · 152 punten", punten: 152 },
+      { waarde: "1", label: "v1 — Begin · 140 punten", punten: 140 },
     ]);
   });
 });
