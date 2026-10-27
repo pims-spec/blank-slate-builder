@@ -10,6 +10,20 @@ function metInvoer(f: (i: WwsInput) => void) {
 }
 
 describe("WwsCalculator", () => {
+  it("een nieuwe ruimte begint leeg: badkamer en keuken met alles op 0", () => {
+    render(<WwsCalculator />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]!);
+    fireEvent.change(screen.getByRole("combobox", { name: "Soort ruimte" }), {
+      target: { value: "badkamer" },
+    });
+    for (const veld of ["Staand toilet", "Hangend toilet", "Wastafel", "Douche", "Bad"])
+      expect(screen.getByRole("combobox", { name: veld })).toHaveValue("0");
+    fireEvent.change(screen.getByRole("combobox", { name: "Soort ruimte" }), {
+      target: { value: "keuken" },
+    });
+    expect(screen.getByRole("combobox", { name: "Lengte aanrecht" })).toHaveValue("<1");
+  });
+
   it("rekent live mee als er een vertrek wordt toegevoegd", () => {
     render(<WwsCalculator />);
     expect(screen.getByText("Sociale huur")).toBeInTheDocument();

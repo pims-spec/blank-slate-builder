@@ -18,7 +18,7 @@ import {
 } from "./indeling";
 import { DEFAULT_NORMEN, type Normen } from "./normen";
 import type { Pve } from "./pve";
-import { genereer, rng } from "./testdata";
+import { genereer, rng, zonderLegeStandaard } from "./testdata";
 import type { WwsInput } from "./types";
 import { zetBronAfronding } from "./calc";
 
@@ -70,7 +70,7 @@ function scenario(seed: number) {
   const kies = <T>(a: readonly T[]): T => a[Math.floor(R() * a.length)]!;
   const kans = (p: number) => R() < p;
   const int = (a: number, b: number) => a + Math.floor(R() * (b - a + 1));
-  const x = genereer(seed);
+  const x = zonderLegeStandaard(genereer(seed));
   // extra hal/overloop (verkeersruimten die deels in de pot gaan), soms met een plek (bbox)
   if (kans(0.6))
     x.overig.push({

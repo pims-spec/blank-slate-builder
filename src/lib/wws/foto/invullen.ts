@@ -7,11 +7,13 @@
 // - niet_vast_te_stellen: niets invullen, wel een markering;
 // - vrijstaand: niets invullen (telt niet); alleen een markering als de telling hem wel meetelt.
 // Soort niet te zien: de laagst tellende soort, met markering. "Voldoet aan de eisen" (badkamer)
-// blijft altijd aan de gebruiker.
+// blijft altijd aan de gebruiker. Staat de ruimte nog op de standaardwaarden (niets ingevuld, bijv.
+// de 1 wastafel en 1 douche van oudere tellingen), dan begint de beoordeling met een lege ruimte.
 //
 // De veldnamen in fotoOnzeker zijn die van het formulier: de sleutel van een voorziening, de groep
 // bij een keuze (kook, oven, kraan), en lengte, toilet, wastafel, enz.
-import { num } from "../basis";
+import { facDefault, num } from "../basis";
+import { facIsOnbewerkt } from "../pve";
 import type { Fac, FacBadkamer, FacKeuken, FacToilet } from "../types";
 import type { Beoordeling, ElementOordeel } from "./beoordeling";
 import type { FotoRuimte } from "./elementen";
@@ -242,6 +244,14 @@ export interface FotoResultaat {
 export function pasFotosToe(f: Fac, ruimte: FotoRuimte, b: Beoordeling): FotoResultaat | null {
   if (fotoRuimteVoor(f) !== ruimte) return null;
   const uit = clone(f) as FacKeuken | FacBadkamer | FacToilet;
+  if (facIsOnbewerkt(f)) {
+    const leeg = facDefault(f.kind, true) as typeof uit;
+    // alleen de voorzieningen leeg; "voldoet aan de eisen" blijft wat het was
+    if (uit.kind === "keuken" && leeg.kind === "keuken") uit.keuken = leeg.keuken;
+    if (uit.kind === "badkamer" && leeg.kind === "badkamer")
+      uit.san = { ...leeg.san, eisenOk: uit.san.eisenOk };
+    if (uit.kind === "toilet" && leeg.kind === "toilet") uit.toilet = leeg.toilet;
+  }
   const onzeker: Record<string, string> = {};
   const markeerVoor = (veld: string) => (reden: string) => {
     const r = reden.trim();

@@ -15,7 +15,7 @@ import {
   pveVoorTelling,
   type Pve,
 } from "./pve";
-import { genereer, rng } from "./testdata";
+import { genereer, rng, zonderLegeStandaard } from "./testdata";
 import type { WwsInput } from "./types";
 
 const require = createRequire(import.meta.url);
@@ -44,7 +44,7 @@ const kloon = <T>(o: T): T => JSON.parse(JSON.stringify(o));
 /** Willekeurige invoer, met een deel van de ruimten terug op de standaardwaarden (onbewerkt) */
 function invoer(seed: number): WwsInput {
   const R = rng(seed + 4_000_003);
-  const x = normaliseer(genereer(seed));
+  const x = zonderLegeStandaard(normaliseer(genereer(seed)));
   for (const r of [...x.vertrekken, ...x.overig])
     if (r.fac && R() < 0.5) r.fac = facDefault(r.fac.kind, false);
   return x;

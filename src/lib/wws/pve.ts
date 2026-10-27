@@ -94,10 +94,18 @@ export function normaliseerPves(raw: unknown, uid: () => string): Pve[] {
   });
 }
 
-/** Staat deze ruimte nog op de standaardwaarden van een nieuwe ruimte? — facIsOnbewerkt() */
+/**
+ * Staat deze ruimte nog op de standaardwaarden van een nieuwe ruimte? — facIsOnbewerkt(). Nieuwe
+ * ruimtes beginnen leeg (alles op 0); oudere tellingen hebben nog de standaardwaarden van de bron
+ * (bijv. 1 wastafel en 1 douche). Beide gelden als onbewerkt.
+ */
 export function facIsOnbewerkt(f: Fac | undefined): boolean {
   if (!f) return false;
-  const basis = facDefault(f.kind, false);
+  return gelijkAanBasis(f, false) || gelijkAanBasis(f, true);
+}
+
+function gelijkAanBasis(f: Fac, leeg: boolean): boolean {
+  const basis = facDefault(f.kind, leeg);
   if (f.kind === "keuken" && basis.kind === "keuken")
     return (
       f.keuken.lengte === basis.keuken.lengte &&

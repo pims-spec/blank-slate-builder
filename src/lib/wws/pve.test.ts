@@ -81,7 +81,7 @@ describe("PvE toepassen", () => {
         type: "keuken",
         m2: 8,
         verwarmd: true,
-        fac: { kind: "keuken", keuken: { lengte: "<1", voorz: {} } },
+        fac: { kind: "keuken", keuken: { lengte: "<1", voorz: { koelkast: true } } },
       },
     );
     const r = pasPveToe(x, opgeslagen);
@@ -93,6 +93,14 @@ describe("PvE toepassen", () => {
     });
     expect(r.input.vertrekken[1]!.fac).toEqual(x.vertrekken[1]!.fac);
     expect(x.vertrekken[0]!.fac).toEqual(facDefault("keuken", false));
+  });
+
+  it("een lege ruimte (zoals een nieuwe) telt ook als onbewerkt (bewuste afwijking van de bron)", () => {
+    const x = legeInput();
+    x.vertrekken.push({ type: "keuken", m2: 8, verwarmd: true, fac: facDefault("keuken", true) });
+    const r = pasPveToe(x, opgeslagen);
+    expect([r.aangepast, r.overgeslagen]).toEqual([1, 0]);
+    expect(r.input.vertrekken[0]!.fac).toMatchObject({ uitPve: true });
   });
 
   it("welk PvE voor stil aanvullen: gekozen PvE, anders het enige actieve", () => {

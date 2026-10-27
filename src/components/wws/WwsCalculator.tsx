@@ -568,6 +568,8 @@ export default function WwsCalculator({
     }
     if (fac.kind === "badkamer") {
       const s = fac.san;
+      // het ! bij het toilet één keer: bij hangend als alleen dat is ingevuld, anders bij staand
+      const toiletBijHangend = num(s.toiletHang) > 0 && num(s.toiletStaand) === 0;
       const zet = (key: keyof typeof s, v: unknown) =>
         zetFac(key === "toiletStaand" || key === "toiletHang" ? "toilet" : key, (f) => {
           if (f.kind === "badkamer") (f.san as Record<string, unknown>)[key] = v;
@@ -578,14 +580,14 @@ export default function WwsCalculator({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Teller
               label="Staand toilet"
-              extra={m("toilet")}
+              extra={toiletBijHangend ? undefined : m("toilet")}
               value={s.toiletStaand}
               max={2}
               onChange={(n) => zet("toiletStaand", n)}
             />
             <Teller
               label="Hangend toilet"
-              extra={m("toilet")}
+              extra={toiletBijHangend ? m("toilet") : undefined}
               value={s.toiletHang}
               max={2}
               onChange={(n) => zet("toiletHang", n)}
@@ -753,7 +755,8 @@ export default function WwsCalculator({
                     wijzig((d) => {
                       const x = d[groep][i]!;
                       x.type = v as never;
-                      ensureFac(groep, x, false);
+                      // een nieuwe ruimte begint leeg (alles op 0); alleen wat je invult telt
+                      ensureFac(groep, x, true);
                       pasRuimteAan?.(groep, x);
                     });
                   }}

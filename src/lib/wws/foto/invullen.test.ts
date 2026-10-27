@@ -138,7 +138,9 @@ describe("pasFotosToe: keuken", () => {
   });
 
   it("aanrechtlengte niet te schatten: lengte blijft, met !", () => {
-    const uit = pasFotosToe(keuken(), "keuken", beoordeling("keuken", { aanrecht: ja() }))!
+    const f = keuken();
+    f.keuken.voorz.afzuig = true; // met de hand ingevuld, dus niet de standaard
+    const uit = pasFotosToe(f, "keuken", beoordeling("keuken", { aanrecht: ja() }))!
       .fac as FacKeuken;
     expect(uit.keuken.lengte).toBe("1-2");
     expect(uit.fotoOnzeker!["lengte"]).toMatch(/^Niet te schatten/);
@@ -229,9 +231,21 @@ describe("pasFotosToe: badkamer", () => {
     expect(uit2.fotoOnzeker!["toilet"]).toMatch(/in de telling staan er meer/);
   });
 
-  it("standaard één douche: AI ziet geen douche → douche blijft, met !", () => {
-    const uit = pasFotosToe(badkamer(), "badkamer", beoordeling("badkamer"))!.fac as FacBadkamer;
-    expect(uit.san.douche).toBe(1);
+  it("standaardwaarden (1 wastafel, 1 douche): begint leeg", () => {
+    const uit = pasFotosToe(
+      badkamer(),
+      "badkamer",
+      beoordeling("badkamer", { meerpers: ja({ aantal: 1 }) }),
+    )!.fac as FacBadkamer;
+    expect(uit.san).toMatchObject({ wastafel: 0, douche: 0, meerpers: 1, eisenOk: true });
+    expect(uit.fotoOnzeker!["douche"]).toMatch(/^Niet vast te stellen/);
+  });
+
+  it("met de hand ingevuld (niet de standaard): douche blijft staan, met !", () => {
+    const f = badkamer();
+    f.san.douche = 2;
+    const uit = pasFotosToe(f, "badkamer", beoordeling("badkamer"))!.fac as FacBadkamer;
+    expect(uit.san).toMatchObject({ douche: 2, wastafel: 1 });
     expect(uit.fotoOnzeker!["douche"]).toMatch(/^Niet vast te stellen/);
   });
 });

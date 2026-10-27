@@ -1,6 +1,13 @@
 // Willekeurige tellingen voor de vergelijkingstests met wws-site.html
 // (calc.vergelijk.test.ts en advies/advies.vergelijk.test.ts). Alleen voor tests.
-import { BUITEN_SOORTEN, OVERIG_TYPES, VERTREK_TYPES, ensureFac, LABELS } from "./basis";
+import {
+  BUITEN_SOORTEN,
+  OVERIG_TYPES,
+  VERTREK_TYPES,
+  ensureFac,
+  facDefault,
+  LABELS,
+} from "./basis";
 import type { Fac, OverigeRuimte, Vertrek, WwsInput } from "./types";
 
 // ---------- deterministische willekeur ----------
@@ -157,4 +164,22 @@ export function genereer(seed: number): WwsInput {
     },
   };
   return inp;
+}
+
+/**
+ * Voor de vergelijkingen met wws-site.html: een ruimte die precies op de lege standaard staat, iets
+ * invullen. Bewuste afwijking: in de app telt een lege ruimte als onbewerkt (nieuwe ruimtes
+ * beginnen leeg, het PvE moet er dan nog op kunnen); in de bron niet. Muteert en geeft x terug.
+ */
+export function zonderLegeStandaard<
+  T extends { vertrekken: { fac?: Fac }[]; overig: { fac?: Fac }[] },
+>(x: T): T {
+  for (const r of [...x.vertrekken, ...x.overig]) {
+    const f = r.fac;
+    if (!f || JSON.stringify(f) !== JSON.stringify(facDefault(f.kind, true))) continue;
+    if (f.kind === "keuken") f.keuken.voorz = { afzuig: true };
+    else if (f.kind === "badkamer") f.san.bad = 1;
+    else if (f.kind === "toilet") f.toilet.fontein = true;
+  }
+  return x;
 }
