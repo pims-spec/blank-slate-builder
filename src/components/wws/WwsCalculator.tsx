@@ -39,6 +39,7 @@ import type { Maat } from "@/lib/wws/types";
 import { fotoAllesGecontroleerd, fotoStand, fotoVeldGecontroleerd } from "@/lib/wws/foto/invullen";
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
 import { samenvattingVoorz } from "@/lib/wws/voorzSamenvatting";
+import { wozJaarTekst } from "@/lib/wws/basis";
 import {
   MINDER_DAN_40,
   exactTekst,
@@ -1368,7 +1369,9 @@ export default function WwsCalculator({
                   />
                 </Veld>
               )}
-              <Veld label="Peildatum">
+              {/* De kengetallen horen bij het jaar van de WOZ-beschikking; de waardepeildatum ligt
+                  een jaar eerder (zoals het WOZ-waardeloket die toont). */}
+              <Veld label="WOZ-beschikking">
                 <Keuze
                   value={inp.woz.jaar}
                   onChange={(v) =>
@@ -1379,7 +1382,7 @@ export default function WwsCalculator({
                   opties={Object.keys(N.woz)
                     .sort()
                     .reverse()
-                    .map((j) => [j, j])}
+                    .map((j) => [j, wozJaarTekst(j)])}
                 />
               </Veld>
             </div>

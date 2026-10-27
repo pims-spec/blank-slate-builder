@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { legeInput, type WwsInput } from "@/lib/wws";
+import { wozJaarTekst } from "@/lib/wws/basis";
 import WwsCalculator from "./WwsCalculator";
 
 function metInvoer(f: (i: WwsInput) => void) {
@@ -10,6 +11,17 @@ function metInvoer(f: (i: WwsInput) => void) {
 }
 
 describe("WwsCalculator", () => {
+  it("WOZ: het beschikkingsjaar met de waardepeildatum van het WOZ-waardeloket", () => {
+    render(<WwsCalculator />);
+    const veld = screen.getByRole("combobox", { name: "WOZ-beschikking" });
+    expect(veld).toHaveValue("2026");
+    expect(
+      within(veld).getByRole("option", { name: "2026 (peildatum 1-1-2025)" }),
+    ).toBeInTheDocument();
+    expect(wozJaarTekst("2024")).toBe("2024 (peildatum 1-1-2023)");
+    expect(wozJaarTekst("x")).toBe("x");
+  });
+
   it("een nieuwe ruimte begint leeg: badkamer en keuken met alles op 0", () => {
     render(<WwsCalculator />);
     fireEvent.click(screen.getAllByRole("button", { name: "Vertrek toevoegen" })[0]!);

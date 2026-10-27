@@ -188,3 +188,9 @@ export function matenM2(r: { maten?: { l: unknown; b: unknown }[] }): number | n
   if (!ms.length) return null;
   return Math.max(0, r2(ms.reduce((s, m) => s + r2(num(m.l) * num(m.b)), 0)));
 }
+
+/** "2026 (peildatum 1-1-2025)": het beschikkingsjaar met de waardepeildatum uit het WOZ-waardeloket */
+export function wozJaarTekst(jaar: string): string {
+  const j = Number(jaar);
+  return Number.isInteger(j) && j > 1900 ? `${jaar} (peildatum 1-1-${j - 1})` : jaar;
+}
