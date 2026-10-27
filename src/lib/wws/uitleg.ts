@@ -19,5 +19,5 @@ export const VINK_UITLEG = {
   nieuwbouw1519:
     "Vink dit aan als de woning tussen 1 januari 2015 en 1 juli 2019 als nieuwbouw is opgeleverd, of in die periode een hoogniveaurenovatie heeft ondergaan, waarbij het aantal WWS-punten vóór de renovatie (exclusief WOZ-punten) minimaal 40 bedroeg. De minimum-WOZ-waardering wordt dan verhoogd.",
   kleinCorop:
-    "Vink dit aan bij een zelfstandige nieuwbouwwoning kleiner dan 40 m², gebouwd tussen 2018 en 2022, gelegen in de COROP-regio Groot-Amsterdam of Utrecht. Hiervoor geldt een hoger WOZ-kengetal per m².",
+    "Vink dit aan bij een zelfstandige nieuwbouwwoning kleiner dan 40 m², gebouwd tussen 2018 en 2022, gelegen in de COROP-regio Groot-Amsterdam of Utrecht. Hiervoor geldt een hoger WOZ-kengetal per m². Na het adres bepaalt de app dit zelf uit de gemeente en het bouwjaar in de BAG; zet je het vinkje zelf, dan blijft het zo.",
 } as const;

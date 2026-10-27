@@ -40,6 +40,7 @@ import { fotoAllesGecontroleerd, fotoStand, fotoVeldGecontroleerd } from "@/lib/
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
 import { samenvattingVoorz } from "@/lib/wws/voorzSamenvatting";
 import { wozJaarTekst } from "@/lib/wws/basis";
+import { beoordeelKleinCorop, kleinCoropActief } from "@/lib/wws/corop";
 import {
   MINDER_DAN_40,
   exactTekst,
@@ -95,9 +96,11 @@ function Veld({
 function Onzeker({
   reden,
   onGecontroleerd,
+  kop = "Uit de foto's, niet zeker.",
 }: {
   reden: string;
   onGecontroleerd?: (() => void) | undefined;
+  kop?: string;
 }) {
   return (
     <Popover>
@@ -111,7 +114,7 @@ function Onzeker({
       </PopoverTrigger>
       <PopoverContent className="w-80 space-y-2 text-sm font-normal" side="top">
         <p>
-          <b>Uit de foto's, niet zeker.</b> {reden}
+          <b>{kop}</b> {reden}
         </p>
         {onGecontroleerd && (
           <button
@@ -460,6 +463,8 @@ export interface WwsCalculatorProps {
   wozExtra?: ReactNode;
   /** Onder de keuze "Monument" (bv. de monumentstatus opzoeken) */
   monumentExtra?: ReactNode;
+  /** Onder het vinkje kleine nieuwbouw COROP (bv. gemeente en bouwjaar ophalen) */
+  kleinCoropExtra?: ReactNode;
   /** Woningtype automatisch overgenomen (EP-Online): alleen-lezen met "wijzigen" */
   woningtypeVergrendeld?: { onOntgrendel: () => void } | undefined;
   /** Het woningtype staat elders (in de kaart "Woning" van de telling, zoals in de bron) */
@@ -478,6 +483,7 @@ export default function WwsCalculator({
   energieExtra,
   wozExtra,
   monumentExtra,
+  kleinCoropExtra,
   woningtypeVergrendeld,
   woningtypeElders = false,
 }: WwsCalculatorProps = {}) {
@@ -492,6 +498,12 @@ export default function WwsCalculator({
       return d;
     });
   const res = useMemo(() => calc(inp, N), [inp, N]);
+  // het kengetal kleine nieuwbouw COROP, zolang de gebruiker het vinkje niet zelf zette
+  const kleinCorop = kleinCoropActief(inp.woz, res.oppV + res.oppO);
+  const coropAuto =
+    inp.woz.corop && !inp.woz.kleinCoropZelf
+      ? beoordeelKleinCorop(inp.woz.corop, res.oppV + res.oppO)
+      : null;
   const zonderType = zonderTypeMelding(aantalZonderType(inp));
   // Voorzieningenpanelen: ingeklapt, behalve een ruimte die je net toevoegt of van soort wisselt.
   // Sleutel "groep:index"; alleen weergave, wordt niet opgeslagen.
@@ -1402,13 +1414,56 @@ export default function WwsCalculator({
             <Vink
               label="Kengetal kleine nieuwbouw COROP"
               uitleg={VINK_UITLEG.kleinCorop}
-              checked={inp.woz.kleinCorop}
+              checked={kleinCorop}
               onChange={(b) =>
                 wijzig((d) => {
                   d.woz.kleinCorop = b;
+                  d.woz.kleinCoropZelf = true;
                 })
               }
+              extra={
+                coropAuto?.twijfel && (
+                  <Onzeker
+                    kop="Automatisch bepaald, niet zeker."
+                    reden={coropAuto.twijfel}
+                    onGecontroleerd={
+                      alleenLezen
+                        ? undefined
+                        : () =>
+                            wijzig((d) => {
+                              d.woz.kleinCorop = kleinCorop;
+                              d.woz.kleinCoropZelf = true;
+                            })
+                    }
+                  />
+                )
+              }
             />
+            {inp.woz.corop && (
+              <p className="text-xs text-muted-foreground" aria-label="Kengetal COROP bepaald">
+                {coropAuto ? (
+                  <>Automatisch (PDOK/BAG): {coropAuto.uitleg}</>
+                ) : (
+                  <>
+                    Zelf ingesteld.{" "}
+                    {!alleenLezen && (
+                      <button
+                        type="button"
+                        className="text-primary underline"
+                        onClick={() =>
+                          wijzig((d) => {
+                            delete d.woz.kleinCoropZelf;
+                          })
+                        }
+                      >
+                        Weer automatisch bepalen
+                      </button>
+                    )}
+                  </>
+                )}
+              </p>
+            )}
+            {kleinCoropExtra}
             {wozExtra}
           </Sectie>
 

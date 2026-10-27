@@ -44,7 +44,12 @@ import {
 import { adresFoutMelding, EpVraagSchema, epFoutMelding } from "@/lib/wws/opzoeken/dienst";
 import { epAdresVelden, epToepassen, type EpLabel } from "@/lib/wws/opzoeken/eponline";
 import { monumentFoutMelding, type MonumentStatus } from "@/lib/wws/opzoeken/monument";
-import { zoekAdres, zoekEnergielabel, zoekMonument } from "@/lib/wws/opzoeken/opzoeken.functions";
+import {
+  zoekAdres,
+  zoekCorop,
+  zoekEnergielabel,
+  zoekMonument,
+} from "@/lib/wws/opzoeken/opzoeken.functions";
 import { adresOpzoekenNodig, adresToepassen, adresZoekVelden } from "@/lib/wws/opzoeken/pdok";
 import AdviesDialoog from "./AdviesDialoog";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
@@ -344,10 +349,12 @@ export default function TellingEditor({
   const gegevensVoor = useRef("");
   const [ep, setEp] = useState<OphaalStaat<EpLabel>>({});
   const [mon, setMon] = useState<OphaalStaat<MonumentStatus>>({});
+  const [corop, setCorop] = useState<OphaalStaat<true>>({});
   useEffect(() => {
     gegevensVoor.current = "";
     setEp({});
     setMon({});
+    setCorop({});
   }, [id]);
 
   /**
@@ -402,6 +409,7 @@ export default function TellingEditor({
     gegevensVoor.current = sleutel;
     void haalLabelOp(false);
     void haalMonumentOp(false);
+    void haalCoropOp(false);
   }
 
   /** De zoekvraag voor het huidige adres, en een controle dat het adres sindsdien niet veranderde */
@@ -479,6 +487,44 @@ export default function TellingEditor({
     setStaat((x) => ({ ...x, input: { ...x.input, opslag: { ...x.input.opslag, keuze: nieuw } } }));
     setDirty(true);
     toast(monumentMelding(r.data));
+  }
+
+  /**
+   * Gemeente en BAG-bouwjaar ophalen voor het kengetal kleine nieuwbouw COROP; het vinkje volgt
+   * daarna de beoordeling (lib/wws/corop.ts). Automatisch: alleen als ze er nog niet zijn. Een al
+   * aangevinkt kengetal (oude telling) blijft staan als zelf gezet.
+   */
+  async function haalCoropOp(forceer: boolean) {
+    const a = adresVraag();
+    if (!a) {
+      if (forceer) setCorop({ fout: monumentFoutMelding("ongeldige_invoer") });
+      return;
+    }
+    if (!forceer && staatRef.current.input.woz.corop) return;
+    setCorop({ bezig: true });
+    let r;
+    try {
+      r = await zoekCorop({ data: a.data });
+    } catch {
+      r = null;
+    }
+    if (!a.nogActueel()) return setCorop({});
+    if (!r) return setCorop({ fout: monumentFoutMelding("geen_verbinding") });
+    if (!r.ok) return setCorop({ fout: monumentFoutMelding(r.fout) });
+    setCorop({});
+    const gegevens = r.data;
+    setStaat((x) => {
+      const w = x.input.woz;
+      const zelf = w.kleinCoropZelf || (!w.corop && w.kleinCorop);
+      return {
+        ...x,
+        input: {
+          ...x.input,
+          woz: { ...w, corop: gegevens, ...(zelf ? { kleinCoropZelf: true } : {}) },
+        },
+      };
+    });
+    setDirty(true);
   }
 
   /** EP-Online-label overnemen in de werkversie — applyEpLabel() */
@@ -1490,6 +1536,12 @@ export default function TellingEditor({
           </>
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
+        kleinCoropExtra={
+          <CoropOphalen
+            staat={corop}
+            onOpnieuw={!alleenLezen && rechten.magSchrijven ? () => haalCoropOp(true) : undefined}
+          />
+        }
         monumentExtra={
           <MonumentUitslag
             staat={mon}
@@ -1623,6 +1675,29 @@ function MetaVeld({
 }
 
 /** "Opzoeken voor 1234AB 12: WOZ-waardeloket ↗" — lookupRow(); de link kopieert het adres */
+/** Bezig of mislukt bij het ophalen van gemeente en bouwjaar (kengetal kleine nieuwbouw COROP) */
+function CoropOphalen({
+  staat,
+  onOpnieuw,
+}: {
+  staat: OphaalStaat<true>;
+  onOpnieuw?: (() => void) | undefined;
+}) {
+  if (staat.bezig)
+    return <p className="text-xs text-muted-foreground">Gemeente en bouwjaar ophalen…</p>;
+  if (!staat.fout) return null;
+  return (
+    <p className="text-xs text-destructive" role="alert">
+      Gemeente en bouwjaar niet opgehaald: {staat.fout}{" "}
+      {onOpnieuw && (
+        <button type="button" className="text-primary underline" onClick={onOpnieuw}>
+          Opnieuw ophalen
+        </button>
+      )}
+    </p>
+  );
+}
+
 function OpzoekLink({ meta, soort }: { meta: TellingMeta; soort: LinkSoort }) {
   const [melding, setMelding] = useState("");
   const q = adresZoek(meta, "woz");

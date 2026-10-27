@@ -11,6 +11,24 @@ function metInvoer(f: (i: WwsInput) => void) {
 }
 
 describe("WwsCalculator", () => {
+  it("kengetal kleine nieuwbouw COROP: automatisch aangevinkt, ! bij een onbekend bouwjaar", () => {
+    const woning = (bouwjaar: number | null) => (i: WwsInput) => {
+      i.vertrekken = [{ type: "woonkamer", m2: 30, verwarmd: true, verkoeld: false }];
+      i.woz.corop = { gemeentecode: "0363", gemeente: "Amsterdam", bouwjaar };
+    };
+    const vink = () => screen.getByRole("checkbox", { name: "Kengetal kleine nieuwbouw COROP" });
+    metInvoer(woning(2020));
+    expect(vink()).toBeChecked();
+    expect(screen.getByLabelText("Kengetal COROP bepaald")).toHaveTextContent(
+      "Amsterdam (COROP Groot-Amsterdam), 30 m², bouwjaar 2020",
+    );
+    expect(screen.queryByRole("button", { name: /^Controleren:/ })).toBeNull();
+    document.body.innerHTML = "";
+    metInvoer(woning(null));
+    expect(vink()).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /^Controleren: Het bouwjaar/ })).toBeInTheDocument();
+  });
+
   it("WOZ: het beschikkingsjaar met de waardepeildatum van het WOZ-waardeloket", () => {
     render(<WwsCalculator />);
     const veld = screen.getByRole("combobox", { name: "WOZ-beschikking" });
