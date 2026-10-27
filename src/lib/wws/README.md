@@ -192,6 +192,15 @@ reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de v
   `gemini-3.1-flash-image`.
 - **Instructies:** de server bouwt ze zelf op. Ze zijn letterlijk gelijk aan de bron, met een
   vergelijkingstest.
+  - Afwijking inlezen (`PLAT_EXTRA_REGELS`): per ruimte `raam` (raam naar de buitenlucht) en
+    `open_keuken`, en een open keuken wordt één woonkamer met open keuken, ook als de tekening ze
+    apart noemt.
+  - Afwijking AI-afbeelding (`INDELING_EXTRA_REGELS`): elke slaapkamer heeft een eigen deur vanuit
+    hal, gang, overloop of woonkamer, nooit alleen via badkamer, toilet of een andere kamer.
+- **Overnemen** (`platToepassen`): een ingelezen ruimte begint zonder sanitair of standaard-
+  uitrusting (de bron vulde een staand toilet, wastafel en douche in); alleen de aanrechtlengte
+  komt uit de plattegrond. Ook een op de tekening toegevoegde ruimte begint leeg. `raam` en
+  `openKeuken` gaan mee naar de ruimte. De vergelijkingstest gebruikt `bronGetrouw`.
 - **Privacy:**
   - Claude krijgt alleen de afbeelding of tekst plus de instructie.
   - Uit de tekst gaan eerst de eigen gegevens van de telling, postcodes, e-mail, telefoon en IBAN.
@@ -935,6 +944,34 @@ Aanvulling op de bron:
 - **Eigenaar en PvE pas bij toepassen**: de bron zet `meta.klantId` al bij stap 1 → 2 en legt geen
   `meta.pveId` vast. De app koppelt eigenaar én gebruikt PvE pas bij "Toepassen", zodat annuleren
   geen bijwerking heeft en later stil invullen hetzelfde PvE gebruikt.
+- **Opties van de app** (oktober 2026, `IndelingOpties`, getest in `indeling.opties.test.ts`).
+  `berekenVarianten` geeft ze aan `bouwVariant`; zonder opties rekent `bouwVariant` precies als de
+  bron (`berekenVariantenKern`, de vergelijkingstest).
+  - **Eén toilet** bij één woonlaag (`meerWoonlagen`: geen eengezinswoning, geen overloop,
+    zolderkamer of zolder). `ruimtenVoorAdvies` houdt dan één toiletruimte vast
+    (`logischToilet`: het dichtst bij een getekende hal, anders het kleinste toilet van minstens
+    0,9 m²); de andere staan op "vrij herindelen". `eenToilet` haalt het toilet uit de badkamer als
+    er een toiletruimte met toilet is. Een nieuw voorgestelde toiletruimte is 1,1 m² (bron: 2 m²).
+  - **Raamregel**: alleen een ruimte met raam naar buiten kan een woon- of slaapkamer worden. Er
+    komen niet meer nieuwe woon- en slaapkamers dan er vrije ruimten met raam zijn. Een keuken
+    heeft geen raam nodig. Het raam staat per ruimte in de telling (`raam`, uit de plattegrond of
+    aangevinkt in stap Ruimten); onbekend = een vertrek wel, een overige ruimte niet. De berekening
+    van de telling zelf (`calc`) kijkt niet naar het raam.
+  - **Hal bij de woonkamer** (`halBijWoon`): van hal en overloop blijft 2 m² (bron: 30%, minstens
+    2 m²); de rest gaat naar de nieuwe of vaste woonkamer, niet naar de slaapkamers. Een hal levert
+    geen punten per m² op, een woonkamer wel. De kaart toont het verschil (`halWinst`). Met een
+    vaste slaapkamer rekent de app ook 0 nieuwe slaapkamers door.
+  - **Open keuken** (`keukenOpen`, `keukenOpenSamenvoegen`): keuken en woonkamer worden samen één
+    woonkamer met open keuken. Staat aan als de plattegrond de keuken als open heeft gelezen
+    (`openKeuken`).
+  - **Voorzieningen** (`voorzieningen`, `voorzieningenToepassen`): wat er in elke keuken, badkamer
+    en toiletruimte van de varianten komt. Begint met het PvE, anders wat in de telling is
+    ingevuld, anders de standaard (`standaardVoorzieningen`). Per variant toont de kaart hoeveel
+    punten er nog ontbreken tot de vrije sector (`grensMidden` + 1).
+  - **Plattegrond toevoegen**: heeft een bestaande telling nog geen plattegrond, dan kan die in
+    stap Ruimten alsnog worden ingelezen (prop `plattegrond`).
+  - **Stap 1** heeft naast de WOZ-waarde ook de WOZ-beschikking met peildatum
+    (`WozBeschikkingVeld`).
 
 ### PDF's (`pdf/`)
 
