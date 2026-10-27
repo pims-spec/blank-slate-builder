@@ -177,13 +177,41 @@ export function huurVoorPunten(
 }
 
 /**
- * Afronding zoals wws-site.html in plaats van zoals de Huurprijscheck (buitenruimte, WOZ-m² en de
- * WOZ-regel bij de vloer van 186).
+ * Afronding zoals wws-site.html in plaats van zoals de Huurprijscheck (buitenruimte, WOZ-punten,
+ * WOZ-m² en de WOZ-cap).
  * Alleen voor de vergelijkingstests met de bron; de app zet dit nooit aan.
  */
 let bronAfronding = false;
 export function zetBronAfronding(aan: boolean) {
   bronAfronding = aan;
+}
+
+/**
+ * De WOZ-cap zoals de Huurprijscheck hem toepast, afgeleid uit proeven met de Huurprijscheck
+ * (oktober 2026, zie de README). Vanaf de WOZ-punten zonder cap gaat er steeds 1 punt af, tot
+ * - de WOZ-punten hooguit 33% zijn van het afgeronde totaal, én
+ * - de naar boven afgeronde WOZ-punten, gedeeld door het afgeronde totaal, in procenten op één
+ *   decimaal afgerond hooguit 33,0 zijn.
+ * Zakt het afgeronde totaal onderweg onder 187 (en geldt de vloer), dan stopt het daar: de woning
+ * krijgt 186 punten en de WOZ-punten blijven staan zoals ze dan zijn.
+ * `pW` telt mee in het totaal; `toon` is wat de Huurprijscheck in rubriek 11 laat zien (na de cap
+ * naar boven afgerond, op de vloer zoals `pW`).
+ */
+export function wozCap(
+  other: number,
+  pW: number,
+  N: Pick<Normen, "wozCapPct" | "grensMidden">,
+  vloer: boolean,
+): { pW: number; toon: number; vloer: boolean } {
+  const start = pW;
+  for (;;) {
+    const t = Math.round(other + pW + 1e-9);
+    if (vloer && t < N.grensMidden + 1) return { pW, toon: pW, vloer: true };
+    const pct = Math.round((1000 * Math.ceil(pW - 1e-9)) / t) / 10;
+    if (pW <= (N.wozCapPct / 100) * t + 1e-9 && pct <= N.wozCapPct + 1e-9) break;
+    pW -= 1;
+  }
+  return { pW, toon: pW === start ? pW : Math.ceil(pW - 1e-9), vloer: false };
 }
 
 export function calc(
@@ -567,7 +595,11 @@ export function calc(
     (bronAfronding ? oppV + oppO : oppVraw + oppOraw) + (num(P.typeI) * N.parkeer.m2TypeI) / pa,
   );
   const d2 = W.kleinCorop ? kg[2] : kg[1];
-  let pW = q(wVal / kg[0] + (m2woz > 0 ? wVal / m2woz / d2 : 0));
+  const deel1 = wVal / kg[0];
+  const deel2 = m2woz > 0 ? wVal / m2woz / d2 : 0;
+  // de Huurprijscheck rondt elk deel af op 2 decimalen en de som op kwarten (bewuste afwijking
+  // van de bron, die alleen de som afrondde)
+  let pW = bronAfronding ? q(deel1 + deel2) : q(r2(deel1) + r2(deel2));
   const pWstd = pW;
   let nb1519 = false;
   if (W.nieuwbouw1519 && r1to10 + p12 >= N.nieuwbouwMinPunten && pW < N.wozMinNieuwbouw) {
@@ -590,26 +622,32 @@ export function calc(
   const other = r1to10 + p12 + pZorg + pRijks;
   let totaalExact = other + pW;
   let capNote = "",
-    floor186 = false;
+    floor186 = false,
+    toonW = pW;
   if (Math.round(totaalExact) >= N.grensMidden + 1 && !minUsed && !nb1519) {
     const share = N.wozCapPct / 100;
-    if (pW > share * totaalExact) {
-      const wMax = Math.floor((other * share) / (1 - share) + 1e-9);
-      pW = wMax;
-      capNote = " (cap: maximaal " + N.wozCapPct + "% van het totaal, afgerond op hele punten)";
-      totaalExact = other + pW;
-      if (Math.round(totaalExact) < N.grensMidden + 1 && !W.kleinCorop) floor186 = true;
+    if (bronAfronding) {
+      if (pW > share * totaalExact) {
+        pW = Math.floor((other * share) / (1 - share) + 1e-9);
+        capNote = " (cap: maximaal " + N.wozCapPct + "% van het totaal, afgerond op hele punten)";
+        totaalExact = other + pW;
+        if (Math.round(totaalExact) < N.grensMidden + 1 && !W.kleinCorop) floor186 = true;
+      }
+      toonW = pW;
+    } else {
+      const cap = wozCap(other, pW, N, !W.kleinCorop);
+      if (cap.pW !== pW) {
+        pW = cap.pW;
+        toonW = cap.toon;
+        floor186 = cap.vloer;
+        totaalExact = other + pW;
+        capNote = floor186
+          ? " (afgetopt, vloer " + N.grensMidden + " punten)"
+          : " (afgetopt: maximaal " + N.wozCapPct + "% van het totaal)";
+      }
     }
   }
-  // Bij de vloer van 186: de WOZ-regel krijgt precies het verschil tot 186, zodat de rubrieken
-  // optellen tot het totaal (zoals de Huurprijscheck; bewuste afwijking van de bron, die de
-  // afgetopte WOZ liet staan)
-  if (floor186 && !bronAfronding) {
-    pW = r2(N.grensMidden - other);
-    capNote = " (afgetopt tot " + N.grensMidden + " punten)";
-    totaalExact = N.grensMidden;
-  }
-  add(11, "WOZ-waarde", pW, wT + capNote);
+  add(11, "WOZ-waarde", toonW, wT + capNote);
   add(
     12,
     "Bijzondere voorzieningen",

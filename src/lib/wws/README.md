@@ -71,22 +71,29 @@ De code volgt wws-site.html (bron van waarheid). Verschillen met de tekstspecifi
 ## Bewuste afwijkingen in de rekenkern (afronding zoals de Huurprijscheck)
 
 Gevonden door 69 tellingen uit Huurprijscheck-bijlagen (CBRE-rapporten, Huurcommissie leidend)
-door `calc()` te halen. De bron rondde op twee plekken anders af:
+door `calc()` te halen, en door proeven met de Huurprijscheck zelf (27 oktober 2026). De bron
+rekende op deze plekken anders:
 
 - **Buitenruimte (rubriek 8):** de privé-oppervlakte wordt eerst afgerond op hele m² (vanaf 0,5
   omhoog), daarna × 0,35. Bijvoorbeeld 3,6 m²: 4 × 0,35 + 2 = 3,4 → 3,5 (de bron: 3,25).
 - **WOZ-m² (rubriek 11, deel 2):** de m² van vertrekken en overige ruimten (vanaf 2 m²) worden
   onafgerond opgeteld en pas daarna afgerond. Bijvoorbeeld 60,3 + 6,4 = 66,7 → 67 m² (de bron:
   60 + 6 = 66 m²).
+- **WOZ-punten (rubriek 11):** deel 1 en deel 2 elk op 2 decimalen, de som op kwarten (de bron
+  rondde alleen de som af).
+- **WOZ-cap (`wozCap`):** vanaf de WOZ-punten zonder cap gaat er steeds 1 punt af, tot de WOZ
+  hooguit 33% is van het afgeronde totaal én (WOZ naar boven afgerond ÷ afgerond totaal) op één
+  decimaal hooguit 33,0%. Zakt het afgeronde totaal onderweg onder 187, dan stopt het: 186 punten,
+  en rubriek 11 toont de WOZ van dat moment (bijvoorbeeld 66,25). Na de cap toont rubriek 11 de WOZ
+  naar boven afgerond; het totaal is het afgeronde exacte totaal. Daardoor tellen de rubrieken
+  soms niet precies op tot het totaal, net als in de Huurprijscheck (139H: 101 + 101 + 15 = 217,
+  totaal 216). De bron capte op 33% × overig / 67%, naar beneden afgerond.
+  Vastgesteld met 58 proeven in de Huurprijscheck (één woonkamer, label A, WOZ en m² gevarieerd);
+  alle proeven en alle 17 CBRE-woningen met de cap staan als test in `calc.test.ts`.
 
-- **WOZ-regel bij de vloer van 186:** zakt de woning door de cap onder 187, dan krijgt rubriek 11
-  het verschil tot 186 ("afgetopt tot 186 punten"), zodat de rubrieken optellen tot het totaal.
-  De bron liet de afgetopte WOZ staan (bijvoorbeeld 58 in plaats van 66,25).
-
-Daarmee komen 65 van de 69 totalen exact overeen. Open: bij 4 woningen met een WOZ-cap komt de
-Huurprijscheck 1 punt lager uit; die afronding is nog niet achterhaald. Bij 4 van de 6 woningen op
-de vloer van 186 wijkt de WOZ-regel 0,25 tot 0,5 punt af (de Huurprijscheck telt daar zelf ook niet
-precies op tot 186; totaal gelijk). Brongetrouw (`zetBronAfronding(true)`) rekent zoals de bron.
+Daarmee komen alle 69 totalen en alle rubrieken exact overeen. Open: bij één rapport uit het
+tijdvak 2025 (Hudsonstraat 132-2) verschilt de huurprijs, omdat de app met de huurtabel van 2026
+rekent. Brongetrouw (`zetBronAfronding(true)`) rekent zoals de bron.
 
 De vergelijkingstests met wws-site.html (`*.vergelijk.test.ts`) zetten `zetBronAfronding(true)`,
 zodat ze de bron exact blijven volgen; de app zet dit nooit aan.
