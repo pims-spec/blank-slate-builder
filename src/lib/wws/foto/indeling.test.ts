@@ -62,7 +62,9 @@ describe("sorteren", () => {
     );
     const data = { fotos: [{ foto: 1, soort: "plattegrond", reden: "Tekening." }] };
     expect(controleerSortering(1, data)).toBeNull();
-    expect(controleerSortering(1, data, true)).toEqual([{ soort: "plattegrond", reden: "Tekening." }]);
+    expect(controleerSortering(1, data, true)).toEqual([
+      { soort: "plattegrond", reden: "Tekening." },
+    ]);
   });
 
   it("controleerSortering: in fotovolgorde; ontbrekend, dubbel of onbekend → null", () => {

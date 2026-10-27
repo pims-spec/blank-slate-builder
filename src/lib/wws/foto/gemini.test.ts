@@ -276,7 +276,9 @@ describe("sorteerMetGemini en FotoSorteerVraag", () => {
     const mapBody = JSON.parse(map.aanroepen[0]!.init.body as string);
     expect(mapBody.input.at(-1)).toEqual({ type: "text", text: sorteerPrompt(1, true) });
     expect(mapBody.response_format.schema).toEqual(sorteerSchema(true));
-    expect((await sorteerMetGemini(nepFetch(200, kaart).fn, "s", undefined, [foto])).ok).toBe(false);
+    expect((await sorteerMetGemini(nepFetch(200, kaart).fn, "s", undefined, [foto])).ok).toBe(
+      false,
+    );
 
     const fout = nepFetch(200, { outputs: [{ type: "text", text: '{"fotos":[]}' }] });
     expect(await sorteerMetGemini(fout.fn, "s", undefined, [foto])).toEqual({

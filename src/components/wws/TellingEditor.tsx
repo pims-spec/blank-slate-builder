@@ -56,6 +56,7 @@ import AdviesDialoog from "./AdviesDialoog";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
 import FotoDialoog from "./FotoDialoog";
+import MapDialoog from "./MapDialoog";
 import EnergielabelUitslag from "./EnergielabelUitslag";
 import MonumentUitslag from "./MonumentUitslag";
 import PlattegrondDialoog from "./PlattegrondDialoog";
@@ -171,6 +172,7 @@ export default function TellingEditor({
   const [indelingOpen, setIndelingOpen] = useState(false);
   const [plattegrondOpen, setPlattegrondOpen] = useState(false);
   const [fotosOpen, setFotosOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [verwijderVraag, setVerwijderVraag] = useState(false);
   const [vergelijkOpen, setVergelijkOpen] = useState(false);
   /** Venster "Nieuwe telling" (postcode + huisnummer) — bij elke nieuwe, lege telling */
@@ -922,6 +924,14 @@ export default function TellingEditor({
     toast("Plattegrond overgenomen. Controleer de gemarkeerde ruimten.");
   }
 
+  /** "Map inlezen": de plattegrond is nagekeken; het venster blijft open voor de foto's */
+  function mapPlattegrond(input: WwsInput, beeld: NieuwBeeld) {
+    setStaat((s) => ({ ...s, input }));
+    setNieuwBeeld(beeld);
+    setDirty(true);
+    toast("Plattegrond overgenomen. Controleer de gemarkeerde ruimten.");
+  }
+
   /** Plattegrond-afbeelding weghalen (bij Opslaan ook uit Storage, tenzij een versie hem gebruikt) */
   function plattegrondVerwijderen() {
     setStaat((s) => {
@@ -1256,9 +1266,14 @@ export default function TellingEditor({
             onVerwijderen={plattegrondVerwijderen}
           />
           {rechten.magSchrijven && (
-            <Button type="button" variant="outline" onClick={() => setFotosOpen(true)}>
-              Foto's beoordelen
-            </Button>
+            <>
+              <Button type="button" variant="outline" onClick={() => setFotosOpen(true)}>
+                Foto's beoordelen
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setMapOpen(true)}>
+                Map inlezen
+              </Button>
+            </>
           )}
         </section>
       )}
@@ -1581,6 +1596,16 @@ export default function TellingEditor({
           onOpenChange={setFotosOpen}
           input={staat.input}
           onToepassen={(nieuw) => setInput(nieuw)}
+        />
+      )}
+      {!alleenLezen && rechten.magSchrijven && (
+        <MapDialoog
+          open={mapOpen}
+          onOpenChange={setMapOpen}
+          input={staat.input}
+          meta={staat.meta}
+          onPlattegrond={mapPlattegrond}
+          onFotos={(nieuw) => setInput(nieuw)}
         />
       )}
       <IndelingDialoog
