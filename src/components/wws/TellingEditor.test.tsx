@@ -669,6 +669,14 @@ describe("TellingEditor", () => {
     // via het startscherm Indelingsadvies ("Bestaande telling kiezen")
     renderEditor("t-pve", ADMIN.id, ["admin", "member"], "indeling");
     fireEvent.change(await screen.findByLabelText("Eigenaar"), { target: { value: "k1" } });
+    // stap 1: WOZ-beschikking met de peildatum, net als in de telling
+    const woz = within(screen.getByRole("dialog")).getByLabelText("WOZ-beschikking");
+    expect(woz).toHaveValue(t.input.woz.jaar);
+    expect(
+      within(woz)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toContain(`${t.input.woz.jaar} (peildatum 1-1-${Number(t.input.woz.jaar) - 1})`);
     fireEvent.click(screen.getByRole("button", { name: "Volgende stap: ruimten →" }));
     fireEvent.click(screen.getByRole("button", { name: "Genereer varianten →" }));
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });

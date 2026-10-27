@@ -100,6 +100,7 @@ import WwsCalculator, {
   EnergieVelden,
   Ontgrendel,
   WoningtypeVeld,
+  WozBeschikkingVeld,
   WozWaardeVeld,
 } from "./WwsCalculator";
 import {
@@ -1108,14 +1109,25 @@ export default function TellingEditor({
         staat={ep}
         onOpnieuw={!alleenLezen && rechten.magSchrijven ? () => haalLabelOp(true) : undefined}
       />
-      <WozWaardeVeld
-        waarde={staat.input.woz.waarde}
-        zet={(v) =>
-          wijzigInput((d) => {
-            d.woz.waarde = v;
-          })
-        }
-      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <WozWaardeVeld
+          waarde={staat.input.woz.waarde}
+          zet={(v) =>
+            wijzigInput((d) => {
+              d.woz.waarde = v;
+            })
+          }
+        />
+        <WozBeschikkingVeld
+          className="max-w-xs"
+          waarde={staat.input.woz.jaar}
+          zet={(v) =>
+            wijzigInput((d) => {
+              d.woz.jaar = v;
+            })
+          }
+        />
+      </div>
       <OpzoekLink meta={m} soort="woz" />
       <h3 className="pt-3 font-semibold">Energielabel</h3>
       <p className="-mt-2 text-xs text-muted-foreground">

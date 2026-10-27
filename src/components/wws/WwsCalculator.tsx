@@ -1386,20 +1386,14 @@ export default function WwsCalculator({
               )}
               {/* De kengetallen horen bij het jaar van de WOZ-beschikking; de waardepeildatum ligt
                   een jaar eerder (zoals het WOZ-waardeloket die toont). */}
-              <Veld label="WOZ-beschikking">
-                <Keuze
-                  value={inp.woz.jaar}
-                  onChange={(v) =>
-                    wijzig((d) => {
-                      d.woz.jaar = v;
-                    })
-                  }
-                  opties={Object.keys(N.woz)
-                    .sort()
-                    .reverse()
-                    .map((j) => [j, wozJaarTekst(j)])}
-                />
-              </Veld>
+              <WozBeschikkingVeld
+                waarde={inp.woz.jaar}
+                zet={(v) =>
+                  wijzig((d) => {
+                    d.woz.jaar = v;
+                  })
+                }
+              />
             </div>
             <Vink
               label="Nieuwbouw 2015–2019 (minimaal 40 WOZ-punten vanaf 110 punten)"
@@ -1649,6 +1643,31 @@ export function WozWaardeVeld({
   return (
     <Veld label="WOZ-waarde (€)" className="max-w-xs">
       <Getal value={waarde} placeholder="Bijv. 300000" onChange={zet} />
+    </Veld>
+  );
+}
+
+/** Jaar van de WOZ-beschikking, met de waardepeildatum erbij; ook in stap 1 van het indelingsadvies */
+export function WozBeschikkingVeld({
+  waarde,
+  zet,
+  className = "",
+}: {
+  waarde: string;
+  zet: (v: string) => void;
+  className?: string;
+}) {
+  const N = useNormen();
+  return (
+    <Veld label="WOZ-beschikking" className={className}>
+      <Keuze
+        value={waarde}
+        onChange={zet}
+        opties={Object.keys(N.woz)
+          .sort()
+          .reverse()
+          .map((j) => [j, wozJaarTekst(j)])}
+      />
     </Veld>
   );
 }
