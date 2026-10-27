@@ -20,6 +20,9 @@ import {
   blobNaarBytes,
   bytesNaarBase64,
   canvasNaarJpeg,
+  pdfAantalPaginas,
+  pdfPaginasNaarCanvassen,
+  stapelCanvassen,
 } from "@/lib/wws/plattegrond/beeld";
 import {
   buitenTekst,
@@ -28,7 +31,25 @@ import {
   standaardVervangen,
   type PlatKeuzes,
 } from "@/lib/wws/plattegrond/toepassen";
+import {
+  MAX_VERDIEPINGEN,
+  stapelMaten,
+  stelVerdiepingVoor,
+  VERDIEPING_NAMEN,
+  verdiepingNotitie,
+  voegVerdiepingenSamen,
+} from "@/lib/wws/plattegrond/verdiepingen";
 import type { NieuwBeeld } from "./plattegrondBeeld";
+
+interface Tekening {
+  id: number;
+  bestand: File;
+  /** Pagina van een PDF; null = afbeelding */
+  pagina: number | null;
+  /** Bestandsnaam, met de pagina bij een PDF met meer pagina's */
+  naam: string;
+  verdieping: string;
+}
 
 // groen = afgelezen, paars = berekend, oranje = ingeschat (zoals de bron), met tekst in AA-contrast
 const BRON_KLEUR: Record<string, string> = {
@@ -57,10 +78,10 @@ export default function PlattegrondDialoog(p: Props) {
         <DialogHeader>
           <DialogTitle>Plattegrond inlezen</DialogTitle>
           <DialogDescription>
-            Upload een plattegrond als afbeelding (PNG of JPG) of PDF (eerste pagina). Claude leest
-            de maten af en zet de ruimten klaar. Je controleert alles voordat het in de telling
-            komt. Gebruik bij voorkeur een tekening met maatvoering; zonder maten zijn de
-            oppervlakten alleen een schatting.
+            Upload een plattegrond als afbeelding (PNG of JPG) of PDF. Meer verdiepingen? Kies alle
+            tekeningen, of een PDF met een pagina per verdieping. Claude leest de maten af en zet de
+            ruimten klaar. Je controleert alles voordat het in de telling komt. Gebruik bij voorkeur
+            een tekening met maatvoering; zonder maten zijn de oppervlakten alleen een schatting.
           </DialogDescription>
         </DialogHeader>
         {p.open && <PlattegrondInlezen {...p} />}
@@ -80,23 +101,29 @@ export function PlattegrondInlezen({
   onOvernemen,
   vastVervangen = false,
   knopTekst = "Overnemen",
-  beginBestand,
+  beginBestanden,
 }: Omit<Props, "open" | "onOpenChange"> & {
   vastVervangen?: boolean;
   knopTekst?: string;
-  /** "Map inlezen": de plattegrond is al gekozen */
-  beginBestand?: File;
+  /** "Map inlezen": de plattegrond(en) zijn al gekozen */
+  beginBestanden?: readonly File[];
 }) {
-  const [bestand, setBestand] = useState<File | null>(beginBestand ?? null);
+  // meer verdiepingen (elk apart naar Claude); niet in de Blanco-start van het indelingsadvies,
+  // dat de vlakken op één tekening nodig heeft
+  const meer = !vastVervangen;
+  const [tekeningen, setTekeningen] = useState<Tekening[]>([]);
   const [notitie, setNotitie] = useState("");
   const [beeld, setBeeld] = useState<NieuwBeeld | null>(null);
   const [voorbeeld, setVoorbeeld] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
   const [status, setStatus] = useState("");
   const [R, setR] = useState<PlattegrondAntwoord | null>(null);
+  const [verdiepingen, setVerdiepingen] = useState<string[]>([]);
   const [k, setK] = useState<PlatKeuzes | null>(null);
   const [gebruik, setGebruik] = useState<Gebruik | undefined>();
   const ctl = useRef<AbortController | null>(null);
+  const volgnr = useRef(0);
+  const begonnen = useRef(false);
 
   useEffect(() => {
     if (!beeld) return;
@@ -105,58 +132,153 @@ export function PlattegrondInlezen({
     return () => URL.revokeObjectURL(u);
   }, [beeld]);
 
+  /** Bestanden erbij (een PDF met meer pagina's: elke pagina een tekening); hoogstens 4 */
+  async function voegToe(bestanden: readonly File[], vervang: boolean) {
+    const al = vervang ? [] : tekeningen;
+    const nieuw: Tekening[] = [];
+    let teVeel = false;
+    for (const bestand of bestanden) {
+      let paginas: (number | null)[] = [null];
+      if (bestand.type === "application/pdf" && meer) {
+        try {
+          const n = await pdfAantalPaginas(bestand);
+          paginas = Array.from({ length: n }, (_, i) => i + 1);
+        } catch {
+          setStatus("De PDF kon niet worden gelezen.");
+          continue;
+        }
+      } else if (bestand.type === "application/pdf") paginas = [1];
+      for (const pagina of paginas) {
+        if (al.length + nieuw.length >= (meer ? MAX_VERDIEPINGEN : 1)) {
+          teVeel = true;
+          break;
+        }
+        const nr = al.length + nieuw.length;
+        nieuw.push({
+          id: volgnr.current++,
+          bestand,
+          pagina,
+          naam: bestand.name + (paginas.length > 1 ? ", pagina " + pagina : ""),
+          verdieping:
+            paginas.length > 1 ? stelVerdiepingVoor("", nr) : stelVerdiepingVoor(bestand.name, nr),
+        });
+      }
+    }
+    // van laag naar hoog (kelder, begane grond, 1e, …, zolder); verder in de gekozen volgorde
+    const plek = (t: Tekening) => {
+      const i = (VERDIEPING_NAMEN as readonly string[]).indexOf(t.verdieping);
+      return i < 0 ? VERDIEPING_NAMEN.length : i;
+    };
+    setTekeningen([...al, ...[...nieuw].sort((a, b) => plek(a) - plek(b))]);
+    setR(null);
+    setK(null);
+    setStatus(
+      teVeel
+        ? `Hoogstens ${MAX_VERDIEPINGEN} tekeningen tegelijk; de rest is niet toegevoegd.`
+        : "",
+    );
+  }
+
+  useEffect(() => {
+    if (begonnen.current || !beginBestanden?.length) return;
+    begonnen.current = true;
+    void voegToe(beginBestanden, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen
+  }, []);
+
+  async function canvasVan(t: Tekening): Promise<HTMLCanvasElement> {
+    if (t.pagina === null) return bestandNaarCanvas(t.bestand);
+    const [c] = await pdfPaginasNaarCanvassen(t.bestand, [t.pagina]);
+    if (!c) throw new Error("Deze pagina kon niet worden gelezen.");
+    return c;
+  }
+
   async function inlezen() {
-    if (!bestand) {
+    if (!tekeningen.length) {
       setStatus("Kies eerst een bestand.");
       return;
     }
     setBezig(true);
     setR(null);
     setK(null);
+    const n = tekeningen.length;
     try {
-      setStatus("Tekening voorbereiden…");
-      let jpeg: Blob, c: HTMLCanvasElement;
-      try {
-        c = await bestandNaarCanvas(bestand);
-        jpeg = await canvasNaarJpeg(c);
-      } catch (e) {
-        setStatus(
-          bestand.type === "application/pdf"
-            ? "De PDF kon niet worden gelezen. Exporteer de plattegrond als PNG of JPG en probeer opnieuw."
-            : e instanceof Error && e.message
-              ? e.message
-              : "Dit bestand kon niet worden gelezen.",
-        );
-        return;
-      }
-      const nieuw: NieuwBeeld = { blob: jpeg, breedte: c.width, hoogte: c.height };
-      setBeeld(nieuw);
-      setStatus("Claude leest de plattegrond… dit duurt meestal 15 tot 40 seconden.");
-      const data = bytesNaarBase64(await blobNaarBytes(jpeg));
-      let r;
+      const delen: { verdieping: string; R: PlattegrondAntwoord }[] = [];
+      const canvassen: HTMLCanvasElement[] = [];
+      let eersteJpeg: Blob | null = null;
       ctl.current = new AbortController();
-      try {
-        r = await leesPlattegrond({
-          signal: ctl.current.signal,
-          data: {
-            afbeelding: { data, type: "image/jpeg" },
-            // eigen gegevens van de telling eruit; Claude krijgt alleen de tekening en de instructie
-            notitie: anonimiseer(notitie.trim(), meta),
-          },
-        });
-      } catch {
+      for (const [j, t] of tekeningen.entries()) {
+        const wie = n > 1 ? t.verdieping + ": " : "";
+        setStatus(wie + "Tekening voorbereiden…");
+        let jpeg: Blob, c: HTMLCanvasElement;
+        try {
+          c = await canvasVan(t);
+          jpeg = await canvasNaarJpeg(c);
+        } catch (e) {
+          setStatus(
+            wie +
+              (t.bestand.type === "application/pdf"
+                ? "De PDF kon niet worden gelezen. Exporteer de plattegrond als PNG of JPG en probeer opnieuw."
+                : e instanceof Error && e.message
+                  ? e.message
+                  : "Dit bestand kon niet worden gelezen."),
+          );
+          return;
+        }
+        if (n === 1) setBeeld({ blob: jpeg, breedte: c.width, hoogte: c.height });
+        eersteJpeg ??= jpeg;
         setStatus(
-          ctl.current?.signal.aborted ? "Gestopt." : aiMelding("geen_verbinding", "plattegrond"),
+          n > 1
+            ? `Claude leest ${t.verdieping.toLowerCase()} (${j + 1} van ${n})… dit duurt meestal 15 tot 40 seconden per tekening.`
+            : "Claude leest de plattegrond… dit duurt meestal 15 tot 40 seconden.",
         );
-        return;
+        const data = bytesNaarBase64(await blobNaarBytes(jpeg));
+        // eigen gegevens van de telling eruit; Claude krijgt alleen de tekening en de instructie
+        const eigen = anonimiseer(notitie.trim(), meta);
+        let r;
+        try {
+          r = await leesPlattegrond({
+            signal: ctl.current.signal,
+            data: {
+              afbeelding: { data, type: "image/jpeg" },
+              notitie: n > 1 ? verdiepingNotitie(t.verdieping, eigen) : eigen,
+            },
+          });
+        } catch {
+          setStatus(
+            ctl.current?.signal.aborted
+              ? "Gestopt."
+              : wie + aiMelding("geen_verbinding", "plattegrond"),
+          );
+          return;
+        }
+        setGebruik(r.gebruik);
+        if (!r.ok) {
+          setStatus(wie + aiMelding(r.fout, "plattegrond", r.gebruik));
+          return;
+        }
+        delen.push({ verdieping: t.verdieping, R: r.data });
+        canvassen.push(c);
       }
-      setGebruik(r.gebruik);
-      if (!r.ok) {
-        setStatus(aiMelding(r.fout, "plattegrond", r.gebruik));
-        return;
+      if (n > 1) {
+        setStatus("De tekeningen onder elkaar zetten…");
+        const maten = stapelMaten(canvassen.map((c) => ({ breedte: c.width, hoogte: c.height })));
+        const c = stapelCanvassen(
+          canvassen,
+          tekeningen.map((t) => t.verdieping),
+          maten,
+        );
+        try {
+          setBeeld({ blob: await canvasNaarJpeg(c), breedte: c.width, hoogte: c.height });
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Samenvoegen van de tekeningen is mislukt.");
+          return;
+        }
       }
-      setR(r.data);
-      setK({ ...standaardKeuzes(r.data), vervangen: vastVervangen || standaardVervangen(input) });
+      const samen = voegVerdiepingenSamen(delen);
+      setR(samen.R);
+      setVerdiepingen(n > 1 ? samen.verdiepingen : []);
+      setK({ ...standaardKeuzes(samen.R), vervangen: vastVervangen || standaardVervangen(input) });
       // runIndPlat() in de Blanco-start zegt "ga door" (daar heet de knop Doorgaan)
       setStatus(
         vastVervangen
@@ -177,22 +299,21 @@ export function PlattegrondInlezen({
     // min-w-0: anders maakt de brede tabel het venster breder dan het scherm (grid-kind)
     <div className="min-w-0 space-y-4 text-sm">
       <div className="grid gap-3 sm:grid-cols-2">
-        {beginBestand ? (
-          <p className="flex flex-col gap-1">
-            <span className="font-medium">Plattegrond</span>
-            <span className="break-all">{beginBestand.name}</span>
-          </p>
-        ) : (
-          <label className="flex flex-col gap-1">
-            <span className="font-medium">Plattegrond</span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp,application/pdf"
-              disabled={bezig}
-              onChange={(e) => setBestand(e.target.files?.[0] ?? null)}
-            />
-          </label>
-        )}
+        <label className="flex flex-col gap-1">
+          <span className="font-medium">
+            {meer ? "Plattegrond (één of meer verdiepingen)" : "Plattegrond"}
+          </span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,application/pdf"
+            multiple={meer}
+            disabled={bezig}
+            onChange={(e) => {
+              void voegToe([...(e.target.files ?? [])], !meer);
+              e.target.value = "";
+            }}
+          />
+        </label>
         <label className="flex flex-col gap-1">
           <span className="font-medium">Toelichting (optioneel)</span>
           <input
@@ -206,6 +327,52 @@ export function PlattegrondInlezen({
           />
         </label>
       </div>
+      {meer && tekeningen.length > 0 && (
+        <ul className="space-y-1">
+          {tekeningen.map((t, i) => {
+            const naam = t.naam;
+            return (
+              <li key={t.id} className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label={"Verdieping: " + naam}
+                  className={veldCls}
+                  disabled={bezig}
+                  value={t.verdieping}
+                  onChange={(e) =>
+                    setTekeningen((ts) =>
+                      ts.map((x, j) => (j === i ? { ...x, verdieping: e.target.value } : x)),
+                    )
+                  }
+                >
+                  {[...new Set([t.verdieping, ...VERDIEPING_NAMEN])].map((v) => (
+                    <option key={v}>{v}</option>
+                  ))}
+                </select>
+                <span className="break-all">{naam}</span>
+                <button
+                  type="button"
+                  aria-label={"Weghalen: " + naam}
+                  disabled={bezig}
+                  className="rounded px-1.5 text-xs hover:text-destructive"
+                  onClick={() => {
+                    setTekeningen((ts) => ts.filter((_, j) => j !== i));
+                    setR(null);
+                    setK(null);
+                  }}
+                >
+                  ✕
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {meer && tekeningen.length > 1 && (
+        <p className="text-xs text-muted-foreground">
+          Elke tekening wordt apart ingelezen en telt als één AI-aanroep. In de telling komen de
+          tekeningen onder elkaar op één afbeelding.
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         Alleen de tekening en vaste instructies gaan naar Claude. Staat er een naam of adres op de
         tekening (bijv. in het stempel), snijd dat dan eerst weg. Zet in de toelichting geen namen
@@ -245,6 +412,7 @@ export function PlattegrondInlezen({
                 <tr>
                   <th className="p-1">Neem over</th>
                   <th className="p-1">Soort</th>
+                  {verdiepingen.length > 0 && <th className="p-1">Verdieping</th>}
                   <th className="p-1">Naam</th>
                   <th className="p-1">Maten</th>
                   <th className="p-1">m²</th>
@@ -284,6 +452,7 @@ export function PlattegrondInlezen({
                           ))}
                         </select>
                       </td>
+                      {verdiepingen.length > 0 && <td className="p-1">{verdiepingen[i]}</td>}
                       <td className="p-1">{r.naam}</td>
                       <td className="p-1 text-xs">
                         {r.lengte_m && r.breedte_m

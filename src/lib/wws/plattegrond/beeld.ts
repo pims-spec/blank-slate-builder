@@ -163,3 +163,29 @@ export async function pdfTekst(file: Blob): Promise<{ n: number; text: string; l
   const text = out.join("\n\n").slice(0, 90000);
   return { n, text, leeg: text.replace(/\[Pagina \d+\]/g, "").trim().length < 20 };
 }
+
+/** Meer tekeningen onder elkaar op één canvas, met een kop per tekening (stapelMaten) */
+export function stapelCanvassen(
+  canvassen: readonly HTMLCanvasElement[],
+  koppen: readonly string[],
+  maten: {
+    breedte: number;
+    hoogte: number;
+    kop: number;
+    delen: readonly { x: number; y: number; w: number; h: number; kopY: number }[];
+  },
+): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = maten.breedte;
+  c.height = maten.hoogte;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = "#111";
+  ctx.font = `600 ${Math.max(10, Math.round(maten.kop * 0.5))}px sans-serif`;
+  maten.delen.forEach((d, i) => {
+    ctx.fillText(koppen[i] ?? "", Math.round(maten.kop * 0.3), d.kopY);
+    ctx.drawImage(canvassen[i]!, d.x, d.y, d.w, d.h);
+  });
+  return c;
+}
