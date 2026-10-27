@@ -20,6 +20,7 @@ import { weergaveAdres } from "../opslag/doc";
 import type { TellingMeta } from "../opslag/types";
 import { kiesPlattegrond, OVERZICHT_VOORKEUR, SITUATIE_VOORKEUR } from "../plattegrond/rapport";
 import type { WwsInput, WwsResultaat } from "../types";
+import { labelMarkering } from "./labelMarkering";
 import {
   pdfBanner,
   pdfCoverPage,
@@ -452,7 +453,16 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   }
 
   // Altijd: uitleg energielabel en WOZ-waarde
-  pdfEnergieUitlegPagina(doc, N);
+  pdfEnergieUitlegPagina(
+    doc,
+    N,
+    x.bronGetrouw
+      ? undefined
+      : labelMarkering(
+          cur,
+          opties.map((o) => o.route),
+        ),
+  );
 
   // Woningplattegrond: elke plattegrond op een eigen pagina, zoals de CBRE-rapporten
   pdfPlattegrondPaginas(doc, plattegronden);

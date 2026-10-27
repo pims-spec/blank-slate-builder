@@ -41,6 +41,7 @@ import {
   type PdfLib,
   type RGB,
 } from "./stijl";
+import { labelMarkeringTekst, type LabelMarkering } from "./labelMarkering";
 
 type Groep = "vertrekken" | "overig";
 type Ruimte = (Vertrek | OverigeRuimte) & { verkoeld?: boolean };
@@ -1472,8 +1473,15 @@ function pdfKaartHeader(doc: Doc, M: number, y: number, titel: string, sub?: str
   return y;
 }
 
+const MARK_ROOD: RGB = [220, 38, 38];
+const MARK_GROEN: RGB = [22, 163, 74];
+
 /** Uitleg over energielabel en WOZ-waarde — pdfEnergieUitlegPagina() */
-export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
+export function pdfEnergieUitlegPagina(
+  doc: Doc,
+  normen: Normen,
+  markering?: LabelMarkering,
+): number {
   const W = PDF_W,
     M = PDF_M,
     INK = PDF_INK;
@@ -1497,13 +1505,21 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
   const bron = isBronModus();
   const cardW = W - 2 * M,
     padX = 7,
-    rowH = bron ? 8.4 : 7,
+    // met omcirkelingen iets compacter: de uitleg eronder past dan nog op de pagina
+    rowH = bron ? 8.4 : markering ? 6.5 : 7,
     chevW = 26,
     chevH = 5.6,
     col1 = M + 66,
     col2 = M + 128;
   const nRows = LABELS.length + 1;
-  const cardH = 12 + nRows * rowH;
+  // bewuste afwijking: rood om het huidige label, groen om het label na het advies
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  const markTekst: string[] =
+    markering && !bron
+      ? doc.splitTextToSize(pdfTxt(labelMarkeringTekst(markering)), cardW - 2 * padX)
+      : [];
+  const cardH = 12 + nRows * rowH + (markTekst.length ? 3 + markTekst.length * 4 : 0);
   if (y + cardH > 270) {
     doc.addPage();
     y = 20;
@@ -1528,6 +1544,23 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
       l,
       pdfLabelKleur(i, LABELS.length),
     );
+    if (markTekst.length) {
+      const cx = M + padX + chevW / 2,
+        cy = ty - chevH / 2 + 1.5;
+      const isOud = markering!.oud === l,
+        isNieuw = markering!.nieuw.some((n) => n.label === l);
+      doc.setLineWidth(0.6);
+      if (isOud) {
+        doc.setDrawColor(...MARK_ROOD);
+        doc.ellipse(cx, cy, chevW / 2 + 2.5, chevH / 2 + 0.7, "S");
+      }
+      if (isNieuw) {
+        // gelijk aan het huidige label: een groene ring om de rode heen
+        const extra = isOud ? 1 : 0;
+        doc.setDrawColor(...MARK_GROEN);
+        doc.ellipse(cx, cy, chevW / 2 + 2.5 + extra, chevH / 2 + 0.7 + extra, "S");
+      }
+    }
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...INK);
@@ -1548,6 +1581,11 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
   doc.setFont("helvetica", "normal");
   doc.text(fmt(normen.epv[0]), col1, ty);
   doc.text(fmt(normen.epv[1]), col2, ty);
+  if (markTekst.length) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(...PDF_MUT);
+    doc.text(markTekst, M + padX, ty + 5.5);
+  }
   y += cardH + (bron ? 12 : 8);
 
   // Kaart: WOZ-waarde, in twee delen plus de cap

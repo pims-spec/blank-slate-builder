@@ -802,6 +802,10 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
   toch niet, dan gaat het kopje "Samenvatting" mee naar de volgende pagina (de bron liet het kopje
   los staan).
 - **Energielabel en WOZ-waarde op één pagina:** compactere labelrijen (7 in plaats van 8,4 mm).
+- **Labeltabel met omcirkelingen** (`pdf/labelMarkering.ts`, alleen het adviesrapport): rood om
+  het huidige label (registratie, anders het bevestigde advieslabel), groen om het label na elke
+  optie, met een regel uitleg eronder. Blijft het label gelijk, dan een groene ring om de rode heen
+  en "(ongewijzigd)" in de uitleg. De rijen zijn dan 6,5 mm, zodat de WOZ-kaart op de pagina blijft.
 - **Woningplattegrond** (`plattegrond/rapport.ts`, `pdfPlattegrondPaginas`): plattegronden alleen
   voor het rapport, zonder de maten over te nemen ("Plattegrond toevoegen aan rapport" in de
   telling). Een of meer bestanden tegelijk: afbeeldingen (PNG/JPG/WebP) en PDF's; daarna kies je
