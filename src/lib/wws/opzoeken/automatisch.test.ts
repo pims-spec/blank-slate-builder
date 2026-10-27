@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { legeInput } from "../legeInput";
 import {
   adresSleutel,
+  coropOphalenNodig,
   energieIsLeeg,
   monumentIsLeeg,
   monumentKeuzeVoor,
@@ -20,6 +21,21 @@ const status = (over: Partial<MonumentStatus>): MonumentStatus => ({
 });
 
 describe("automatisch invullen na het adres", () => {
+  it("COROP-gegevens opnieuw ophalen als ze ontbreken of bij een ander adres horen", () => {
+    const g = {
+      gemeentecode: "0363",
+      gemeente: "Amsterdam",
+      bouwjaar: 2020,
+      adres: "1096GM|156||",
+    };
+    expect(coropOphalenNodig(undefined, "1096GM|156||")).toBe(true);
+    expect(coropOphalenNodig(g, "1096GM|156||")).toBe(false);
+    expect(coropOphalenNodig(g, "1015CJ|123||")).toBe(true);
+    // opgehaald vóór het onthouden van het adres
+    const { adres: _, ...zonderAdres } = g;
+    expect(coropOphalenNodig(zonderAdres, "1096GM|156||")).toBe(true);
+  });
+
   it("alleen lege velden: een nieuwe telling is leeg, een ingevuld label of index niet", () => {
     const x = legeInput();
     expect(energieIsLeeg(x.energie)).toBe(true);

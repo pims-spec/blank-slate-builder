@@ -35,6 +35,7 @@ import {
 } from "@/lib/wws/opslag";
 import {
   adresSleutel,
+  coropOphalenNodig,
   type OphaalStaat,
   energieIsLeeg,
   monumentIsLeeg,
@@ -491,8 +492,8 @@ export default function TellingEditor({
 
   /**
    * Gemeente en BAG-bouwjaar ophalen voor het kengetal kleine nieuwbouw COROP; het vinkje volgt
-   * daarna de beoordeling (lib/wws/corop.ts). Automatisch: alleen als ze er nog niet zijn. Een al
-   * aangevinkt kengetal (oude telling) blijft staan als zelf gezet.
+   * daarna de beoordeling (lib/wws/corop.ts). Automatisch: alleen als ze ontbreken of bij een ander
+   * adres horen. Een al aangevinkt kengetal (oude telling) blijft staan als zelf gezet.
    */
   async function haalCoropOp(forceer: boolean) {
     const a = adresVraag();
@@ -500,7 +501,8 @@ export default function TellingEditor({
       if (forceer) setCorop({ fout: monumentFoutMelding("ongeldige_invoer") });
       return;
     }
-    if (!forceer && staatRef.current.input.woz.corop) return;
+    const sleutel = adresSleutel(a.data);
+    if (!forceer && !coropOphalenNodig(staatRef.current.input.woz.corop, sleutel)) return;
     setCorop({ bezig: true });
     let r;
     try {
@@ -512,7 +514,7 @@ export default function TellingEditor({
     if (!r) return setCorop({ fout: monumentFoutMelding("geen_verbinding") });
     if (!r.ok) return setCorop({ fout: monumentFoutMelding(r.fout) });
     setCorop({});
-    const gegevens = r.data;
+    const gegevens = { ...r.data, adres: sleutel };
     setStaat((x) => {
       const w = x.input.woz;
       const zelf = w.kleinCoropZelf || (!w.corop && w.kleinCorop);

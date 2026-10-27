@@ -163,6 +163,8 @@ export interface CoropGegevens {
   gemeente: string;
   /** Bouwjaar van het (oudste) pand volgens de BAG */
   bouwjaar: number | null;
+  /** Het adres waarbij dit is opgehaald (adresSleutel); bij een ander adres opnieuw ophalen */
+  adres?: string;
 }
 
 export interface Energie {

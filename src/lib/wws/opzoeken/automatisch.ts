@@ -1,7 +1,7 @@
 // Na het invullen van postcode en huisnummer worden energielabel (EP-Online) en monumentstatus
 // (Kadaster en RCE) vanzelf opgehaald. Ingevuld wordt alleen wat nog leeg is (of op de standaard
 // staat): wat de gebruiker zelf heeft ingevuld, blijft staan.
-import type { Energie, MonumentKeuze } from "../types";
+import type { CoropGegevens, Energie, MonumentKeuze } from "../types";
 import type { MonumentStatus } from "./monument";
 
 /** Wat het scherm van een ophaalpoging laat zien: bezig, de uitslag of een foutmelding */
@@ -15,6 +15,10 @@ export interface OphaalStaat<T> {
 export function energieIsLeeg(e: Energie): boolean {
   return !e.label && !e.indexKlasse && !String(e.bouwjaar ?? "") && !e.datum;
 }
+
+/** Gemeente en bouwjaar (opnieuw) ophalen: als ze ontbreken of bij een ander adres horen */
+export const coropOphalenNodig = (corop: CoropGegevens | undefined, sleutel: string) =>
+  !corop || corop.adres !== sleutel;
 
 /** Staat de monumentkeuze nog op de standaard ("Geen monument")? */
 export const monumentIsLeeg = (keuze: MonumentKeuze | undefined) => !keuze || keuze === "geen";
