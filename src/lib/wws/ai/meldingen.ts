@@ -3,14 +3,19 @@
 import type { AiServerFout } from "./ai.functions";
 import type { Gebruik } from "./vragen";
 
-export type AiMeldingSoort = "plattegrond" | "advies" | "afbeelding";
+export type AiMeldingSoort = "plattegrond" | "advies" | "afbeelding" | "foto";
 
 export function aiMelding(
   fout: AiServerFout | "geen_verbinding",
   soort: AiMeldingSoort,
   gebruik?: Gebruik,
 ): string {
-  const dienst = soort === "afbeelding" ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY";
+  const dienst =
+    soort === "afbeelding" || soort === "foto" ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY";
+  if (soort === "foto") {
+    const m = fotoMelding(fout);
+    if (m) return m;
+  }
   switch (fout) {
     case "limiet_bereikt":
       return (
@@ -53,6 +58,24 @@ export function aiMelding(
       return "Je hebt geen toegang tot deze functie.";
     case "geen_verbinding":
       return "Kon geen verbinding maken met de server.";
+  }
+}
+
+/** Eigen teksten voor de fotobeoordeling; null = de algemene tekst */
+function fotoMelding(fout: AiServerFout | "geen_verbinding"): string | null {
+  switch (fout) {
+    case "time_out":
+      return "Dit duurde te lang (meer dan 55 seconden) en is afgebroken. Probeer het nog eens, eventueel met minder foto's.";
+    case "te_veel_verzoeken":
+      return "Gemini is nu niet bereikbaar (te veel verzoeken of een quotum bij Google). Probeer het later opnieuw.";
+    case "dienst_onbereikbaar":
+      return "Gemini is nu niet bereikbaar. Probeer het later opnieuw.";
+    case "onbruikbaar_antwoord":
+      return "Het antwoord was onbruikbaar. Probeer het nog een keer, eventueel met scherpere foto's.";
+    case "afbeelding_geweigerd":
+      return "Een of meer foto's werden niet geaccepteerd. Probeer het met andere foto's.";
+    default:
+      return null;
   }
 }
 

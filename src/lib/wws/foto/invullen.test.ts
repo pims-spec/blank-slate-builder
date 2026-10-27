@@ -4,7 +4,13 @@ import { DEFAULT_NORMEN as NORMEN } from "../normen";
 import type { FacBadkamer, FacKeuken, FacToilet } from "../types";
 import type { Beoordeling, ElementOordeel } from "./beoordeling";
 import { ELEMENTEN, type FotoRuimte } from "./elementen";
-import { fotoRuimteVoor, fotoVeldGecontroleerd, pasFotosToe } from "./invullen";
+import {
+  fotoAllesGecontroleerd,
+  fotoRuimteVoor,
+  fotoStand,
+  fotoVeldGecontroleerd,
+  pasFotosToe,
+} from "./invullen";
 
 const o = (over: Partial<ElementOordeel> = {}): ElementOordeel => ({
   status: "niet_vast_te_stellen",
@@ -301,12 +307,26 @@ describe("algemeen", () => {
     expect(fotoRuimteVoor(badkamer())).toBe("badkamer");
   });
 
-  it("fotoVeldGecontroleerd haalt één ! weg, en het veld als het leeg is", () => {
+  it("fotoVeldGecontroleerd haalt één ! weg; zonder ! verdwijnt ook uitFoto", () => {
     const f = keuken();
+    f.uitFoto = true;
     f.fotoOnzeker = { oven: "a", kook: "b" };
     fotoVeldGecontroleerd(f, "oven");
     expect(f.fotoOnzeker).toEqual({ kook: "b" });
+    expect(f.uitFoto).toBe(true);
     fotoVeldGecontroleerd(f, "kook");
     expect(f).not.toHaveProperty("fotoOnzeker");
+    expect(f).not.toHaveProperty("uitFoto");
+  });
+
+  it("fotoStand en fotoAllesGecontroleerd", () => {
+    const f = keuken();
+    expect(fotoStand(f)).toEqual({ uitFoto: false, onzeker: {} });
+    f.uitFoto = true;
+    f.fotoOnzeker = { oven: "a" };
+    expect(fotoStand(f)).toEqual({ uitFoto: true, onzeker: { oven: "a" } });
+    fotoAllesGecontroleerd(f);
+    expect(f).toEqual(keuken());
+    expect(fotoStand(facDefault("was"))).toEqual({ uitFoto: false, onzeker: {} });
   });
 });

@@ -36,6 +36,13 @@ import {
   zonderTypeNotitie,
 } from "@/lib/wws/ruimteInvoer";
 import type { Maat } from "@/lib/wws/types";
+import {
+  fotoAllesGecontroleerd,
+  fotoRuimteVoor,
+  fotoStand,
+  fotoVeldGecontroleerd,
+  pasFotosToe,
+} from "@/lib/wws/foto/invullen";
 import { RUBRIEK_UITLEG, VINK_UITLEG } from "@/lib/wws/uitleg";
 import { samenvattingVoorz } from "@/lib/wws/voorzSamenvatting";
 import {
@@ -45,6 +52,8 @@ import {
   opslagTekst,
   segmentSchaal,
 } from "@/lib/wws/samenvatting";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import FotoDialoog from "./FotoDialoog";
 import { useNormen } from "./NormenContext";
 import Uitleg from "./Uitleg";
 
@@ -59,18 +68,68 @@ function Veld({
   label,
   children,
   className = "",
+  extra,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
+  /** Naast het label, bijv. het ! van de fotobeoordeling */
+  extra?: ReactNode;
 }) {
-  return (
-    <label className={`flex min-w-0 flex-col gap-1 text-sm ${className}`}>
-      <span className="truncate text-muted-foreground" title={label}>
+  const veld = (
+    <label className={`flex min-w-0 flex-col gap-1 text-sm ${extra ? "" : className}`}>
+      <span className={"truncate text-muted-foreground" + (extra ? " pr-6" : "")} title={label}>
         {label}
       </span>
       {children}
     </label>
+  );
+  if (!extra) return veld;
+  // buiten het label: een knop in een <label> zou het label van het invoerveld overnemen
+  return (
+    <div className={`relative min-w-0 ${className}`}>
+      {veld}
+      <span className="absolute right-0 top-0">{extra}</span>
+    </div>
+  );
+}
+
+/**
+ * Het ! van de fotobeoordeling: de AI was hier niet zeker. Klikken of tikken toont de reden en
+ * (bij bewerken) de knop "Gecontroleerd".
+ */
+function Onzeker({
+  reden,
+  onGecontroleerd,
+}: {
+  reden: string;
+  onGecontroleerd?: (() => void) | undefined;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger
+        type="button"
+        aria-label={"Controleren: " + reden}
+        title={reden}
+        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-orange text-xs font-bold leading-none text-orange-foreground hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        !
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-2 text-sm font-normal" side="top">
+        <p>
+          <b>Uit de foto's, niet zeker.</b> {reden}
+        </p>
+        {onGecontroleerd && (
+          <button
+            type="button"
+            className="rounded-lg border border-border px-2.5 py-1 text-sm hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={onGecontroleerd}
+          >
+            Gecontroleerd
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 /** Tekstveld voor getallen; bewaart de invoer zoals getypt ("12,5"), net als wws-site.html */
@@ -164,11 +223,14 @@ function Vink({
   checked,
   onChange,
   uitleg,
+  extra,
 }: {
   label: string;
   checked: boolean;
   onChange: (b: boolean) => void;
   uitleg?: string;
+  /** Naast het vinkje, bijv. het ! van de fotobeoordeling */
+  extra?: ReactNode;
 }) {
   const vink = (
     <label className="flex items-center gap-2 text-sm">
@@ -181,11 +243,12 @@ function Vink({
       {label}
     </label>
   );
-  if (!uitleg) return vink;
+  if (!uitleg && !extra) return vink;
   return (
     <div className="flex items-center gap-2">
       {vink}
-      <Uitleg tekst={uitleg} over={label} />
+      {uitleg && <Uitleg tekst={uitleg} over={label} />}
+      {extra}
     </div>
   );
 }
@@ -229,14 +292,16 @@ function Teller({
   value,
   max,
   onChange,
+  extra,
 }: {
   label: string;
   value: NumLike;
   max: number;
   onChange: (n: number) => void;
+  extra?: ReactNode;
 }) {
   return (
-    <Veld label={label}>
+    <Veld label={label} extra={extra}>
       <select
         className={inputCls}
         value={num(value)}
@@ -284,10 +349,13 @@ function Voorzieningen({
   waarden,
   zet,
   toelichting,
+  markering,
 }: {
   lijst: readonly VoorzDef[];
   waarden: Record<string, unknown>;
   zet: (k: string, v: boolean | string | undefined) => void;
+  /** Het ! van de fotobeoordeling bij een veld (sleutel of groep), of niets */
+  markering?: (veld: string) => ReactNode;
   /** Kleine regel onder de kop (bv. het maximum aan punten) */
   toelichting?: string;
 }) {
@@ -305,7 +373,7 @@ function Voorzieningen({
             const items = lijst.filter((it) => it.g === g);
             const gekozen = items.find((it) => num(waarden[it.k]) > 0)?.k ?? "";
             return (
-              <Veld key={g} label={groepNaam[g] ?? g}>
+              <Veld key={g} label={groepNaam[g] ?? g} extra={markering?.(g)}>
                 <Keuze
                   value={gekozen}
                   onChange={(v) => {
@@ -357,7 +425,10 @@ function Voorzieningen({
                   />
                 )}
               </span>
-              <span className="leading-snug">{it.l}</span>
+              <span className="flex items-center gap-1.5 leading-snug">
+                {it.l}
+                {markering?.(it.k)}
+              </span>
               <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                 {fmt(it.p)} {it.n ? "p/st" : "p"}
               </span>
@@ -397,6 +468,8 @@ export interface WwsCalculatorProps {
   woningtypeVergrendeld?: { onOntgrendel: () => void } | undefined;
   /** Het woningtype staat elders (in de kaart "Woning" van de telling, zoals in de bron) */
   woningtypeElders?: boolean;
+  /** Knop "Foto's beoordelen" bij keuken, badkamer en toilet (vereist een schrijfrol) */
+  fotoBeoordelen?: boolean;
 }
 
 export default function WwsCalculator({
@@ -412,6 +485,7 @@ export default function WwsCalculator({
   wozExtra,
   woningtypeVergrendeld,
   woningtypeElders = false,
+  fotoBeoordelen = false,
 }: WwsCalculatorProps = {}) {
   const N = useNormen();
   const [eigenInp, setEigenInp] = useState<WwsInput>(legeInput);
@@ -442,6 +516,13 @@ export default function WwsCalculator({
       }
       return n;
     });
+  // Fotobeoordeling: voor welke ruimte het venster open is
+  const [fotoVoor, setFotoVoor] = useState<{ groep: "vertrekken" | "overig"; i: number } | null>(
+    null,
+  );
+  const fotoRuimte = fotoVoor ? inp[fotoVoor.groep][fotoVoor.i] : undefined;
+  const fotoSoort = fotoRuimteVoor(fotoRuimte?.fac);
+
   const metFac = [
     ...inp.vertrekken.map((r, i) => (r.fac ? "vertrekken:" + i : "")),
     ...inp.overig.map((r, i) => (r.fac ? "overig:" + i : "")),
@@ -457,17 +538,24 @@ export default function WwsCalculator({
     </button>
   );
 
-  /** Paneel met voorzieningen van een ruimte (keuken, badkamer, toilet, …) */
-  const facPaneel = (fac: Fac, zetFac: (f: (x: Fac) => void) => void) => {
+  /**
+   * Paneel met voorzieningen van een ruimte (keuken, badkamer, toilet, …). zetFac krijgt het
+   * veld mee (voor het ! van de fotobeoordeling); m geeft het ! bij een veld, of niets.
+   */
+  const facPaneel = (
+    fac: Fac,
+    zetFac: (veld: string, f: (x: Fac) => void) => void,
+    m: (veld: string) => ReactNode,
+  ) => {
     if (fac.kind === "keuken") {
       const k = fac.keuken;
       return (
         <>
-          <Veld label="Lengte aanrecht" className="max-w-xs">
+          <Veld label="Lengte aanrecht" className="max-w-xs" extra={m("lengte")}>
             <Keuze
               value={k.lengte}
               onChange={(v) =>
-                zetFac((f) => {
+                zetFac("lengte", (f) => {
                   if (f.kind === "keuken") f.keuken.lengte = v as typeof k.lengte;
                 })
               }
@@ -482,8 +570,9 @@ export default function WwsCalculator({
             toelichting="Tellen samen maximaal de punten van het aanrecht."
             lijst={N.voorzKeuken}
             waarden={k.voorz}
+            markering={m}
             zet={(key, v) =>
-              zetFac((f) => {
+              zetFac(N.voorzKeuken.find((it) => it.k === key)?.g ?? key, (f) => {
                 if (f.kind !== "keuken") return;
                 const vz = f.keuken.voorz as Record<string, unknown>;
                 if (v === undefined || v === "") delete vz[key];
@@ -497,7 +586,7 @@ export default function WwsCalculator({
     if (fac.kind === "badkamer") {
       const s = fac.san;
       const zet = (key: keyof typeof s, v: unknown) =>
-        zetFac((f) => {
+        zetFac(key === "toiletStaand" || key === "toiletHang" ? "toilet" : key, (f) => {
           if (f.kind === "badkamer") (f.san as Record<string, unknown>)[key] = v;
         });
       return (
@@ -506,32 +595,49 @@ export default function WwsCalculator({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Teller
               label="Staand toilet"
+              extra={m("toilet")}
               value={s.toiletStaand}
               max={2}
               onChange={(n) => zet("toiletStaand", n)}
             />
             <Teller
               label="Hangend toilet"
+              extra={m("toilet")}
               value={s.toiletHang}
               max={2}
               onChange={(n) => zet("toiletHang", n)}
             />
             <Teller
               label="Wastafel"
+              extra={m("wastafel")}
               value={s.wastafel}
               max={4}
               onChange={(n) => zet("wastafel", n)}
             />
             <Teller
               label="Meerpersoonswastafel"
+              extra={m("meerpers")}
               value={s.meerpers}
               max={2}
               onChange={(n) => zet("meerpers", n)}
             />
-            <Teller label="Douche" value={s.douche} max={3} onChange={(n) => zet("douche", n)} />
-            <Teller label="Bad" value={s.bad} max={2} onChange={(n) => zet("bad", n)} />
+            <Teller
+              label="Douche"
+              extra={m("douche")}
+              value={s.douche}
+              max={3}
+              onChange={(n) => zet("douche", n)}
+            />
+            <Teller
+              label="Bad"
+              extra={m("bad")}
+              value={s.bad}
+              max={2}
+              onChange={(n) => zet("bad", n)}
+            />
             <Teller
               label="Bad met douche"
+              extra={m("badDouche")}
               value={s.badDouche}
               max={2}
               onChange={(n) => zet("badDouche", n)}
@@ -546,8 +652,9 @@ export default function WwsCalculator({
             toelichting="Tellen samen maximaal de punten van douche en bad in deze ruimte."
             lijst={N.voorzSan}
             waarden={s.voorz}
+            markering={m}
             zet={(key, v) =>
-              zetFac((f) => {
+              zetFac(key, (f) => {
                 if (f.kind !== "badkamer") return;
                 const vz = f.san.voorz as Record<string, unknown>;
                 if (v === undefined || v === "") delete vz[key];
@@ -561,7 +668,7 @@ export default function WwsCalculator({
     if (fac.kind === "slaap_san") {
       const s = fac.san;
       const zet = (key: keyof typeof s, v: number) =>
-        zetFac((f) => {
+        zetFac(key, (f) => {
           if (f.kind === "slaap_san") f.san[key] = v;
         });
       return (
@@ -597,11 +704,11 @@ export default function WwsCalculator({
     if (fac.kind === "toilet") {
       return (
         <div className="flex flex-wrap items-end gap-4">
-          <Veld label="Toilet" className="w-56">
+          <Veld label="Toilet" className="w-56" extra={m("toilet")}>
             <Keuze
               value={fac.toilet.toilet}
               onChange={(v) =>
-                zetFac((f) => {
+                zetFac("toilet", (f) => {
                   if (f.kind === "toilet") f.toilet.toilet = v as "geen";
                 })
               }
@@ -614,9 +721,10 @@ export default function WwsCalculator({
           </Veld>
           <Vink
             label="Fontein of wastafel (1 p)"
+            extra={m("fontein")}
             checked={fac.toilet.fontein}
             onChange={(b) =>
-              zetFac((f) => {
+              zetFac("fontein", (f) => {
                 if (f.kind === "toilet") f.toilet.fontein = b;
               })
             }
@@ -629,7 +737,7 @@ export default function WwsCalculator({
         label="Wastafel of uitstortgootsteen op waterleiding en riool (1 p)"
         checked={fac.was.wastafel}
         onChange={(b) =>
-          zetFac((f) => {
+          zetFac("wastafel", (f) => {
             if (f.kind === "was") f.was.wastafel = b;
           })
         }
@@ -777,22 +885,79 @@ export default function WwsCalculator({
                     </span>
                   </button>
                 )}
+                {fotoBeoordelen && !alleenLezen && fotoRuimteVoor(r.fac) && (
+                  <button
+                    type="button"
+                    className={knopCls}
+                    onClick={() => setFotoVoor({ groep, i })}
+                  >
+                    Foto's beoordelen
+                  </button>
+                )}
                 {r.fac.uitPve && (
                   <p className="rounded-lg bg-warn px-2 py-1 text-xs" role="note">
                     Overgenomen uit het standaard PvE van deze eigenaar. Controleer dit ter plekke
                     en pas aan waar nodig.
                   </p>
                 )}
+                {fotoStand(r.fac).uitFoto && (
+                  <p
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-warn px-2 py-1 text-xs"
+                    role="note"
+                  >
+                    <span>
+                      {Object.keys(fotoStand(r.fac).onzeker).length
+                        ? "Ingevuld uit foto's. Controleer de velden met een uitroepteken (!)."
+                        : "Ingevuld uit foto's. Controleer dit en pas aan waar nodig."}
+                    </span>
+                    {!alleenLezen && (
+                      <button
+                        type="button"
+                        className="font-medium underline underline-offset-2"
+                        onClick={() =>
+                          wijzig((d) => {
+                            const x = d[groep][i]!.fac;
+                            if (x) fotoAllesGecontroleerd(x);
+                          })
+                        }
+                      >
+                        Alles gecontroleerd
+                      </button>
+                    )}
+                  </p>
+                )}
                 {(alleenLezen || uitgeklapt[groep + ":" + i]) && (
                   <div id={"voorz-" + groep + "-" + i} className="space-y-3">
-                    {facPaneel(r.fac, (f) =>
-                      wijzig((d) => {
-                        const x = d[groep][i]!.fac;
-                        if (!x) return;
-                        f(x);
-                        // met de hand aangepast: geen PvE-markering meer (zoals in wws-site.html)
-                        delete x.uitPve;
-                      }),
+                    {facPaneel(
+                      r.fac,
+                      (veld, f) =>
+                        wijzig((d) => {
+                          const x = d[groep][i]!.fac;
+                          if (!x) return;
+                          f(x);
+                          // met de hand aangepast: geen PvE-markering meer (zoals in wws-site.html)
+                          delete x.uitPve;
+                          // en geen ! meer bij dit veld
+                          fotoVeldGecontroleerd(x, veld);
+                        }),
+                      (veld) => {
+                        const reden = fotoStand(r.fac).onzeker[veld];
+                        if (!reden) return null;
+                        return (
+                          <Onzeker
+                            reden={reden}
+                            onGecontroleerd={
+                              alleenLezen
+                                ? undefined
+                                : () =>
+                                    wijzig((d) => {
+                                      const x = d[groep][i]!.fac;
+                                      if (x) fotoVeldGecontroleerd(x, veld);
+                                    })
+                            }
+                          />
+                        );
+                      },
                     )}
                   </div>
                 )}
@@ -1412,6 +1577,32 @@ export default function WwsCalculator({
           {kop && <p className="mt-4 text-xs text-muted-foreground">Normen: {N.naam}.</p>}
         </div>
       </aside>
+      {fotoVoor && fotoSoort && (
+        <FotoDialoog
+          open
+          onOpenChange={(o) => !o && setFotoVoor(null)}
+          ruimte={fotoSoort}
+          naam={
+            fotoRuimte?.naam ||
+            (fotoVoor.groep === "vertrekken" ? VERTREK_TYPES : OVERIG_TYPES).find(
+              (t) => t.k === fotoRuimte?.type,
+            )?.l ||
+            "ruimte"
+          }
+          onUitslag={(b) => {
+            // op de huidige stand van de ruimte toepassen (pasFotosToe wijzigt niets zelf)
+            const huidig = inp[fotoVoor.groep][fotoVoor.i]?.fac;
+            const r = huidig ? pasFotosToe(huidig, fotoSoort, b) : null;
+            if (!r) return 0;
+            wijzig((d) => {
+              const x = d[fotoVoor.groep][fotoVoor.i];
+              if (x?.fac && fotoRuimteVoor(x.fac) === fotoSoort) x.fac = r.fac;
+            });
+            zetUitgeklapt(fotoVoor.groep + ":" + fotoVoor.i, true);
+            return r.onzeker;
+          }}
+        />
+      )}
     </div>
   );
 }

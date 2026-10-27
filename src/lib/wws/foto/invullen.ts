@@ -268,10 +268,33 @@ export function pasFotosToe(f: Fac, ruimte: FotoRuimte, b: Beoordeling): FotoRes
   return { fac: uit, onzeker: Object.keys(onzeker).length };
 }
 
-/** Het ! bij één veld weghalen (met de hand aangepast of gecontroleerd). Muteert f. */
+/** De markeringen van de fotobeoordeling van een voorziening (voor het scherm) */
+export function fotoStand(f: Fac | undefined): {
+  uitFoto: boolean;
+  onzeker: Readonly<Record<string, string>>;
+} {
+  if (f?.kind === "keuken" || f?.kind === "badkamer" || f?.kind === "toilet")
+    return { uitFoto: !!f.uitFoto, onzeker: f.fotoOnzeker ?? {} };
+  return { uitFoto: false, onzeker: {} };
+}
+
+/**
+ * Het ! bij één veld weghalen (met de hand aangepast of gecontroleerd). Is er daarna geen ! meer
+ * over, dan verdwijnt ook de markering "ingevuld uit foto's" (zoals uitPve). Muteert f.
+ */
 export function fotoVeldGecontroleerd(f: Fac, veld: string): void {
   if (f.kind !== "keuken" && f.kind !== "badkamer" && f.kind !== "toilet") return;
-  if (!f.fotoOnzeker) return;
-  delete f.fotoOnzeker[veld];
-  if (!Object.keys(f.fotoOnzeker).length) delete f.fotoOnzeker;
+  if (f.fotoOnzeker) {
+    delete f.fotoOnzeker[veld];
+    if (Object.keys(f.fotoOnzeker).length) return;
+    delete f.fotoOnzeker;
+  }
+  delete f.uitFoto;
+}
+
+/** Alle ! en de markering "ingevuld uit foto's" weghalen. Muteert f. */
+export function fotoAllesGecontroleerd(f: Fac): void {
+  if (f.kind !== "keuken" && f.kind !== "badkamer" && f.kind !== "toilet") return;
+  delete f.fotoOnzeker;
+  delete f.uitFoto;
 }

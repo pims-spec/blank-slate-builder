@@ -1366,6 +1366,7 @@ export default function TellingEditor({
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
         woningtypeElders
+        fotoBeoordelen={!alleenLezen && rechten.magSchrijven}
       />
       {!alleenLezen && (
         <PlattegrondDialoog
