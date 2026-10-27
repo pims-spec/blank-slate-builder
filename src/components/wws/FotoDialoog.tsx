@@ -86,17 +86,42 @@ export default function FotoDialoog(p: Props) {
   );
 }
 
-function FotosBeoordelen({ input, onToepassen }: Props) {
-  const [fotos, setFotos] = useState<Gekozen[]>([]);
-  const [fase, setFase] = useState<Fase>("kiezen");
+/**
+ * Het beoordelen zelf. Ook gebruikt door "Map inlezen" (MapDialoog): dan zijn de foto's al gekozen
+ * en gesorteerd (beginFotos en beginSortering) en begint het bij het nakijken van de indeling.
+ */
+export function FotosBeoordelen({
+  input,
+  onToepassen,
+  beginFotos,
+  beginSortering,
+}: Omit<Props, "open" | "onOpenChange"> & {
+  beginFotos?: readonly File[];
+  beginSortering?: readonly FotoSortering[];
+}) {
+  const urls = useRef<string[]>([]);
+  const [fotos, setFotos] = useState<Gekozen[]>(() =>
+    (beginFotos ?? []).map((bestand) => {
+      const url = URL.createObjectURL(bestand);
+      urls.current.push(url);
+      return { url, bestand };
+    }),
+  );
+  const gesorteerd = !!beginSortering && beginSortering.length === (beginFotos?.length ?? 0);
+  const [fase, setFase] = useState<Fase>(gesorteerd ? "indelen" : "kiezen");
   const [bezig, setBezig] = useState(false);
-  const [status, setStatus] = useState("");
-  const [sortering, setSortering] = useState<FotoSortering[]>([]);
-  const [doelen, setDoelen] = useState<Doel[]>([]);
+  const [status, setStatus] = useState(
+    gesorteerd ? "Kijk de indeling na en kies waar nodig de ruimte. Daarna: Beoordelen." : "",
+  );
+  const [sortering, setSortering] = useState<FotoSortering[]>(
+    gesorteerd ? [...beginSortering] : [],
+  );
+  const [doelen, setDoelen] = useState<Doel[]>(() =>
+    gesorteerd ? beginIndeling(input, beginSortering) : [],
+  );
   const [uitslag, setUitslag] = useState<RuimteUitslag[]>([]);
   const [gebruik, setGebruik] = useState<Gebruik | undefined>();
   const ctl = useRef<AbortController | null>(null);
-  const urls = useRef<string[]>([]);
 
   // object-URL's van de voorbeelden opruimen bij sluiten
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);

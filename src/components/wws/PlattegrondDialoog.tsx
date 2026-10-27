@@ -80,8 +80,14 @@ export function PlattegrondInlezen({
   onOvernemen,
   vastVervangen = false,
   knopTekst = "Overnemen",
-}: Omit<Props, "open" | "onOpenChange"> & { vastVervangen?: boolean; knopTekst?: string }) {
-  const [bestand, setBestand] = useState<File | null>(null);
+  beginBestand,
+}: Omit<Props, "open" | "onOpenChange"> & {
+  vastVervangen?: boolean;
+  knopTekst?: string;
+  /** "Map inlezen": de plattegrond is al gekozen */
+  beginBestand?: File;
+}) {
+  const [bestand, setBestand] = useState<File | null>(beginBestand ?? null);
   const [notitie, setNotitie] = useState("");
   const [beeld, setBeeld] = useState<NieuwBeeld | null>(null);
   const [voorbeeld, setVoorbeeld] = useState<string | null>(null);
@@ -171,15 +177,22 @@ export function PlattegrondInlezen({
     // min-w-0: anders maakt de brede tabel het venster breder dan het scherm (grid-kind)
     <div className="min-w-0 space-y-4 text-sm">
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="font-medium">Plattegrond</span>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,application/pdf"
-            disabled={bezig}
-            onChange={(e) => setBestand(e.target.files?.[0] ?? null)}
-          />
-        </label>
+        {beginBestand ? (
+          <p className="flex flex-col gap-1">
+            <span className="font-medium">Plattegrond</span>
+            <span className="break-all">{beginBestand.name}</span>
+          </p>
+        ) : (
+          <label className="flex flex-col gap-1">
+            <span className="font-medium">Plattegrond</span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,application/pdf"
+              disabled={bezig}
+              onChange={(e) => setBestand(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        )}
         <label className="flex flex-col gap-1">
           <span className="font-medium">Toelichting (optioneel)</span>
           <input
