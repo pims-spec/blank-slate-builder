@@ -150,7 +150,7 @@ describe("tekenen: ruimte wijzigen en toevoegen (zoals de bron, in de telling ze
     expect("notch" in leeg.input.vertrekken[1]!).toBe(false);
   });
 
-  it("nieuwe ruimte krijgt voorzieningen, verwarming en status zoals indelingVoegRuimteToe", () => {
+  it("nieuwe ruimte krijgt lege voorzieningen, verwarming en status zoals indelingVoegRuimteToe", () => {
     const x = woning();
     const bbox = { x: 0.5, y: 0.5, w: 0.2, h: 0.2 };
     const r = ruimteToevoegen(x, ruimtenUitTelling(x), {
@@ -162,7 +162,8 @@ describe("tekenen: ruimte wijzigen en toevoegen (zoals de bron, in de telling ze
     });
     const rij = r.input.overig.at(-1)!;
     expect(rij).toMatchObject({ type: "toilet", m2: "1,5", bbox, verwarmd: false });
-    expect(rij.fac?.kind).toBe("toilet");
+    // bewuste afwijking: leeg, geen standaardtoilet
+    expect(rij.fac).toEqual({ kind: "toilet", toilet: { toilet: "geen", fontein: false } });
     expect(r.rooms.at(-1)).toMatchObject({
       key: "overig",
       idx: r.input.overig.length - 1,

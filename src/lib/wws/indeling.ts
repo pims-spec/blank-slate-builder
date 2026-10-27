@@ -646,7 +646,7 @@ export function ruimteWijzigen(
   return { input: uit, rooms: rooms.map((x, j) => (j === i ? nr : x)) };
 }
 
-/** Een op de tekening ingetekende ruimte toevoegen — indelingVoegRuimteToe() */
+/** Een op de tekening ingetekende ruimte toevoegen — indelingVoegRuimteToe(), met lege voorzieningen */
 export function ruimteToevoegen(
   input: WwsInput,
   rooms: readonly IndelingRuimte[],
@@ -660,7 +660,9 @@ export function ruimteToevoegen(
     bbox: { ...n.bbox },
     verwarmd: autoVerwarmd(n.key, n.type),
   } as unknown as Vertrek & OverigeRuimte;
-  ensureFac(n.key, rij, false);
+  // bewuste afwijking: een getekende ruimte begint leeg, net als een ingelezen ruimte (de bron
+  // vulde de standaard in: staand toilet, wastafel en douche)
+  ensureFac(n.key, rij, true);
   const uit = { ...input, [n.key]: [...input[n.key], rij] } as WwsInput;
   const kind = facKind(n.key, n.type);
   return {

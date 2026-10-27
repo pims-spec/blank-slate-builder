@@ -139,6 +139,10 @@ export interface Vertrek {
   verwarmd: boolean;
   verkoeld?: boolean;
   fac?: Fac;
+  /** Raam naar de buitenlucht (plattegrond of indelingsadvies); ontbreekt = onbekend */
+  raam?: boolean;
+  /** Keuken loopt zonder deur of tussenmuur over in de woonkamer (plattegrond of indelingsadvies) */
+  openKeuken?: boolean;
 }
 export interface OverigeRuimte {
   /** Herkomst van een ingelezen plattegrond, bijv. "Plattegrond: berekend" (alleen tonen) */
@@ -150,6 +154,8 @@ export interface OverigeRuimte {
   maten?: Maat[];
   verwarmd: boolean;
   fac?: Fac;
+  /** Raam naar de buitenlucht (plattegrond of indelingsadvies); ontbreekt = onbekend */
+  raam?: boolean;
 }
 
 // ---------- overige rubrieken ----------

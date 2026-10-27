@@ -123,7 +123,7 @@ describe("plattegrond overnemen gelijk aan wws-site.html", () => {
       });
       const cur = { input: kloon(input) };
       maakPlat(cur, { result: kloon(A) }, velden).applyPlat();
-      const nieuw = platToepassen(input, A, k);
+      const nieuw = platToepassen(input, A, k, { bronGetrouw: true });
       try {
         // de oude normalizeInput voegt afgeleide velden toe (keuken, san, …): aan beide kanten
         expect(vergelijkbaar(nieuw)).toEqual(vergelijkbaar(cur.input));

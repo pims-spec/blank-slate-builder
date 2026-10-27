@@ -41,4 +41,31 @@ describe("plattegrond overnemen: van de voorzieningen alleen de aanrechtlengte",
     );
     expect((uit.overig[0]!.fac as FacToilet).toilet).toEqual({ toilet: "geen", fontein: false });
   });
+
+  it("ingelezen ruimten beginnen leeg (geen standaardsanitair), raam en open keuken gaan mee", () => {
+    const R = antwoord();
+    const ruimte = (soort: "vertrek" | "overig", type: string, extra: object = {}) =>
+      ({ soort, type, naam: "", m2: 4, bron: "afgelezen", ...extra }) as never;
+    R.ruimten = [
+      ruimte("vertrek", "keuken", { raam: false, open_keuken: true }),
+      ruimte("vertrek", "badkamer", { raam: null }),
+      ruimte("vertrek", "slaapkamer", { raam: true }),
+      ruimte("overig", "toilet", { raam: false }),
+    ];
+    const k = { ...standaardKeuzes(R), vervangen: true };
+    const uit = platToepassen(legeInput(), R, k);
+    const [keuken, bad, slaap] = uit.vertrekken;
+    expect(keuken).toMatchObject({ raam: false, openKeuken: true });
+    expect((keuken!.fac as FacKeuken).keuken.lengte).toBe(">=2");
+    expect((bad!.fac as FacBadkamer).san).toEqual(
+      (facDefault("badkamer", true) as FacBadkamer).san,
+    );
+    expect(bad).not.toHaveProperty("raam");
+    expect(slaap).toMatchObject({ raam: true });
+    expect(slaap).not.toHaveProperty("openKeuken");
+    expect((uit.overig[0]!.fac as FacToilet).toilet).toEqual({ toilet: "geen", fontein: false });
+    // zonder aanrecht in het antwoord: keuken korter dan 1 m, niet de standaard 1–2 m
+    const zonder = platToepassen(legeInput(), { ...R, keuken: {} }, k);
+    expect((zonder.vertrekken[0]!.fac as FacKeuken).keuken.lengte).toBe("<1");
+  });
 });

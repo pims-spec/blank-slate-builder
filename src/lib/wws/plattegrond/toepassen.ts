@@ -2,7 +2,7 @@
 // wws-site.html, zonder DOM: de keuzes uit het venster (per ruimte overnemen/soort/m², sanitair,
 // keuken, buitenruimte, vervangen) komen als parameters binnen. De afbeelding zelf wordt apart
 // opgeslagen (Storage), niet hier.
-import { fmt, num, OVERIG_TYPES, overigType, r2, VERTREK_TYPES } from "../basis";
+import { ensureFac, fmt, num, OVERIG_TYPES, overigType, r2, VERTREK_TYPES } from "../basis";
 import { normaliseer } from "../calc";
 import { bboxOk } from "../indeling";
 import type { OverigeRuimte, Vertrek, WwsInput } from "../types";
@@ -82,8 +82,22 @@ export function sanitairTekst(R: PlattegrondAntwoord): string {
 
 type Nieuw = (Vertrek | OverigeRuimte) & { herkomst: string; bbox?: unknown; _merged?: boolean };
 
-/** applyPlat(): geeft de nieuwe invoer (de oude blijft ongewijzigd) */
-export function platToepassen(input: WwsInput, R: PlattegrondAntwoord, k: PlatKeuzes): WwsInput {
+/**
+ * applyPlat(): geeft de nieuwe invoer (de oude blijft ongewijzigd).
+ *
+ * Bewuste afwijkingen (tenzij `bronGetrouw`, voor de vergelijkingstest):
+ * - een ingelezen ruimte met voorziening begint leeg (geen toilet, wastafel of douche, keuken
+ *   korter dan 1 m); de bron vulde daar via normaliseer de standaard in. Van de voorzieningen komt
+ *   alleen de aanrechtlengte uit de plattegrond.
+ * - "raam" en "open_keuken" uit het antwoord gaan mee als `raam` en `openKeuken` (voor het
+ *   indelingsadvies).
+ */
+export function platToepassen(
+  input: WwsInput,
+  R: PlattegrondAntwoord,
+  k: PlatKeuzes,
+  { bronGetrouw = false }: { bronGetrouw?: boolean } = {},
+): WwsInput {
   let I = structuredClone(input);
   const newV: Nieuw[] = [],
     newO: Nieuw[] = [];
@@ -106,6 +120,11 @@ export function platToepassen(input: WwsInput, R: PlattegrondAntwoord, k: PlatKe
           ]
         : [{ l: "", b: "" }];
     const bbox = bboxOk(r.bbox) ? { x: r.bbox.x, y: r.bbox.y, w: r.bbox.w, h: r.bbox.h } : null;
+    const extra: Partial<Nieuw> = {};
+    if (!bronGetrouw) {
+      if (typeof r.raam === "boolean") extra.raam = r.raam;
+      if (r.open_keuken === true && sel[1] === "keuken") (extra as Vertrek).openKeuken = true;
+    }
     if (sel[0] === "v")
       newV.push(
         Object.assign(
@@ -119,6 +138,7 @@ export function platToepassen(input: WwsInput, R: PlattegrondAntwoord, k: PlatKe
             herkomst,
           },
           bbox ? { bbox } : {},
+          extra,
         ) as Nieuw,
       );
     else
@@ -133,9 +153,14 @@ export function platToepassen(input: WwsInput, R: PlattegrondAntwoord, k: PlatKe
             herkomst,
           },
           bbox ? { bbox } : {},
+          extra,
         ) as Nieuw,
       );
   });
+  if (!bronGetrouw) {
+    newV.forEach((r) => ensureFac("vertrekken", r, true));
+    newO.forEach((r) => ensureFac("overig", r, true));
+  }
   if (k.vervangen) {
     I.vertrekken = newV as Vertrek[];
     I.overig = newO as OverigeRuimte[];
