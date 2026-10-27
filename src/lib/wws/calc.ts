@@ -19,6 +19,7 @@ import {
   r2,
   vertrekType,
 } from "./basis";
+import { kleinCoropActief } from "./corop";
 import { DEFAULT_NORMEN, type Normen } from "./normen";
 import type { CalcOpties, FacBadkamer, Rij, Segment, WwsInput, WwsResultaat } from "./types";
 
@@ -596,7 +597,8 @@ export function calc(
   const m2woz = m2r(
     (bronAfronding ? oppV + oppO : oppVraw + oppOraw) + (num(P.typeI) * N.parkeer.m2TypeI) / pa,
   );
-  const d2 = W.kleinCorop ? kg[2] : kg[1];
+  const kleinCorop = kleinCoropActief(W, oppV + oppO);
+  const d2 = kleinCorop ? kg[2] : kg[1];
   const deel1 = wVal / kg[0];
   const deel2 = m2woz > 0 ? wVal / m2woz / d2 : 0;
   // de Huurprijscheck rondt elk deel af op 2 decimalen en de som op kwarten (bewuste afwijking
@@ -612,7 +614,7 @@ export function calc(
     ", " +
     m2woz +
     " m²" +
-    (W.kleinCorop ? ", kengetal kleine nieuwbouw COROP" : "") +
+    (kleinCorop ? ", kengetal kleine nieuwbouw COROP" : "") +
     (nb1519 ? ", minimaal 40 punten (nieuwbouw 2015-2019)" : "");
 
   // Zorgwoning: +35% over rubrieken 1 t/m 11
@@ -633,11 +635,11 @@ export function calc(
         pW = Math.floor((other * share) / (1 - share) + 1e-9);
         capNote = " (cap: maximaal " + N.wozCapPct + "% van het totaal, afgerond op hele punten)";
         totaalExact = other + pW;
-        if (Math.round(totaalExact) < N.grensMidden + 1 && !W.kleinCorop) floor186 = true;
+        if (Math.round(totaalExact) < N.grensMidden + 1 && !kleinCorop) floor186 = true;
       }
       toonW = pW;
     } else {
-      const cap = wozCap(other, pW, N, !W.kleinCorop);
+      const cap = wozCap(other, pW, N, !kleinCorop);
       if (cap.pW !== pW) {
         pW = cap.pW;
         toonW = cap.toon;

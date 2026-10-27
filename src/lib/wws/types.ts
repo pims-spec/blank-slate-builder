@@ -156,6 +156,15 @@ export interface OverigeRuimte {
 export type Labelklasse =
   "A++++" | "A+++" | "A++" | "A+" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "EPV";
 
+/** Uit PDOK (Locatieserver en BAG), bij het adres van de telling */
+export interface CoropGegevens {
+  /** CBS-gemeentecode, 4 cijfers (bijv. "0363") */
+  gemeentecode: string;
+  gemeente: string;
+  /** Bouwjaar van het (oudste) pand volgens de BAG */
+  bouwjaar: number | null;
+}
+
 export interface Energie {
   /** label = vanaf 2021 (NTA 8800), labelOud = vóór 2015, index = 2015–2021, bouwjaar = geen geldig label */
   soort: "label" | "labelOud" | "index" | "bouwjaar";
@@ -270,7 +279,12 @@ export interface WwsInput {
     /** Beschikkingsjaar; bepaalt de WOZ-kengetallen */
     jaar: string;
     nieuwbouw1519: boolean;
+    /** Het zelf gezette vinkje; met `corop` en zonder `kleinCoropZelf` beslist de beoordeling */
     kleinCorop: boolean;
+    /** Gemeente en bouwjaar bij het adres (PDOK/BAG), voor het kengetal kleine nieuwbouw COROP */
+    corop?: CoropGegevens;
+    /** De gebruiker heeft het COROP-vinkje zelf gezet of gecontroleerd */
+    kleinCoropZelf?: boolean;
   };
   bijz: { zorgwoning: boolean; aanbel: boolean; laadpalen: NumLike };
   opslag: {

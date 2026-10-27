@@ -11,6 +11,7 @@ import {
   zoekAdresBijPdok,
   zoekEnergielabelBijEpOnline,
 } from "./dienst";
+import { zoekCoropGegevens } from "./corop";
 import { zoekMonumentStatus } from "./monument";
 
 export const zoekAdres = createServerFn({ method: "POST" })
@@ -30,6 +31,12 @@ export const zoekMonument = createServerFn({ method: "POST" })
   .middleware([vereisSchrijfrol])
   .validator((d: unknown) => EpVraagSchema.parse(d))
   .handler(async ({ data }) => zoekMonumentStatus(fetch, data));
+
+/** Gemeente en BAG-bouwjaar bij een adres, voor het kengetal kleine nieuwbouw COROP */
+export const zoekCorop = createServerFn({ method: "POST" })
+  .middleware([vereisSchrijfrol])
+  .validator((d: unknown) => EpVraagSchema.parse(d))
+  .handler(async ({ data }) => zoekCoropGegevens(fetch, data));
 
 /** Welke secrets zijn ingesteld (alleen aanwezig of niet — nooit de waarde), en welke modellen */
 export const serverStatus = createServerFn({ method: "POST" })

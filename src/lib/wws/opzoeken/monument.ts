@@ -85,10 +85,12 @@ function locatieUrl(v: z.infer<typeof EpVraagSchema>): string {
 }
 
 /** Het adres dat bij de huisletter of toevoeging past (anders het adres zonder, of het eerste) */
-export function kiesAdres(
-  docs: z.infer<typeof LocatieSchema>["response"]["docs"],
+export function kiesAdres<
+  T extends { huisletter?: string | undefined; huisnummertoevoeging?: string | undefined },
+>(
+  docs: T[],
   v: Pick<z.infer<typeof EpVraagSchema>, "huisletter" | "huisnummertoevoeging">,
-) {
+): T | undefined {
   const norm = (s: string | undefined) => (s ?? "").replace(/[\s-]/g, "").toUpperCase();
   const letter = norm(v.huisletter),
     toev = norm(v.huisnummertoevoeging);
@@ -227,7 +229,12 @@ export function monumentVoorstel(
   return null;
 }
 
-async function haal(fetchFn: typeof fetch, dienst: string, url: string, init: RequestInit = {}) {
+export async function haal(
+  fetchFn: typeof fetch,
+  dienst: string,
+  url: string,
+  init: RequestInit = {},
+) {
   const r = await haalJson(fetchFn, url, {
     ...init,
     headers: { Accept: "application/json", ...(init.headers as Record<string, string>) },

@@ -204,7 +204,10 @@ describe("zoekMonumentStatus", () => {
 
 describe("onderdelen", () => {
   it("kiesAdres: de juiste toevoeging of huisletter, anders het adres zonder", () => {
-    const docs = [
+    const docs: (ReturnType<typeof adresDoc> & {
+      huisletter?: string;
+      huisnummertoevoeging?: string;
+    })[] = [
       adresDoc({ weergavenaam: "49-1", huisnummertoevoeging: "1" }),
       adresDoc({ weergavenaam: "49-2", huisnummertoevoeging: "2" }),
       adresDoc({ weergavenaam: "49", huisletter: undefined }),
