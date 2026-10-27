@@ -274,6 +274,7 @@ export type Database = {
           bag_oppervlakte: number | null
           bag_status: string | null
           bloks_object_id: string | null
+          bloxs_categorie: string | null
           created_at: string
           huisletter: string
           huisnummer: number
@@ -295,6 +296,7 @@ export type Database = {
           bag_oppervlakte?: number | null
           bag_status?: string | null
           bloks_object_id?: string | null
+          bloxs_categorie?: string | null
           created_at?: string
           huisletter?: string
           huisnummer: number
@@ -316,6 +318,7 @@ export type Database = {
           bag_oppervlakte?: number | null
           bag_status?: string | null
           bloks_object_id?: string | null
+          bloxs_categorie?: string | null
           created_at?: string
           huisletter?: string
           huisnummer?: number
