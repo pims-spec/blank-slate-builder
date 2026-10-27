@@ -72,10 +72,28 @@ vi.mock("@/lib/wws/pdf/laden", async (orig) => ({
 
 // Adres opzoeken (PDOK) via de server function: nep
 const zoekAdres = vi.hoisted(() => vi.fn());
+// energielabel en monument worden na het adres vanzelf opgehaald; standaard: niets gevonden
+const zoekEnergielabel = vi.hoisted(() => vi.fn());
+const zoekMonument = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/wws/opzoeken/opzoeken.functions", () => ({
   zoekAdres,
-  zoekEnergielabel: vi.fn(),
+  zoekEnergielabel,
+  zoekMonument,
 }));
+beforeEach(() => {
+  zoekEnergielabel.mockReset().mockResolvedValue({ ok: false, fout: "niet_gevonden" });
+  zoekMonument.mockReset().mockResolvedValue({
+    ok: true,
+    data: {
+      adres: "Damrak 1, 1012LG Amsterdam",
+      rijksmonument: false,
+      rijksmonumentNummers: [],
+      gemeentelijkMonument: false,
+      gezichten: [],
+      voorstel: null,
+    },
+  });
+});
 
 // Plattegrond inlezen (Claude) is elders getest; hier een nep-stap die een vaste uitkomst overneemt
 const platStap = vi.hoisted(() => ({ props: null as null | Record<string, unknown> }));
@@ -684,6 +702,56 @@ describe("TellingEditor", () => {
       expect(store.maakAan.mock.calls[0]![1].meta.opsteller).toBe(ADMIN.naam);
     });
 
+    it("na het adres: energielabel en monument vanzelf ingevuld; rijksmonument standaard na 1 juli 2024", async () => {
+      zoekAdres.mockResolvedValue({
+        ok: true,
+        data: { straat: "Keizersgracht", plaats: "Amsterdam" },
+      });
+      zoekEnergielabel.mockResolvedValue({
+        ok: true,
+        data: { Energieklasse: "C", Registratiedatum: "2022-03-01T00:00:00", Bouwjaar: 1650 },
+      });
+      zoekMonument.mockResolvedValue({
+        ok: true,
+        data: {
+          adres: "Keizersgracht 123, 1015CJ Amsterdam",
+          rijksmonument: true,
+          rijksmonumentNummers: ["2249"],
+          gemeentelijkMonument: false,
+          gezichten: ["Amsterdam - Binnen de Singelgracht"],
+          voorstel: "rijks",
+        },
+      });
+      renderEditor(undefined);
+      fireEvent.change(await screen.findByPlaceholderText("1234 AB"), {
+        target: { value: "1015CJ" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("12 A"), { target: { value: "123" } });
+      fireEvent.click(screen.getByRole("button", { name: "Doorgaan" }));
+      await waitFor(() =>
+        expect(screen.getByRole("combobox", { name: "Monument" })).toHaveValue("rijks"),
+      );
+      expect(zoekMonument).toHaveBeenCalledWith({
+        data: { postcode: "1015CJ", huisnummer: "123", huisletter: "", huisnummertoevoeging: "" },
+      });
+      expect(zoekEnergielabel).toHaveBeenCalledTimes(1);
+      await waitFor(() =>
+        expect(screen.getByRole("combobox", { name: "Labelklasse" })).toHaveValue("C"),
+      );
+      expect(screen.getByRole("link", { name: "nr. 2249" })).toBeInTheDocument();
+      const vink = screen.getByRole("checkbox", { name: "Huurcontract gesloten vóór 1 juli 2024" });
+      expect(vink).not.toBeChecked();
+      fireEvent.click(vink);
+      fireEvent.click(screen.getByRole("button", { name: "Opslaan" }));
+      await waitFor(() => expect(store.maakAan).toHaveBeenCalledTimes(1));
+      const doc = store.maakAan.mock.calls[0]![1];
+      expect(doc.input.opslag.keuze).toBe("rijks_voor");
+      expect(doc.input.energie.label).toBe("C");
+      // geen knoppen meer
+      expect(screen.queryByRole("button", { name: /Energielabel automatisch ophalen/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Monumentstatus opzoeken/ })).toBeNull();
+    });
+
     it("ongeldige invoer: melding van de bron, venster blijft open", async () => {
       renderEditor(undefined);
       fireEvent.change(await screen.findByPlaceholderText("1234 AB"), {
@@ -1110,9 +1178,11 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
       expect(zoekAdres).toHaveBeenCalledWith({ data: { postcode: "1012LG", huisnummer: "1" } }),
     );
     await waitFor(() => expect(within(dlg).getByLabelText("Plaats")).toHaveValue("Amsterdam"));
+    // energielabel en monument vanzelf opgehaald (hier niets gevonden), geen knop meer
+    await waitFor(() => expect(zoekEnergielabel).toHaveBeenCalledTimes(1));
     expect(
-      within(dlg).getByRole("button", { name: /Energielabel automatisch ophalen/ }),
-    ).toBeInTheDocument();
+      within(dlg).queryByRole("button", { name: /Energielabel automatisch ophalen/ }),
+    ).toBeNull();
     fireEvent.change(within(dlg).getByLabelText("WOZ-waarde (€)"), { target: { value: "300000" } });
     expect(within(dlg).getByRole("radio", { name: /Label vanaf 2021/ })).toBeChecked();
     fireEvent.change(within(dlg).getByRole("combobox", { name: "Labelklasse" }), {
@@ -1149,6 +1219,7 @@ describe("indelingsadvies stap 1: adres, WOZ en energielabel (renderIndelingEige
     expect(
       within(dlg).queryByRole("button", { name: /Energielabel automatisch ophalen/ }),
     ).toBeNull();
+    expect(zoekEnergielabel).not.toHaveBeenCalled();
   });
 });
 

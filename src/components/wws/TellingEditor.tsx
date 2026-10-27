@@ -33,16 +33,23 @@ import {
   type TellingStaat,
   type Versie,
 } from "@/lib/wws/opslag";
-import { adresFoutMelding } from "@/lib/wws/opzoeken/dienst";
-import { epToepassen, type EpLabel } from "@/lib/wws/opzoeken/eponline";
-import { zoekAdres } from "@/lib/wws/opzoeken/opzoeken.functions";
+import {
+  adresSleutel,
+  energieIsLeeg,
+  monumentIsLeeg,
+  monumentKeuzeVoor,
+  monumentMelding,
+} from "@/lib/wws/opzoeken/automatisch";
+import { adresFoutMelding, EpVraagSchema, epFoutMelding } from "@/lib/wws/opzoeken/dienst";
+import { epAdresVelden, epToepassen, type EpLabel } from "@/lib/wws/opzoeken/eponline";
+import { monumentFoutMelding, type MonumentStatus } from "@/lib/wws/opzoeken/monument";
+import { zoekAdres, zoekEnergielabel, zoekMonument } from "@/lib/wws/opzoeken/opzoeken.functions";
 import { adresOpzoekenNodig, adresToepassen, adresZoekVelden } from "@/lib/wws/opzoeken/pdok";
 import AdviesDialoog from "./AdviesDialoog";
-import EnergielabelOphalen from "./EnergielabelOphalen";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
 import FotoDialoog from "./FotoDialoog";
-import MonumentOpzoeken from "./MonumentOpzoeken";
+import MonumentUitslag from "./MonumentUitslag";
 import PlattegrondDialoog from "./PlattegrondDialoog";
 import NieuweTellingDialoog from "./NieuweTellingDialoog";
 import {
@@ -331,6 +338,13 @@ export default function TellingEditor({
   const adresTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const adresLaatsteFout = useRef("");
   useEffect(() => () => clearTimeout(adresTimer.current), []);
+  // het adres waarvoor energielabel en monumentstatus al zijn opgehaald, en de laatste uitslag
+  const gegevensVoor = useRef("");
+  const [monumentUitslag, setMonumentUitslag] = useState<MonumentStatus | null>(null);
+  useEffect(() => {
+    gegevensVoor.current = "";
+    setMonumentUitslag(null);
+  }, [id]);
 
   /**
    * Na het typen van postcode of huisnummer: straat en plaats opzoeken bij PDOK als die nog
@@ -341,7 +355,9 @@ export default function TellingEditor({
     adresTimer.current = setTimeout(async () => {
       const meta = staatRef.current.meta;
       const velden = adresZoekVelden(meta);
-      if (!velden || !adresOpzoekenNodig(meta)) return;
+      if (!velden) return;
+      void haalGegevensOp();
+      if (!adresOpzoekenNodig(meta)) return;
       const poging = velden.postcode + "|" + velden.huisnummer;
       const voorId = idRef.current;
       const meld = (m: string) => {
@@ -366,6 +382,54 @@ export default function TellingEditor({
         meld(adresFoutMelding("geen_verbinding"));
       }
     }, wacht);
+  }
+
+  /**
+   * Na het invullen van postcode en huisnummer: energielabel (EP-Online) en monumentstatus
+   * (Kadaster en RCE) ophalen en invullen, maar alleen wat nog leeg is (of op de standaard staat).
+   * Eén keer per adres; een uitslag voor een inmiddels ander adres wordt niet gebruikt.
+   */
+  async function haalGegevensOp() {
+    if (!rechten.magSchrijven) return;
+    const s0 = staatRef.current;
+    const v = EpVraagSchema.safeParse(epAdresVelden(s0.meta));
+    if (!v.success) return;
+    const sleutel = adresSleutel(v.data);
+    if (gegevensVoor.current === sleutel) return;
+    gegevensVoor.current = sleutel;
+    const voorId = idRef.current;
+    const nogActueel = () => {
+      const nu = EpVraagSchema.safeParse(epAdresVelden(staatRef.current.meta));
+      return idRef.current === voorId && nu.success && adresSleutel(nu.data) === sleutel;
+    };
+    const [e, mon] = await Promise.all([
+      energieIsLeeg(s0.input.energie)
+        ? zoekEnergielabel({ data: v.data }).catch(() => "geen_verbinding" as const)
+        : null,
+      monumentIsLeeg(s0.input.opslag.keuze)
+        ? zoekMonument({ data: v.data }).catch(() => "geen_verbinding" as const)
+        : null,
+    ]);
+    if (!nogActueel()) return;
+    if (e === "geen_verbinding") toast(epFoutMelding("geen_verbinding"));
+    else if (e?.ok) {
+      if (energieIsLeeg(staatRef.current.input.energie)) energielabelToepassen(e.data);
+    } else if (e)
+      toast(
+        e.fout === "niet_gevonden"
+          ? "Geen geregistreerd energielabel gevonden bij EP-Online; vul het zelf in."
+          : epFoutMelding(e.fout),
+      );
+    if (mon === "geen_verbinding") toast(monumentFoutMelding("geen_verbinding"));
+    else if (mon?.ok) {
+      setMonumentUitslag(mon.data);
+      const k = monumentKeuzeVoor(mon.data);
+      if (k && monumentIsLeeg(staatRef.current.input.opslag.keuze)) {
+        setStaat((x) => ({ ...x, input: { ...x.input, opslag: { ...x.input.opslag, keuze: k } } }));
+        setDirty(true);
+        toast(monumentMelding(mon.data));
+      }
+    } else if (mon) toast(monumentFoutMelding(mon.fout));
   }
 
   /** EP-Online-label overnemen in de werkversie — applyEpLabel() */
@@ -943,7 +1007,6 @@ export default function TellingEditor({
         />
       </div>
       <OpzoekLink meta={m} soort="ep" />
-      {!alleenLezen && <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />}
       <WozWaardeVeld
         waarde={staat.input.woz.waarde}
         zet={(v) =>
@@ -1367,22 +1430,10 @@ export default function TellingEditor({
               </p>
             )}
             <OpzoekLink meta={m} soort="ep" />
-            {!alleenLezen && (
-              <EnergielabelOphalen key={id} meta={m} pasToe={energielabelToepassen} />
-            )}
           </>
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
-        monumentExtra={
-          !alleenLezen && rechten.magSchrijven ? (
-            <MonumentOpzoeken
-              key={id}
-              meta={m}
-              keuze={staat.input.opslag.keuze}
-              zetKeuze={(k) => setInput((i) => ({ ...i, opslag: { ...i.opslag, keuze: k } }))}
-            />
-          ) : undefined
-        }
+        monumentExtra={monumentUitslag ? <MonumentUitslag status={monumentUitslag} /> : undefined}
         woningtypeElders
       />
       {!alleenLezen && (

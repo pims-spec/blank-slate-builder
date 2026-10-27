@@ -1446,15 +1446,33 @@ export default function WwsCalculator({
           <Sectie titel="Monument en opslagen" rubriek="13">
             <Veld label="Monument" className="max-w-sm">
               <Keuze
-                value={inp.opslag.keuze}
+                value={inp.opslag.keuze.startsWith("rijks") ? "rijks" : inp.opslag.keuze}
                 onChange={(v) =>
                   wijzig((d) => {
-                    d.opslag.keuze = v as typeof d.opslag.keuze;
+                    // rijksmonument: standaard contract na 1 juli 2024; het vinkje zet het om
+                    if (v === "rijks") {
+                      if (!d.opslag.keuze.startsWith("rijks")) d.opslag.keuze = "rijks_na";
+                    } else d.opslag.keuze = v as typeof d.opslag.keuze;
                   })
                 }
-                opties={MONUMENT_KEUZES}
+                opties={[
+                  ...MONUMENT_KEUZES.filter(([k]) => !k.startsWith("rijks") && k !== "geen"),
+                  ["rijks", "Rijksmonument"],
+                  ["geen", "Geen monument"],
+                ]}
               />
             </Veld>
+            {inp.opslag.keuze.startsWith("rijks") && (
+              <Vink
+                label="Huurcontract gesloten vóór 1 juli 2024"
+                checked={inp.opslag.keuze === "rijks_voor"}
+                onChange={(b) =>
+                  wijzig((d) => {
+                    d.opslag.keuze = b ? "rijks_voor" : "rijks_na";
+                  })
+                }
+              />
+            )}
             {monumentExtra}
             <Vink
               label={`Nieuwbouw in de middensector (+${N.opslag.nieuwbouwPct}%)`}
