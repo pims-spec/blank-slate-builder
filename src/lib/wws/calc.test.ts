@@ -140,6 +140,19 @@ describe("bijzonderheden uit de bron", () => {
     expect(p(r, 1)).toBe(4);
     expect(heeftWarn(r, "minimaal 4 m²")).toBe(true);
   });
+  it("badkamer en keuken < 4 m² tellen mee zonder waarschuwing (brongetrouw: met)", () => {
+    const i = legeInput();
+    i.vertrekken = [vertrek("badkamer", 1.7), vertrek("keuken", 2.8)];
+    const r = reken(i);
+    expect(p(r, 1)).toBe(5);
+    expect(heeftWarn(r, "minimaal 4 m²")).toBe(false);
+    zetBronAfronding(true);
+    try {
+      expect(heeftWarn(reken(i), "minimaal 4 m²")).toBe(true);
+    } finally {
+      zetBronAfronding(false);
+    }
+  });
   it("verlopen label → bouwjaar", () => {
     const i = legeInput();
     i.energie = {

@@ -226,10 +226,12 @@ export function calc(
   const warn: string[] = [];
   const add = (nr: number, naam: string, p: number, t: string) => rows.push({ nr, naam, p, t });
 
-  // Rubriek 1: vertrekken
+  // Rubriek 1: vertrekken. Een keuken of badkamer is altijd een vertrek, ook onder de 4 m² (zoals
+  // de Huurprijscheck; bewuste afwijking van de bron, die ook daar waarschuwde)
+  const altijdVertrek = (t: string) => !bronAfronding && (t === "keuken" || t === "badkamer");
   inp.vertrekken.forEach((r) => {
     const m = num(r.m2);
-    if (m > 0 && m < N.minVertrek)
+    if (m > 0 && m < N.minVertrek && !altijdVertrek(r.type))
       warn.push(
         (r.naam || vertrekType(r.type).l) +
           ": een vertrek moet minimaal 4 m² zijn. Voldoet de ruimte daar niet aan, zet hem dan bij de overige ruimten.",

@@ -79,6 +79,8 @@ rekende op deze plekken anders:
 - **WOZ-m² (rubriek 11, deel 2):** de m² van vertrekken en overige ruimten (vanaf 2 m²) worden
   onafgerond opgeteld en pas daarna afgerond. Bijvoorbeeld 60,3 + 6,4 = 66,7 → 67 m² (de bron:
   60 + 6 = 66 m²).
+- **Badkamer en keuken onder 4 m²:** tellen als vertrek zonder de melding "een vertrek moet
+  minimaal 4 m² zijn" (een keuken of badkamer is altijd een vertrek; de bron waarschuwde ook daar).
 - **WOZ-punten (rubriek 11):** deel 1 en deel 2 elk op 2 decimalen, de som op kwarten (de bron
   rondde alleen de som af).
 - **WOZ-cap (`wozCap`):** vanaf de WOZ-punten zonder cap gaat er steeds 1 punt af, tot de WOZ
