@@ -3,6 +3,7 @@ import {
   EFG_TOELICHTING,
   efgTekst,
   NIET_GEVONDEN_REDEN,
+  metCategorie,
   teControlerenLijsten,
   type AnalyseUitkomst,
 } from "@/lib/wws/portefeuille/analyse";
@@ -211,7 +212,7 @@ export function AnalyseWeergave({
                   <ul className="mt-1 max-h-40 overflow-y-auto text-muted-foreground">
                     {lijst.map((a) => (
                       <li key={a} className="flex items-center justify-between gap-2">
-                        <span className="min-w-0">{a}</span>
+                        <span className="min-w-0">{metCategorie(u, a)}</span>
                         {onUitsluiten && (
                           <button
                             type="button"

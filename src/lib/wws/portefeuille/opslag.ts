@@ -150,7 +150,7 @@ export function maakPortefeuilleStore(db: Db) {
         const { data, error } = await db
           .from("portefeuille_adressen")
           .select(
-            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, niet_in_bloxs_sinds, uitgesloten_op, bag_status, bag_oppervlakte, bag_bouwjaar, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
+            "id, postcode, huisnummer, huisletter, toevoeging, straat, woonplaats, bloxs_categorie, niet_in_bloxs_sinds, uitgesloten_op, bag_status, bag_oppervlakte, bag_bouwjaar, label_resultaten(status, energieklasse, registratiedatum, geldig_tot, opgehaald_op)",
           )
           .eq("portefeuille_id", portefeuilleId)
           .order("postcode")
@@ -172,6 +172,7 @@ export function maakPortefeuilleStore(db: Db) {
             woonplaats: r.woonplaats,
             nietInBloxsSinds: r.niet_in_bloxs_sinds,
             uitgeslotenOp: r.uitgesloten_op,
+            bloxsCategorie: r.bloxs_categorie,
             bag: r.bag_status
               ? {
                   status: r.bag_status as BagStatus,
@@ -289,6 +290,7 @@ export function maakPortefeuilleStore(db: Db) {
               toevoeging: a.toevoeging,
               straat: a.straat ?? null,
               woonplaats: a.woonplaats ?? null,
+              bloxs_categorie: a.categorie,
             })),
             { onConflict: "portefeuille_id,postcode,huisnummer,huisletter,toevoeging" },
           )

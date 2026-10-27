@@ -85,3 +85,22 @@ describe("kleuren in de grafiek", () => {
     expect(fKleur()).toEqual(["fill-primary"]);
   });
 });
+
+describe("te controleren", () => {
+  it("de categorie uit Bloxs staat achter het adres; uitsluiten gebruikt het adres zelf", () => {
+    const metCat = analyseer(
+      [
+        adres(1, "C", "2016-11-20"),
+        { ...adres(5, "C", null), resultaat: null, bloxsCategorie: "Garagebox" },
+      ],
+      "2026-10-16",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    const uit: string[] = [];
+    render(<AnalyseWeergave uitkomst={metCat} onUitsluiten={(a) => uit.push(a)} />);
+    expect(screen.getByText("1053 ZD 5 · Garagebox")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Uit de analyse halen: 1053 ZD 5" }));
+    expect(uit).toEqual(["1053 ZD 5"]);
+  });
+});

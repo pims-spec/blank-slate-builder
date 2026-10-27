@@ -6,6 +6,7 @@ import {
   categorie,
   efgOmschrijving,
   isWaarschuwingsKlasse,
+  metCategorie,
   teControlerenLijsten,
   zonderLabelLijst,
   portefeuilleNormen,
@@ -292,6 +293,27 @@ describe("analyse van een portefeuille", () => {
     expect(u.risico.every((r) => r.pct === 0)).toBe(true);
     expect(u.efg.pct).toBe(0);
     expect(u.epOpgehaaldVan).toBeNull();
+  });
+});
+
+describe("categorie uit Bloxs bij te controleren", () => {
+  it("alleen voor adressen onder te controleren, met de categorie achter het adres", () => {
+    const u = analyseer(
+      [
+        { ...adres(1, label("A", "2023-01-01")), bloxsCategorie: "Woning" },
+        { ...adres(2, null), bloxsCategorie: "Garagebox" },
+        { ...adres(3, { ...label(null, null), status: "meerdere" }), bloxsCategorie: null },
+      ],
+      D,
+      3,
+      N,
+    );
+    expect(u.teControleren.nietOpgehaald).toEqual(["1053 ZD 2"]);
+    expect(u.categorieen).toEqual({ "1053 ZD 2": "Garagebox" });
+    expect(metCategorie(u, "1053 ZD 2")).toBe("1053 ZD 2 · Garagebox");
+    expect(metCategorie(u, "1053 ZD 3")).toBe("1053 ZD 3");
+    // oudere opgeslagen analyse zonder categorieën
+    expect(metCategorie({}, "1053 ZD 2")).toBe("1053 ZD 2");
   });
 });
 

@@ -164,6 +164,8 @@ export interface BloxsObject {
   complexId: BloxsId | null;
   complexNaam: string | null;
   adresId: BloxsId | null;
+  /** Categorie zoals in Bloxs (CategoryName), bijv. "Garagebox" */
+  categorie: string | null;
 }
 
 /** Waar de volgende pagina begint: eigen $skip, of de (gecontroleerde) link van de feed */
@@ -176,6 +178,7 @@ const ObjectRij = z.object({
   ComplexName: Tekst(200),
   AddressId: IdSchema.nullable().optional(),
   SalesDate: z.string().max(40).nullable().optional(),
+  CategoryName: Tekst(100),
 });
 
 /**
@@ -197,8 +200,16 @@ export async function haalObjectenPagina(
           "ComplexName",
           "AddressId",
           "SalesDate",
+          "CategoryName",
         ] as const)
-      : (["RealEstateObjectId", "Reference", "OwnerId", "AddressId", "SalesDate"] as const);
+      : ([
+          "RealEstateObjectId",
+          "Reference",
+          "OwnerId",
+          "AddressId",
+          "SalesDate",
+          "CategoryName",
+        ] as const);
   const filter: Filter[] = [{ veld: "OwnerId", is: w.eigenaar }];
   if (w.complex != null && w.soort === "unit") filter.push({ veld: "ComplexId", is: w.complex });
 
@@ -236,6 +247,7 @@ export async function haalObjectenPagina(
       complexId: r.data.ComplexId ?? null,
       complexNaam: r.data.ComplexName,
       adresId: r.data.AddressId ?? null,
+      categorie: r.data.CategoryName,
     });
   }
   const skip = "skip" in w.cursor ? w.cursor.skip : 0;

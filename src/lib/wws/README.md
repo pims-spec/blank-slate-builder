@@ -500,14 +500,19 @@ niet de REST-API.
     filters die ze zelf opbouwt:
     - `owners`: OwnerId, Reference, DisplayName, ArchiveDate;
     - `Units`: RealEstateObjectId, Reference, OwnerId, ComplexId, ComplexName, AddressId,
-      SalesDate;
-    - `Buildings`: RealEstateObjectId, Reference, OwnerId, AddressId, SalesDate;
+      SalesDate, CategoryName;
+    - `Buildings`: RealEstateObjectId, Reference, OwnerId, AddressId, SalesDate, CategoryName;
     - `Addresses`: AddressId, PostalCode, HouseNumber, Street, City.
   - **Eerst een test:** een vraag met `$top=0` (geen rijen). Werken `$select`/`$filter` niet, dan
     stopt alles en worden er nooit hele tabellen opgehaald.
   - **Controle per antwoord:** staan er andere velden in dan gevraagd, of rijen buiten het
     filter, dan stopt de sync zonder iets te bewaren. Een `@odata.nextLink` wordt alleen gevolgd
     als hij naar dezelfde feed en entiteit wijst.
+  - **Categorie:** `CategoryName` (de kolom "Categorie" in Bloxs, bijv. "Garagebox") komt per adres
+    in `portefeuille_adressen.bloxs_categorie` (migratie 0015); delen meer objecten een adres, dan
+    de verschillende categorieën samen ("Woning, Garagebox", hooguit 100 tekens). In de analyse staat
+    de categorie achter het adres onder "Te controleren" (scherm en PDF; `metCategorie`). Bestaande
+    portefeuilles krijgen hem na "Opnieuw inladen uit Bloxs".
   - **Adressen:** alleen per AddressId van onze eigen objecten, in porties van 50; de tabel bevat
     ook adressen van personen. Het huisnummer wordt gesplitst met `normaliseerAdres`; lukt dat
     niet, dan staat het object bij "zonder bruikbaar adres".

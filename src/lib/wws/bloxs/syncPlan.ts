@@ -5,8 +5,11 @@ import { adresSleutel, type PortefeuilleAdres } from "../portefeuille/adres";
 import type { BloxsId } from "./odata";
 import type { BloxsAdres, BloxsObject, Soort } from "./sync";
 
+/** Een adres uit Bloxs met de categorie van de objecten erop ("Woning, Garagebox"), of null */
+export type SyncAdres = PortefeuilleAdres & { categorie: string | null };
+
 export interface SyncPlan {
-  adressen: PortefeuilleAdres[];
+  adressen: SyncAdres[];
   objecten: { soort: Soort; ref: string; adresSleutel: string | null }[];
   zonderAdres: { referentie: string; reden: "geen_adres" | "niet_te_splitsen"; ruw?: string }[];
   /** Aantal objecten dat een adres deelt met een ander object */
@@ -26,6 +29,8 @@ export function maakSyncPlan(
 ): SyncPlan {
   const perId = new Map(adressen.map((a) => [a.adresId, a]));
   const uniek = new Map<string, PortefeuilleAdres>();
+  /** Per adres de categorieën van de objecten erop, uniek, in volgorde */
+  const categorieen = new Map<string, string[]>();
   const perSleutel = new Map<string, number>();
   const plan: SyncPlan = { adressen: [], objecten: [], zonderAdres: [], gedeeld: 0 };
   for (const o of objecten) {
@@ -51,10 +56,17 @@ export function maakSyncPlan(
     };
     const k = adresSleutel(adres);
     if (!uniek.has(k)) uniek.set(k, adres);
+    const cats = categorieen.get(k) ?? [];
+    if (o.categorie && !cats.includes(o.categorie)) cats.push(o.categorie);
+    categorieen.set(k, cats);
     perSleutel.set(k, (perSleutel.get(k) ?? 0) + 1);
     plan.objecten.push({ soort: o.soort, ref: o.ref, adresSleutel: k });
   }
-  plan.adressen = [...uniek.values()];
+  plan.adressen = [...uniek].map(([k, a]) => ({
+    ...a,
+    // samen hooguit 100 tekens (check in migratie 0015)
+    categorie: categorieen.get(k)?.join(", ").slice(0, 100) || null,
+  }));
   for (const n of perSleutel.values()) if (n > 1) plan.gedeeld += n;
   return plan;
 }

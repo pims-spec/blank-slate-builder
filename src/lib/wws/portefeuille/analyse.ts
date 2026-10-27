@@ -41,6 +41,8 @@ export interface AnalyseAdres extends PortefeuilleAdres {
   nietInBloxsSinds?: string | null;
   /** Gezet als iemand het adres uit de analyse heeft gehaald (het blijft in de portefeuille) */
   uitgeslotenOp?: string | null;
+  /** Categorie uit Bloxs ("Garagebox"; bij meer objecten "Woning, Garagebox") */
+  bloxsCategorie?: string | null;
   /** BAG-gegevens voor de verduurzamingsraming (null = nog niet opgehaald) */
   bag?: { status: BagStatus; oppervlakte: number | null; bouwjaar: number | null } | null;
 }
@@ -240,6 +242,11 @@ export interface AnalyseUitkomst {
     nietOpgehaald: string[];
   };
   /**
+   * Categorie uit Bloxs per adres onder "Te controleren" (adres zoals in die lijsten →
+   * "Garagebox"). Alleen adressen met een categorie; ontbreekt bij analyses van vóór deze functie.
+   */
+  categorieen?: Record<string, string>;
+  /**
    * Moment waarop de analyse is gedraaid (ISO), gezet bij opslaan of bij de PDF van de actuele
    * analyse; de peildatum in het rapport. Ontbreekt bij analyses van vóór deze functie.
    */
@@ -271,6 +278,12 @@ export function teControlerenLijsten(
   u: Pick<AnalyseUitkomst, "zonderLabel" | "teControleren">,
 ): AnalyseUitkomst["teControleren"] {
   return u.zonderLabel ? u.teControleren : { ...u.teControleren, nietGevonden: [] };
+}
+
+/** Een adres onder "Te controleren" met de categorie uit Bloxs erachter: "1053 ZD 4 · Garagebox" */
+export function metCategorie(u: Pick<AnalyseUitkomst, "categorieen">, adres: string): string {
+  const c = u.categorieen?.[adres];
+  return c ? adres + " · " + c : adres;
 }
 
 /**
@@ -392,6 +405,13 @@ export function analyseer(
     .sort((x, y) => sorteer(x.adres, y.adres));
   const gesorteerd = (r: AdresRegel[] | undefined) =>
     [...(r ?? [])].sort((x, y) => sorteer(x.adres, y.adres));
+  const teControleren: AnalyseUitkomst["teControleren"] = {
+    nietGevonden: lijst(bestaatNiet),
+    meerdere: lijst((a) => a.resultaat?.status === "meerdere"),
+    fout: lijst((a) => a.resultaat?.status === "fout"),
+    nietOpgehaald: lijst((a) => !a.resultaat),
+  };
+  const teControlerenSet = new Set(Object.values(teControleren).flat());
   const opgehaald = uniek
     .map((a) => a.resultaat?.opgehaaldOp)
     .filter((x): x is string => !!x)
@@ -430,12 +450,12 @@ export function analyseer(
       woningen: efgWoningen,
     },
     zonderLabel,
-    teControleren: {
-      nietGevonden: lijst(bestaatNiet),
-      meerdere: lijst((a) => a.resultaat?.status === "meerdere"),
-      fout: lijst((a) => a.resultaat?.status === "fout"),
-      nietOpgehaald: lijst((a) => !a.resultaat),
-    },
+    teControleren,
+    categorieen: Object.fromEntries(
+      uniek
+        .filter((a) => a.bloxsCategorie && teControlerenSet.has(adresTekst(a)))
+        .map((a) => [adresTekst(a), a.bloxsCategorie!]),
+    ),
     raming: (() => {
       const r = maakRaming(
         beoordeeld.map((a) => ({

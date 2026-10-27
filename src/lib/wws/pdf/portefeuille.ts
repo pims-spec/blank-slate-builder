@@ -9,6 +9,7 @@ import {
   efgTekst,
   isWaarschuwingsKlasse,
   NIET_GEVONDEN_REDEN,
+  metCategorie,
   teControlerenLijsten,
   zonderLabelLijst,
   type AnalyseUitkomst,
@@ -409,7 +410,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
             [c.fout, "Ophalen mislukt"],
             [c.nietOpgehaald, "Nog niet opgehaald"],
           ] as const
-        ).flatMap(([lijst, reden]) => lijst.map((a) => [a, reden])),
+        ).flatMap(([lijst, reden]) => lijst.map((a) => [metCategorie(u, a), reden])),
         ...stijl,
       }) + 8;
   }

@@ -257,6 +257,18 @@ describe("PDF portefeuille-analyse", () => {
     expect(pdf.bestandsnaam).toBe("Portefeuille-analyse_Oost_en_West_2026-10-15.pdf");
   });
 
+  it("te controleren: de categorie uit Bloxs achter het adres", async () => {
+    const u = analyseer(
+      [adres(1, "A", "2023-03-01"), { ...onbekend(4), bloxsCategorie: "Garagebox" }],
+      "2026-10-15",
+      3,
+      PORTEFEUILLE_STANDAARD,
+    );
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: "TEST", eigenaar: null, uitkomst: u });
+    const t = (await pdfTekst(pdf.blob)).flat().join(" ").replace(/\s+/g, " ");
+    expect(t).toContain("1053 ZD 4 · Garagebox Adres niet gevonden (EP-Online en BAG)");
+  });
+
   it("peildatum: één dag of een periode", () => {
     expect(opgehaaldTekst(null, null)).toBe("nog niet opgehaald");
     expect(opgehaaldTekst("2026-10-01T08:00:00Z", "2026-10-01T09:00:00Z")).toBe("1 oktober 2026");

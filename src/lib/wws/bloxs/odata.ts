@@ -17,8 +17,16 @@ export const ALLOWLIST = {
     "ComplexName",
     "AddressId",
     "SalesDate",
+    "CategoryName",
   ],
-  Buildings: ["RealEstateObjectId", "Reference", "OwnerId", "AddressId", "SalesDate"],
+  Buildings: [
+    "RealEstateObjectId",
+    "Reference",
+    "OwnerId",
+    "AddressId",
+    "SalesDate",
+    "CategoryName",
+  ],
   Addresses: ["AddressId", "PostalCode", "HouseNumber", "Street", "City"],
 } as const;
 

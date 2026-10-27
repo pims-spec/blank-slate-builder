@@ -110,6 +110,7 @@ describe("haalObjectenPagina", () => {
     ComplexName: "Complex Oost",
     AddressId: 100 + id,
     SalesDate: null,
+    CategoryName: "Garagebox",
     ...extra,
   });
 
@@ -132,6 +133,7 @@ describe("haalObjectenPagina", () => {
       complexId: 3,
       complexNaam: "Complex Oost",
       adresId: 101,
+      categorie: "Garagebox",
     });
     expect(r.ok && r.data.volgende).toBeNull();
   });
@@ -178,7 +180,7 @@ describe("haalObjectenPagina", () => {
     });
     expect(urls[0]!.pathname).toBe("/odatafeed/Buildings");
     expect(urls[0]!.searchParams.get("$select")).toBe(
-      "RealEstateObjectId,Reference,OwnerId,AddressId,SalesDate",
+      "RealEstateObjectId,Reference,OwnerId,AddressId,SalesDate,CategoryName",
     );
     expect(urls[0]!.searchParams.get("$filter")).toBe("OwnerId eq 'AB'");
   });
@@ -266,7 +268,13 @@ describe("haalAdressen", () => {
 });
 
 describe("syncPlan", () => {
-  const obj = (ref: string, adresId: number | null, soort: "unit" | "building" = "unit") => ({
+  const obj = (
+    ref: string,
+    adresId: number | null,
+    soort: "unit" | "building" = "unit",
+    categorie: string | null = null,
+  ) => ({
+    categorie,
     ref,
     soort,
     referentie: "R" + ref,
@@ -311,6 +319,26 @@ describe("syncPlan", () => {
     expect(plan.zonderAdres).toEqual([
       { referentie: "R4", reden: "geen_adres" },
       { referentie: "R5", reden: "niet_te_splitsen", ruw: "1053ZD ?" },
+    ]);
+  });
+
+  it("categorie per adres: die van de objecten erop, uniek en in volgorde", () => {
+    const plan = maakSyncPlan(
+      [
+        obj("1", 10, "unit", "Woning"),
+        obj("2", 10, "unit", "Garagebox"),
+        obj("3", 10, "unit", "Woning"),
+        obj("4", 11),
+        obj("5", 12, "unit", "x".repeat(80)),
+        obj("6", 12, "unit", "y".repeat(80)),
+      ],
+      [adres("10", 1), adres("11", 2), adres("12", 3)],
+    );
+    expect(plan.adressen.map((a) => a.categorie)).toEqual([
+      "Woning, Garagebox",
+      null,
+      // samen hooguit 100 tekens (check in migratie 0015)
+      ("x".repeat(80) + ", " + "y".repeat(80)).slice(0, 100),
     ]);
   });
 
