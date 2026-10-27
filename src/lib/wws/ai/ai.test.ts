@@ -127,6 +127,8 @@ describe("instructies gelijk aan wws-site.html", () => {
     // een slaapkamer nooit alleen via de badkamer
     expect(p).toContain("Elke slaapkamer heeft een eigen deur vanuit de hal");
     expect(p).toContain("nooit alleen bereikbaar via een badkamer");
+    // hal opgeheven: voordeur in de woonkamer
+    expect(p).toContain("de voordeur komt uit in de woonkamer");
     expect(p.indexOf("Teken alleen binnen deze woning")).toBeLessThan(p.indexOf("Nogmaals:"));
   });
 

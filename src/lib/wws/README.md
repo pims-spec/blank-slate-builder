@@ -196,11 +196,16 @@ reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de v
     `open_keuken`, en een open keuken wordt één woonkamer met open keuken, ook als de tekening ze
     apart noemt.
   - Afwijking AI-afbeelding (`INDELING_EXTRA_REGELS`): elke slaapkamer heeft een eigen deur vanuit
-    hal, gang, overloop of woonkamer, nooit alleen via badkamer, toilet of een andere kamer.
+    hal, gang, overloop of woonkamer, nooit alleen via badkamer, toilet of een andere kamer. Staat
+    er geen hal in de variant (opgeheven), dan komt de voordeur in de woonkamer uit.
 - **Overnemen** (`platToepassen`): een ingelezen ruimte begint zonder sanitair of standaard-
   uitrusting (de bron vulde een staand toilet, wastafel en douche in); alleen de aanrechtlengte
   komt uit de plattegrond. Ook een op de tekening toegevoegde ruimte begint leeg. `raam` en
   `openKeuken` gaan mee naar de ruimte. De vergelijkingstest gebruikt `bronGetrouw`.
+- **Vervangen of aanvullen**: heeft de telling al ruimten met m², dan staat "bestaande ruimten
+  vervangen" standaard aan (`standaardVervangen`); de bron vulde aan, en dan stonden de ruimten er
+  dubbel in. Bij vervangen houdt een ingelezen keuken, badkamer of toiletruimte de al ingevulde
+  voorzieningen van een bestaande ruimte met dezelfde voorziening.
 - **Privacy:**
   - Claude krijgt alleen de afbeelding of tekst plus de instructie.
   - Uit de tekst gaan eerst de eigen gegevens van de telling, postcodes, e-mail, telefoon en IBAN.
@@ -957,10 +962,13 @@ Aanvulling op de bron:
     heeft geen raam nodig. Het raam staat per ruimte in de telling (`raam`, uit de plattegrond of
     aangevinkt in stap Ruimten); onbekend = een vertrek wel, een overige ruimte niet. De berekening
     van de telling zelf (`calc`) kijkt niet naar het raam.
-  - **Hal bij de woonkamer** (`halBijWoon`): van hal en overloop blijft 2 m² (bron: 30%, minstens
-    2 m²); de rest gaat naar de nieuwe of vaste woonkamer, niet naar de slaapkamers. Een hal levert
-    geen punten per m² op, een woonkamer wel. De kaart toont het verschil (`halWinst`). Met een
-    vaste slaapkamer rekent de app ook 0 nieuwe slaapkamers door.
+  - **Hal** (`hal`): "behouden" is de bron (30%, minstens 2 m²; de rest naar alle nieuwe
+    ruimten). "klein": 2 m² blijft, de rest gaat naar de nieuwe of vaste woonkamer, niet naar de
+    slaapkamers. "weg": de hal gaat helemaal naar de woonkamer en de voordeur komt in de woonkamer
+    uit; alleen bij één woonlaag (`halKanWeg`), anders wordt het "klein". Een overloop blijft
+    altijd 2 m². Een hal levert geen punten per m² op, een woonkamer wel; de kaart toont het
+    verschil met "behouden" (`halWinst`). Met een vaste slaapkamer rekent de app ook 0 nieuwe
+    slaapkamers door.
   - **Open keuken** (`keukenOpen`, `keukenOpenSamenvoegen`): keuken en woonkamer worden samen één
     woonkamer met open keuken. Staat aan als de plattegrond de keuken als open heeft gelezen
     (`openKeuken`).

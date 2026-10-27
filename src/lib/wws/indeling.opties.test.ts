@@ -13,6 +13,7 @@ import {
   logischToilet,
   meerWoonlagen,
   ruimtenUitTelling,
+  halKanWeg,
   ruimtenVoorAdvies,
   ruimteWijzigen,
   standaardVoorzieningen,
@@ -224,7 +225,7 @@ describe("hal bij de woonkamer of keuken", () => {
     const x = daCosta();
     const rooms = ruimtenVoorAdvies(x);
     const zonder = berekenVarianten(x, rooms, null, "", N, {})[0]!;
-    const met = berekenVarianten(x, rooms, null, "", N, { halBijWoon: true })[0]!;
+    const met = berekenVarianten(x, rooms, null, "", N, { hal: "klein" })[0]!;
     const hal = (v: IndelingVariant) => v.overig.find((r) => r.type === "hal")!.m2;
     expect(hal(zonder)).toBe("2"); // 30% van 5,5 is minder dan 2
     expect(hal(met)).toBe("2");
@@ -254,7 +255,7 @@ describe("hal bij de woonkamer of keuken", () => {
     );
     // geen ruimte met raam voor een nieuwe slaapkamer: alleen de variant met 0 nieuwe
     expect(berekenVarianten(x, rooms, null, "", N, {})).toHaveLength(1);
-    const [v] = berekenVarianten(x, rooms, null, "", N, { halBijWoon: true });
+    const [v] = berekenVarianten(x, rooms, null, "", N, { hal: "klein" });
     expect(v!.nSlaap).toBe(0);
     expect(v!.slaapTotaal).toBe(1);
     const woon = v!.vertrekken.find((r) => r.type === "woonkamer")!;
@@ -263,6 +264,31 @@ describe("hal bij de woonkamer of keuken", () => {
     expect(v!.halWinst).toBeGreaterThan(0);
     // toepassen haalt de markering weg
     expect(JSON.stringify(toepassen(x, v!))).not.toContain("_indErbij");
+  });
+});
+
+describe("hal opheffen", () => {
+  it("één woonlaag: de hal gaat helemaal naar de woonkamer", () => {
+    const x = daCosta();
+    expect(halKanWeg(x)).toBe(true);
+    const rooms = ruimtenVoorAdvies(x);
+    const klein = berekenVarianten(x, rooms, null, "", N, { hal: "klein" })[0]!;
+    const weg = berekenVarianten(x, rooms, null, "", N, { hal: "weg" })[0]!;
+    expect(weg.overig.some((r) => r.type === "hal")).toBe(false);
+    const woon = (v: IndelingVariant) =>
+      Number(String(v.vertrekken.find((r) => r.type === "woonkamer")!.m2).replace(",", "."));
+    expect(woon(weg)).toBeCloseTo(woon(klein) + 2, 2);
+    expect(weg.halWinst!).toBeGreaterThanOrEqual(klein.halWinst!);
+  });
+
+  it("meer woonlagen: de hal blijft 2 m² (trap); een overloop blijft altijd 2 m²", () => {
+    const x = daCosta();
+    x.overig.push({ type: "overloop", m2: 4, verwarmd: true });
+    expect(halKanWeg(x)).toBe(false);
+    const [v] = berekenVarianten(x, ruimtenVoorAdvies(x), null, "", N, { hal: "weg" });
+    expect(
+      v!.overig.filter((r) => r.type === "hal" || r.type === "overloop").map((r) => r.m2),
+    ).toEqual(["2", "2"]);
   });
 });
 

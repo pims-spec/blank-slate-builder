@@ -647,7 +647,7 @@ describe("TellingEditor", () => {
     const verwacht = toepassen(
       t.input,
       berekenVarianten(t.input, ruimtenVoorAdvies(t.input), PVE, "", N, {
-        halBijWoon: false,
+        hal: "behouden",
         keukenOpen: keukenOpenStandaard(t.input),
         voorzieningen: standaardVoorzieningen(t.input, PVE),
       })[0]!,
@@ -719,7 +719,10 @@ describe("TellingEditor", () => {
     expect(dlg.queryByLabelText("Raam naar buiten: Hal of gang")).toBeNull();
     // ingelezen als open keuken: staat aan
     expect(dlg.getByLabelText(/Keuken is open naar de woonkamer/)).toBeChecked();
-    fireEvent.click(dlg.getByLabelText(/Hal zo klein mogelijk/));
+    // hal: een woning met één woonlaag kan de hal opheffen
+    const halKeuze = dlg.getByLabelText(/^Hal \(als die op/);
+    expect(within(halKeuze).getAllByRole("option")).toHaveLength(3);
+    fireEvent.change(halKeuze, { target: { value: "weg" } });
     // voorzieningen: standaard staand toilet
     expect(dlg.getByText("Wat komt er in de woning (voorzieningen)")).toBeInTheDocument();
     expect(dlg.getByLabelText("Toilet")).toHaveValue("staand");

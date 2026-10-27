@@ -12,6 +12,7 @@ import { SEGMENT_NAMEN, eur, fmt, num, overigType, vertrekType, type WwsInput } 
 import {
   berekenVarianten,
   blokjes,
+  halKanWeg,
   keukenOpenStandaard,
   meerWoonlagen,
   ruimteToevoegen,
@@ -20,6 +21,7 @@ import {
   standaardVoorzieningen,
   toepassen,
   vloerplanLayout,
+  type HalKeuze,
   type IndelingRuimte,
   type IndelingStatus,
   type IndelingVariant,
@@ -204,7 +206,7 @@ function IndelingInhoud({
   const aiCtl = useRef<Record<number, AbortController>>({});
   const [extraSlaap, setExtraSlaap] = useState("");
   const [varianten, setVarianten] = useState<IndelingVariant[]>([]);
-  const [halBijWoon, setHalBijWoon] = useState(false);
+  const [hal, setHal] = useState<HalKeuze>("behouden");
   const [keukenOpen, setKeukenOpen] = useState(() => keukenOpenStandaard(startInput));
   /** Zelf aangepaste voorzieningen; null = de beginwaarden (PvE of telling) */
   const [eigenVz, setEigenVz] = useState<Voorzieningen | null>(null);
@@ -239,7 +241,7 @@ function IndelingInhoud({
   function genereer() {
     setVarianten(
       berekenVarianten(input, rooms, pve, extraSlaap, N, {
-        halBijWoon,
+        hal: hal === "weg" && !halKanWeg(input) ? "klein" : hal,
         keukenOpen,
         voorzieningen: vz,
       }),
@@ -559,14 +561,30 @@ function IndelingInhoud({
                 </label>
               )}
               {heeftHal && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-primary"
-                    checked={halBijWoon}
-                    onChange={(e) => setHalBijWoon(e.target.checked)}
-                  />
-                  Hal zo klein mogelijk (2 m²), de rest bij de woonkamer trekken
+                <label className="flex max-w-xl flex-col gap-1 text-sm">
+                  <span className="text-muted-foreground">
+                    Hal (als die op ‘Vrij herindelen’ staat)
+                  </span>
+                  <select
+                    className={selCls}
+                    value={hal}
+                    onChange={(e) => setHal(e.target.value as HalKeuze)}
+                  >
+                    <option value="behouden">Behouden (ca. 30%, minstens 2 m²)</option>
+                    <option value="klein">
+                      Zo klein mogelijk (2 m²), de rest bij de woonkamer
+                    </option>
+                    {halKanWeg(input) && (
+                      <option value="weg">
+                        Opheffen: helemaal bij de woonkamer (voordeur komt in de woonkamer)
+                      </option>
+                    )}
+                  </select>
+                  {!halKanWeg(input) && (
+                    <span className="text-xs text-muted-foreground">
+                      Opheffen kan niet: de woning heeft meer woonlagen (de hal houdt de trap).
+                    </span>
+                  )}
                 </label>
               )}
             </fieldset>

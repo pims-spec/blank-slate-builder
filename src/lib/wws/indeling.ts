@@ -62,7 +62,7 @@ export interface IndelingRuimte {
 export type IndelingRij = (Vertrek | OverigeRuimte) & {
   _indVast?: boolean;
   _indNieuw?: boolean;
-  /** Vaste ruimte vergroot met m² uit de hal (opties.halBijWoon) */
+  /** Vaste ruimte vergroot met m² uit de hal (opties.hal) */
   _indErbij?: number;
   bbox?: Bbox;
 };
@@ -72,13 +72,20 @@ export type IndelingRij = (Vertrek | OverigeRuimte) & {
  * meegegeven, dan rekent bouwVariant als de bron.
  */
 export interface IndelingOpties {
-  /** Hal en overloop tot 2 m², de rest bij de (nieuwe of vaste) woonkamer */
-  halBijWoon?: boolean;
+  /**
+   * Wat er met hal en overloop gebeurt. "behouden" (standaard, als de bron): 30% blijft, minstens
+   * 2 m², de rest gaat naar alle nieuwe ruimten. "klein": 2 m² blijft, de rest gaat naar de
+   * (nieuwe of vaste) woonkamer. "weg": de hal gaat helemaal naar de woonkamer, als dat kan (één
+   * woonlaag, zie halKanWeg); een overloop blijft dan 2 m².
+   */
+  hal?: HalKeuze;
   /** De keuken loopt open over in de woonkamer: samen één "woonkamer met open keuken" */
   keukenOpen?: boolean;
   /** Wat er in elke keuken, badkamer en toiletruimte van de varianten komt */
   voorzieningen?: Voorzieningen | null;
 }
+
+export type HalKeuze = "behouden" | "klein" | "weg";
 
 /** De voorzieningen die in de woning komen (punt "wat komt er in de woning") */
 export interface Voorzieningen {
@@ -99,7 +106,7 @@ export interface IndelingVariant {
   geenToilet?: boolean;
   /** Aantal slaapkamers in de variant, vaste meegeteld (alleen in de app) */
   slaapTotaal?: number;
-  /** Extra punten doordat de hal bij de woonkamer/keuken is getrokken (opties.halBijWoon) */
+  /** Extra punten doordat (een deel van) de hal bij de woonkamer is getrokken (opties.hal) */
   halWinst?: number;
 }
 
@@ -210,15 +217,20 @@ function genFacRow(
 export function splitsCirculatie(
   rooms: readonly IndelingRuimte[],
   input: WwsInput,
-  /** Alleen 2 m² behouden (opties.halBijWoon), niet 30% */
-  minimaal = false,
+  /** Wat er overblijft (opties.hal); "weg" alleen voor een hal, niet voor een overloop */
+  keuze: HalKeuze = "behouden",
 ) {
   const gewoneVrij: IndelingRuimte[] = [];
   const behoudenCirculatie: { key: Groep; row: IndelingRij }[] = [];
   let poolUitVerkeer = 0;
   rooms.forEach((r) => {
     if (typeVan(r.key, r.type).verkeer) {
-      const behoud = minimaal ? Math.min(r.m2, 2) : Math.min(r.m2, Math.max(2, r2(r.m2 * 0.3)));
+      const behoud =
+        keuze === "weg" && r.type === "hal"
+          ? 0
+          : keuze !== "behouden"
+            ? Math.min(r.m2, 2)
+            : Math.min(r.m2, Math.max(2, r2(r.m2 * 0.3)));
       poolUitVerkeer += r2(r.m2 - behoud);
       if (behoud > 0) {
         const bron = (input[r.key] || [])[r.idx];
@@ -267,11 +279,13 @@ export function bouwVariant(
 ): { vertrekken: IndelingRij[]; overig: IndelingRij[]; nSlaap: number } | null {
   const vast = rooms.filter((r) => r.status === "vast");
   const vrij = rooms.filter((r) => r.status === "vrij");
-  const circulatie = splitsCirculatie(vrij, input, !!opties?.halBijWoon);
+  const halKeuze: HalKeuze =
+    opties?.hal === "weg" && !halKanWeg(input) ? "klein" : (opties?.hal ?? "behouden");
+  const circulatie = splitsCirculatie(vrij, input, halKeuze);
   let pool = circulatie.poolBasis;
   // m² uit de hal die naar de woonkamer of keuken gaan, niet naar de slaapkamers
   let halPool = 0;
-  if (opties?.halBijWoon) {
+  if (halKeuze !== "behouden") {
     halPool = circulatie.poolUitVerkeer;
     pool -= halPool;
   }
@@ -494,9 +508,9 @@ export function berekenVarianten(
   opties: IndelingOpties = {},
 ): IndelingVariant[] {
   const uit = varianten(input, rooms, pve, extraSlaap, N, opties);
-  if (!opties.halBijWoon) return uit;
-  // wat levert de hal bij de woonkamer op? Vergelijk met dezelfde variant zonder
-  const zonder = varianten(input, rooms, pve, extraSlaap, N, { ...opties, halBijWoon: false });
+  if (!opties.hal || opties.hal === "behouden") return uit;
+  // wat levert de hal bij de woonkamer op? Vergelijk met dezelfde variant met de hal behouden
+  const zonder = varianten(input, rooms, pve, extraSlaap, N, { ...opties, hal: "behouden" });
   return uit.map((v) => {
     const z = zonder.find((x) => x.nSlaap === v.nSlaap);
     return z ? { ...v, halWinst: r2(v.R.totaal - z.R.totaal) } : v;
@@ -546,6 +560,14 @@ export function meerWoonlagen(input: WwsInput): boolean {
   return [...input.vertrekken, ...input.overig].some(
     (r) => VERDIEPING_TYPES.has(r.type) && num(r.m2) > 0,
   );
+}
+
+/**
+ * Kan de hal helemaal weg (bij de woonkamer)? Alleen bij één woonlaag: dan komt de voordeur uit in
+ * de woonkamer. Bij meer woonlagen staat in de hal meestal de trap.
+ */
+export function halKanWeg(input: WwsInput): boolean {
+  return !meerWoonlagen(input);
 }
 
 /** Heeft de ruimte een raam naar buiten? Onbekend: een vertrek wel, de rest niet */

@@ -98,7 +98,8 @@ export const INDELING_EXTRA_REGELS =
   "Teken alleen binnen deze woning. Wat buiten de woning ligt -- het algemene trappenhuis, een portiek, galerij, lift of een buurwoning -- blijft exact zoals het is en krijgt nooit een ruimtenaam of functie van deze woning (dus geen slaapkamer, berging of andere ruimte in het trappenhuis).\n\n" +
   "Teken geen nieuwe ramen of buitendeuren. Een wand die aan een buurwoning, het trappenhuis of een andere gemeenschappelijke ruimte grenst (woningscheidende wand) krijgt nooit een raam.\n\n" +
   "Elke hierboven genoemde ruimte (vast én nieuw), dus ook de badkamer en het toilet, moet precies één keer met bijschrift op de tekening staan; laat er geen weg.\n\n" +
-  "Elke slaapkamer heeft een eigen deur vanuit de hal, gang, overloop of woonkamer. Een slaapkamer is nooit alleen bereikbaar via een badkamer, toilet, keuken, wasruimte of een andere slaapkamer. Ook de badkamer en het toilet zijn bereikbaar vanuit de hal, gang of overloop, niet alleen via een slaapkamer (tenzij dat al zo was bij een vaste ruimte).\n\n";
+  "Elke slaapkamer heeft een eigen deur vanuit de hal, gang, overloop of woonkamer. Een slaapkamer is nooit alleen bereikbaar via een badkamer, toilet, keuken, wasruimte of een andere slaapkamer. Ook de badkamer en het toilet zijn bereikbaar vanuit de hal, gang of overloop, niet alleen via een slaapkamer (tenzij dat al zo was bij een vaste ruimte).\n\n" +
+  "Staat er geen hal of gang in de lijst hierboven, dan is die opgeheven en bij de woonkamer getrokken: teken dan geen hal, de voordeur komt uit in de woonkamer en de andere ruimtes hebben hun deur vanuit de woonkamer.\n\n";
 
 /**
  * Instructie voor de AI-afbeelding van een indelingsvariant — indelingAIPrompt().
