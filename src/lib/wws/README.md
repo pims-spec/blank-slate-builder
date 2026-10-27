@@ -804,8 +804,9 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
 - **Energielabel en WOZ-waarde op één pagina:** compactere labelrijen (7 in plaats van 8,4 mm).
 - **Woningplattegrond** (`plattegrond/rapport.ts`, `pdfPlattegrondPaginas`): plattegronden alleen
   voor het rapport, zonder de maten over te nemen ("Plattegrond toevoegen aan rapport" in de
-  telling). Afbeelding (PNG/JPG/WebP) of PDF; bij een PDF kies je de pagina's (bijv. een
-  meetrapport). Per plattegrond een soort: 2D, 3D, Situatie, Berging, Indelingsadvies of een eigen
+  telling). Een of meer bestanden tegelijk: afbeeldingen (PNG/JPG/WebP) en PDF's; daarna kies je
+  welke afbeeldingen en pagina's mee moeten (bijv. een meetrapport; hoogstens 30 tegelijk in het
+  venster). Een onleesbaar bestand wordt gemeld, de rest gaat door. Per plattegrond een soort: 2D, 3D, Situatie, Berging, Indelingsadvies of een eigen
   titel; hoogstens 8. In Storage in dezelfde map als de ingelezen plattegrond; de telling bewaart
   `input.rapportPlattegronden` (pad, maat, soort, titel). Uploaden gebeurt direct (de telling moet
   al opgeslagen zijn); weggehaalde plattegronden worden opgeruimd als geen versie ze gebruikt.

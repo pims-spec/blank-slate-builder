@@ -34,6 +34,9 @@ import { plattegrondOpslag } from "./plattegrondBeeld";
 const veldCls =
   "rounded-lg border border-transparent bg-muted px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+/** Hoogstens zoveel afbeeldingen en PDF-pagina's tegelijk in het venster */
+const MAX_KANDIDATEN = 30;
+
 /** Standaardsoort op volgorde, zoals de CBRE-rapporten: 2D, 3D, situatie, berging */
 const standaardSoort = (i: number): RapportPlattegrondSoort =>
   (["2d", "3d", "situatie", "berging"] as const)[i] ?? "eigen";
@@ -238,6 +241,8 @@ function useObjectUrl(blob: Blob | null): string | null {
 interface Kandidaat {
   canvas: HTMLCanvasElement;
   voorbeeld: string;
+  /** Naam van het bestand (alleen getoond als er meer bestanden zijn gekozen) */
+  bestand: string;
   /** Paginanummer in de PDF; null bij een afbeelding */
   pagina: number | null;
   mee: boolean;
@@ -264,25 +269,38 @@ function ToevoegenDialoog(p: {
     }
   }, [p.open]);
 
-  async function kies(file: File | undefined) {
-    if (!file) return;
+  async function kies(lijstBestanden: FileList | null) {
+    const bestanden = [...(lijstBestanden ?? [])];
+    if (!bestanden.length) return;
     setFout("");
     setKandidaten([]);
     setBezig("lezen");
+    const gelezen: { canvas: HTMLCanvasElement; pagina: number | null; bestand: string }[] = [];
+    const mislukt: string[] = [];
     try {
-      let lijst: { canvas: HTMLCanvasElement; pagina: number | null }[];
-      if (file.type === "application/pdf") {
-        const n = Math.min(await pdfAantalPaginas(file), 20);
-        const nrs = Array.from({ length: n }, (_, i) => i + 1);
-        lijst = (await pdfPaginasNaarCanvassen(file, nrs)).map((canvas, i) => ({
-          canvas,
-          pagina: i + 1,
-        }));
-      } else {
-        lijst = [{ canvas: await bestandNaarCanvas(file), pagina: null }];
+      for (const file of bestanden) {
+        const ruimte = MAX_KANDIDATEN - gelezen.length;
+        if (ruimte <= 0) break;
+        try {
+          if (file.type === "application/pdf") {
+            const n = Math.min(await pdfAantalPaginas(file), 20, ruimte);
+            const nrs = Array.from({ length: n }, (_, i) => i + 1);
+            (await pdfPaginasNaarCanvassen(file, nrs)).forEach((canvas, i) =>
+              gelezen.push({ canvas, pagina: i + 1, bestand: file.name }),
+            );
+          } else {
+            gelezen.push({
+              canvas: await bestandNaarCanvas(file),
+              pagina: null,
+              bestand: file.name,
+            });
+          }
+        } catch {
+          mislukt.push(file.name);
+        }
       }
       setKandidaten(
-        lijst.map((k, i) => ({
+        gelezen.map((k, i) => ({
           ...k,
           voorbeeld: k.canvas.toDataURL("image/jpeg", 0.5),
           mee: i < p.ruimte,
@@ -290,12 +308,13 @@ function ToevoegenDialoog(p: {
           titel: "",
         })),
       );
-    } catch (e) {
-      setFout(
-        e instanceof Error && e.message.startsWith("Dit bestand")
-          ? e.message
-          : "Dit bestand kon niet worden gelezen. Kies een PNG, JPG of PDF.",
-      );
+      if (mislukt.length)
+        setFout(
+          (mislukt.length === 1 ? "Dit bestand kon" : "Deze bestanden konden") +
+            " niet worden gelezen: " +
+            mislukt.join(", ") +
+            ". Kies een PNG, JPG of PDF.",
+        );
     } finally {
       setBezig("");
     }
@@ -333,6 +352,14 @@ function ToevoegenDialoog(p: {
 
   const zet = (i: number, w: Partial<Kandidaat>) =>
     setKandidaten((ks) => ks.map((k, j) => (j === i ? { ...k, ...w } : k)));
+  // bij meer bestanden staat de bestandsnaam erbij
+  const meerBestanden = new Set(kandidaten.map((k) => k.bestand)).size > 1;
+  const naamVan = (k: Kandidaat) =>
+    meerBestanden
+      ? k.bestand + (k.pagina ? " – pagina " + k.pagina : "")
+      : k.pagina
+        ? "Pagina " + k.pagina
+        : "Afbeelding";
 
   return (
     <Dialog open={p.open} onOpenChange={(o) => !bezig && p.onOpenChange(o)}>
@@ -340,17 +367,18 @@ function ToevoegenDialoog(p: {
         <DialogHeader>
           <DialogTitle>Plattegrond toevoegen aan rapport</DialogTitle>
           <DialogDescription>
-            Kies een afbeelding (PNG of JPG) of een PDF, bijvoorbeeld een meetrapport. De maten
-            worden niet overgenomen; de plattegrond komt alleen in het rapport. Bij een PDF kies je
-            welke pagina&apos;s mee moeten.
+            Kies een of meer afbeeldingen (PNG of JPG) of PDF&apos;s, bijvoorbeeld een meetrapport.
+            De maten worden niet overgenomen; de plattegronden komen alleen in het rapport. Daarna
+            kies je welke afbeeldingen en pagina&apos;s mee moeten.
           </DialogDescription>
         </DialogHeader>
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp,application/pdf"
-          aria-label="Bestand met plattegrond"
+          multiple
+          aria-label="Bestanden met plattegronden"
           disabled={!!bezig}
-          onChange={(e) => void kies(e.target.files?.[0])}
+          onChange={(e) => void kies(e.target.files)}
           className="text-sm"
         />
         {bezig === "lezen" && <p className="text-sm text-muted-foreground">Bestand lezen…</p>}
@@ -369,18 +397,18 @@ function ToevoegenDialoog(p: {
                     checked={k.mee}
                     onChange={(e) => zet(i, { mee: e.target.checked })}
                   />
-                  {k.pagina ? "Pagina " + k.pagina : "Afbeelding"}
+                  <span className="min-w-0 break-all">{naamVan(k)}</span>
                 </label>
                 <img
                   src={k.voorbeeld}
-                  alt={k.pagina ? "Pagina " + k.pagina : "Gekozen afbeelding"}
+                  alt={naamVan(k)}
                   className="max-h-48 w-full rounded bg-white object-contain"
                 />
                 {k.mee && (
                   <SoortKeuze
                     soort={k.soort}
                     titel={k.titel}
-                    label={k.pagina ? "pagina " + k.pagina : "afbeelding"}
+                    label={naamVan(k)}
                     onSoort={(soort) => zet(i, { soort })}
                     onTitel={(titel) => zet(i, { titel })}
                   />
