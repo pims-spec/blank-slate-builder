@@ -92,20 +92,43 @@ export interface VariantRuimte {
 
 /**
  * Extra regels voor de AI-afbeelding (bewuste afwijking van de bron): Gemini tekende een algemeen
- * trappenhuis als slaapkamer, liet een badkamer weg en zette een raam in een woningscheidende wand.
+ * trappenhuis als slaapkamer, liet een badkamer weg, zette een raam in een woningscheidende wand,
+ * tekende twee woonkamers en liet de vloer van een vervallen toilet als grijze restruimte liggen.
  */
 export const INDELING_EXTRA_REGELS =
   "Teken alleen binnen deze woning. Wat buiten de woning ligt -- het algemene trappenhuis, een portiek, galerij, lift of een buurwoning -- blijft exact zoals het is en krijgt nooit een ruimtenaam of functie van deze woning (dus geen slaapkamer, berging of andere ruimte in het trappenhuis).\n\n" +
+  "Een trap, trapgat of trapportaal hoort bij het trappenhuis, ook als het binnen de buitenmuren van de tekening ligt, en ook het portaal vóór de voordeur van de woning. Teken daar geen ruimte, wand of meubel overheen; de trap, het portaal en de voordeur blijven exact op hun plek en in hun vorm.\n\n" +
+  "Laat geen naamloze, lege of grijze restruimte over: elk stuk vloer binnen de woning hoort bij een van de genoemde ruimtes. Waar eerst een ruimte lag die nu niet meer in de lijst staat (bijvoorbeeld een tweede toilet of een kast), trek je die vloer bij een aangrenzende ruimte uit de lijst. Alleen een meterkast die al op de tekening stond, mag blijven.\n\n" +
   "Teken geen nieuwe ramen of buitendeuren. Een wand die aan een buurwoning, het trappenhuis of een andere gemeenschappelijke ruimte grenst (woningscheidende wand) krijgt nooit een raam.\n\n" +
   "Elke hierboven genoemde ruimte (vast én nieuw), dus ook de badkamer en het toilet, moet precies één keer met bijschrift op de tekening staan; laat er geen weg.\n\n" +
   "Elke slaapkamer heeft een eigen deur vanuit de hal, gang, overloop of woonkamer. Een slaapkamer is nooit alleen bereikbaar via een badkamer, toilet, keuken, wasruimte of een andere slaapkamer. Ook de badkamer en het toilet zijn bereikbaar vanuit de hal, gang of overloop, niet alleen via een slaapkamer (tenzij dat al zo was bij een vaste ruimte).\n\n" +
   "Staat er geen hal of gang in de lijst hierboven, dan is die opgeheven en bij de woonkamer getrokken: teken dan geen hal, de voordeur komt uit in de woonkamer en de andere ruimtes hebben hun deur vanuit de woonkamer.\n\n";
 
 /**
+ * "Precies deze ruimtes …": het aantal per soort, in de volgorde van de lijst (bewuste afwijking
+ * van de bron). Gemini tekende anders soms twee woonkamers.
+ */
+export function indelingProgramma(ruimten: readonly VariantRuimte[]): string {
+  const tel = new Map<string, number>();
+  ruimten
+    .filter((r) => r.m2 > 0)
+    .forEach((r) => {
+      const l = (r.groep === "vertrekken" ? vertrekType(r.type) : overigType(r.type)).l;
+      tel.set(l, (tel.get(l) ?? 0) + 1);
+    });
+  if (!tel.size) return "";
+  return (
+    "Na de verbouwing heeft de woning precies deze ruimtes, niet meer en niet minder: " +
+    [...tel].map(([l, n]) => n + "× " + l).join(", ") +
+    ". Teken dus nooit een soort ruimte vaker dan hier staat (bijvoorbeeld geen tweede woonkamer) en geen ruimte die hier niet staat. Een bestaand vertrek dat niet meer in deze lijst voorkomt, krijgt een functie uit de lijst of gaat op in een aangrenzende ruimte.\n\n"
+  );
+}
+
+/**
  * Instructie voor de AI-afbeelding van een indelingsvariant — indelingAIPrompt().
  * Bewuste afwijkingen: de bron gebruikte de vrije ruimtenamen; hier alleen de standaardnaam van
  * het ruimtetype, zodat er geen door gebruikers ingetypte tekst naar Gemini gaat. En vóór de
- * slotzin staan de extra regels (`INDELING_EXTRA_REGELS`).
+ * slotzin staan het programma (`indelingProgramma`) en de extra regels (`INDELING_EXTRA_REGELS`).
  */
 export function indelingAIPrompt(ruimten: readonly VariantRuimte[]): string {
   const blokjes = ruimten
@@ -135,7 +158,7 @@ export function indelingAIPrompt(ruimten: readonly VariantRuimte[]): string {
       ". Teken hier de benodigde binnenwanden en -deuren tussen deze ruimtes, in dezelfde stijl als de rest van de afbeelding. De genoemde m² per ruimte zijn ten opzichte van elkaar: teken elke ruimte op een breedte/diepte die daadwerkelijk in verhouding is met die van de andere genoemde ruimtes (en met de vaste ruimtes en de totale woning) -- een ruimte van 2 m² moet merkbaar kleiner ogen dan een ruimte van 12 m², nooit ongeveer even groot.\n\n" +
       "Elke ruimte (vast én nieuw) krijgt precies één deur die daadwerkelijk toegang geeft, op een voor die ruimte logische plek (bijv. een badkamer-/toiletdeur vanuit de hal, niet vanuit een slaapkamer, tenzij dat al zo was bij een vaste ruimte). Teken deurbreedtes in verhouding tot de werkelijke grootte van de ruimte en vergelijkbaar met de deurbreedtes die al op de originele foto te zien zijn -- nooit een deur die te smal of te breed oogt voor de ruimte waar hij bij hoort.\n\n" +
       "Voeg nooit een extra toilet, badkamer of keuken toe die niet hierboven genoemd is: als een genoemde 'vast' ruimte al een badkamer of toilet is, mag er behalve de hierboven expliciet genoemde nieuwe ruimtes geen tweede toiletvoorziening ergens anders bijkomen.\n\n";
-  t += INDELING_EXTRA_REGELS;
+  t += indelingProgramma(ruimten) + INDELING_EXTRA_REGELS;
   t +=
     "Nogmaals: dit moet een bewerkte versie van de ORIGINELE afbeelding blijven (zelfde stijl, kleuren en weergave), geen nieuwe schone 2D-lijntekening of 3D-weergave, en geen ander kleurenpalet.";
   return t;

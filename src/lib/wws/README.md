@@ -197,7 +197,11 @@ reference/wws-site-{ai,plattegrond,schema}.cjs   letterlijke uitsneden voor de v
     apart noemt.
   - Afwijking AI-afbeelding (`INDELING_EXTRA_REGELS`): elke slaapkamer heeft een eigen deur vanuit
     hal, gang, overloop of woonkamer, nooit alleen via badkamer, toilet of een andere kamer. Staat
-    er geen hal in de variant (opgeheven), dan komt de voordeur in de woonkamer uit.
+    er geen hal in de variant (opgeheven), dan komt de voordeur in de woonkamer uit. Een trap,
+    trapgat of portaal vóór de voordeur hoort bij het trappenhuis, ook binnen de buitenmuren van
+    de tekening. Geen grijze restruimte: de vloer van een vervallen ruimte gaat naar een
+    aangrenzende ruimte. Vóór die regels staat het programma (`indelingProgramma`): precies het
+    aantal ruimtes per soort, zodat Gemini geen tweede woonkamer tekent.
 - **Overnemen** (`platToepassen`): een ingelezen ruimte begint zonder sanitair of standaard-
   uitrusting (de bron vulde een staand toilet, wastafel en douche in); alleen de aanrechtlengte
   komt uit de plattegrond. Ook een op de tekening toegevoegde ruimte begint leeg. `raam` en

@@ -19,6 +19,7 @@ import {
   ENERGIEADVIES_EXTRA_REGELS,
   energieAdviesPrompt,
   indelingAIPrompt,
+  indelingProgramma,
   platPrompt,
   type VariantRuimte,
 } from "./prompts";
@@ -110,7 +111,7 @@ describe("instructies gelijk aan wws-site.html", () => {
       // bewuste afwijking: de extra regels staan vóór de slotzin
       const bron = BRON.indelingAIPrompt(v).replace(
         "Nogmaals:",
-        INDELING_EXTRA_REGELS + "Nogmaals:",
+        indelingProgramma(geordend) + INDELING_EXTRA_REGELS + "Nogmaals:",
       );
       expect(indelingAIPrompt(geordend)).toBe(bron);
     }
@@ -127,9 +128,29 @@ describe("instructies gelijk aan wws-site.html", () => {
     // een slaapkamer nooit alleen via de badkamer
     expect(p).toContain("Elke slaapkamer heeft een eigen deur vanuit de hal");
     expect(p).toContain("nooit alleen bereikbaar via een badkamer");
+    // trap en portaal blijven, geen grijze restruimte
+    expect(p).toContain("Een trap, trapgat of trapportaal hoort bij het trappenhuis");
+    expect(p).toContain("Laat geen naamloze, lege of grijze restruimte over");
     // hal opgeheven: voordeur in de woonkamer
     expect(p).toContain("de voordeur komt uit in de woonkamer");
     expect(p.indexOf("Teken alleen binnen deze woning")).toBeLessThan(p.indexOf("Nogmaals:"));
+  });
+
+  it("programma: precies het aantal ruimtes per soort, geen tweede woonkamer", () => {
+    const p = indelingAIPrompt([
+      { groep: "vertrekken", type: "woonkamer", m2: 25, vast: false },
+      { groep: "vertrekken", type: "slaapkamer", m2: 11, vast: false },
+      { groep: "vertrekken", type: "slaapkamer", m2: 9, vast: false },
+      { groep: "vertrekken", type: "keuken", m2: 5, vast: true },
+      { groep: "overig", type: "toilet", m2: 1.1, vast: true },
+      { groep: "overig", type: "hal", m2: 0, vast: true },
+    ]);
+    expect(p).toContain(
+      "precies deze ruimtes, niet meer en niet minder: 1× Woonkamer, 2× Slaapkamer, 1× Keuken, 1× Toiletruimte.",
+    );
+    expect(p).toContain("geen tweede woonkamer");
+    expect(p.indexOf("precies deze ruimtes")).toBeLessThan(p.indexOf("Teken alleen binnen"));
+    expect(indelingProgramma([])).toBe("");
   });
 
   it("gebruikt geen vrije ruimtenamen (bewuste afwijking)", () => {
