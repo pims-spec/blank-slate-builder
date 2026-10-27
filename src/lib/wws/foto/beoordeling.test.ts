@@ -109,6 +109,14 @@ describe("controleerBeoordeling", () => {
     });
     expect(b!["kookplaat"]!.soort).toBe("inductie");
     expect(b!["kast"]!.aantal).toBe(4);
+    // keukenkasten in cm mogen boven de 50; een gewoon aantal niet
+    expect(
+      controleerBeoordeling("keuken", 1, keukenAntwoord({ kast: { aantal: 420 } }))!["kast"]!
+        .aantal,
+    ).toBe(420);
+    expect(
+      controleerBeoordeling("keuken", 1, keukenAntwoord({ kast: { aantal: 2001 } })),
+    ).toBeNull();
   });
 
   it("ongeldig: ontbrekend of onbekend element, foute status, foto die niet bestaat", () => {

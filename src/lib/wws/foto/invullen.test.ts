@@ -8,6 +8,7 @@ import {
   fotoAllesGecontroleerd,
   fotoRuimteVoor,
   fotoStand,
+  extraKasten,
   fotoVeldGecontroleerd,
   pasFotosToe,
 } from "./invullen";
@@ -146,18 +147,28 @@ describe("pasFotosToe: keuken", () => {
     expect(uit.fotoOnzeker!["lengte"]).toMatch(/^Niet te schatten/);
   });
 
-  it("keukenkasten: altijd ! (schatting); nooit minder dan er staat", () => {
-    const uit = pasFotosToe(keuken(), "keuken", beoordeling("keuken", { kast: ja({ aantal: 4 }) }))!
-      .fac as FacKeuken;
-    expect(uit.keuken.voorz.kast).toBe(4);
-    expect(uit.fotoOnzeker!["kast"]).toMatch(/schatting/);
-
+  it("keukenkasten: breedte in cm, de eerste 100 cm is basis, daarboven per 60 cm; altijd !", () => {
+    const vul = (cm: number, f = keuken()) =>
+      pasFotosToe(f, "keuken", beoordeling("keuken", { kast: ja({ aantal: cm }) }))!
+        .fac as FacKeuken;
+    // 4 kasten van 60 cm = 240 cm: 140 cm boven de basis = 2 × 60 cm
+    const uit = vul(240);
+    expect(uit.keuken.voorz.kast).toBe(2);
+    expect(uit.fotoOnzeker!["kast"]).toMatch(/Ca\. 240 cm kastruimte geschat.*daarboven 2 × 60 cm/);
+    expect(extraKasten(100)).toBe(0);
+    expect(extraKasten(159)).toBe(0);
+    expect(extraKasten(160)).toBe(1);
+    expect(extraKasten(460)).toBe(6);
+    // minder dan de basis: niets ingevuld, wel een waarschuwing
+    const weinig = vul(80);
+    expect(weinig.keuken.voorz.kast).toBeUndefined();
+    expect(weinig.fotoOnzeker!["kast"]).toMatch(/minder dan het basisniveau/);
+    // nooit minder dan er staat
     const f = keuken();
     f.keuken.voorz.kast = "6";
-    const uit2 = pasFotosToe(f, "keuken", beoordeling("keuken", { kast: ja({ aantal: 4 }) }))!
-      .fac as FacKeuken;
-    expect(uit2.keuken.voorz.kast).toBe("6");
-    expect(uit2.fotoOnzeker!["kast"]).toMatch(/Op de foto's 4; in de telling staan er meer/);
+    const meer = vul(240, f);
+    expect(meer.keuken.voorz.kast).toBe("6");
+    expect(meer.fotoOnzeker!["kast"]).toMatch(/Op de foto's 2; in de telling staan er meer/);
   });
 
   it("wist nooit iets: wat al aan stond blijft aan, ook als de AI het niet ziet", () => {

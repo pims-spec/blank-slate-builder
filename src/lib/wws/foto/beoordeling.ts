@@ -11,6 +11,8 @@ export type FotoStatus = (typeof STATUSSEN)[number];
 /** Hoogstens zoveel foto's per beoordeling */
 export const MAX_FOTOS = 10;
 const MAX_BEWIJS = 300;
+const MAX_AANTAL = 50;
+const MAX_CM = 2000;
 
 export interface ElementOordeel {
   status: FotoStatus;
@@ -31,7 +33,7 @@ export type Beoordeling = Record<string, ElementOordeel>;
 function elementRegel(e: FotoElement): string {
   const extra = [
     e.soorten ? "soort: " + e.soorten.join(" | ") : "",
-    e.telbaar ? "geef het aantal" : "",
+    e.inCm ? "geef de breedte in cm" : e.telbaar ? "geef het aantal" : "",
     e.inbouw ? "telt alleen ingebouwd" : "",
   ].filter(Boolean);
   return `- ${e.sleutel} (${e.naam}): ${e.kenmerken}${extra.length ? " [" + extra.join("; ") + "]" : ""}`;
@@ -51,7 +53,7 @@ export function fotoPrompt(ruimte: FotoRuimte, nFotos: number): string {
     "- Beoordeel alleen wat op de foto's te zien is. Verzin niets en ga niet uit van wat gebruikelijk is.",
     "- Twijfel je tussen twee statussen, kies dan de lagere (aanwezig > waarschijnlijk_aanwezig > niet_vast_te_stellen).",
     "- Elementen met 'telt alleen ingebouwd': zet vrijstaand op true als het apparaat er wel staat maar niet is ingebouwd (de status beschrijft dan of het apparaat er is). Anders vrijstaand false.",
-    "- aantal: alleen bij elementen met 'geef het aantal' een geheel getal (0 als je niets ziet); bij andere elementen null.",
+    "- aantal: alleen bij elementen met 'geef het aantal' een geheel getal (0 als je niets ziet), bij 'geef de breedte in cm' de breedte in hele cm; bij andere elementen null.",
     "- soort: alleen bij elementen met een soortenlijst één waarde uit die lijst, of null als je de soort niet kunt zien; bij andere elementen null.",
     "- bewijs: één korte zin (maximaal 25 woorden) met wat je waar ziet, of waarom het niet vast te stellen is.",
     "- fotos: de nummers van de foto's waarop het bewijs staat; leeg als er geen bewijs is.",
@@ -107,7 +109,8 @@ const Regel = (nFotos: number) =>
       element: z.string(),
       status: z.enum(STATUSSEN),
       vrijstaand: z.boolean(),
-      aantal: z.number().int().min(0).max(50).nullable(),
+      // breedte in cm (keukenkasten) mag tot 2000; een gewoon aantal tot 50 (zie hieronder)
+      aantal: z.number().int().min(0).max(MAX_CM).nullable(),
       soort: z.string().nullable(),
       bewijs: z.string().max(MAX_BEWIJS * 2),
       fotos: z.array(z.number().int().min(1).max(nFotos)).max(MAX_FOTOS),
@@ -143,6 +146,7 @@ export function controleerBeoordeling(
     const o = per.get(e.sleutel);
     if (!o) return null;
     if (o.soort !== null && e.soorten && !e.soorten.includes(o.soort)) return null;
+    if (o.aantal !== null && !e.inCm && o.aantal > MAX_AANTAL) return null;
     uit[e.sleutel] = {
       status: o.status,
       vrijstaand: !!e.inbouw && o.vrijstaand,

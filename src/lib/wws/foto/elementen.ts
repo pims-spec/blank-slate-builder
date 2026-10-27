@@ -20,6 +20,8 @@ export interface FotoElement {
   soorten?: readonly string[];
   /** Het aantal is van belang (anders alleen aanwezig of niet) */
   telbaar?: boolean;
+  /** Het "aantal" is een breedte in cm (keukenkasten), geen stuks */
+  inCm?: boolean;
   /** Telt alleen als het is ingebouwd; vrijstaand wordt gemeld maar telt niet */
   inbouw?: boolean;
 }
@@ -85,10 +87,11 @@ export const KEUKEN_ELEMENTEN: readonly FotoElement[] = [
   },
   {
     sleutel: "kast",
-    naam: "Extra kastruimte (per 60 cm breed, min. 60 cm hoog)",
+    naam: "Keukenkasten (totale breedte)",
     kenmerken:
-      "Tel de keukenkastelementen (onder- en bovenkasten, hoge kasten) van ca. 60 cm breed die géén apparaat of de spoelbak bevatten. Geef het aantal als schatting; deze telling wordt altijd door de gebruiker nagekeken.",
+      "Schat de totale breedte in cm (buitenmaat) van alle keukenkasten die minimaal 60 cm hoog zijn en géén inbouwapparaat of de spoelbak bevatten: onderkasten (ook ladekasten), bovenkasten en hoge kasten. Een hoge kast telt één keer zijn breedte. Gebruik standaardmaten als houvast (veel kasten zijn 30, 40, 45, 50, 60 of 80 cm breed). Tel een kast die op meerdere foto's staat één keer. Geef de breedte in cm als aantal (0 als je geen kasten ziet); de app rekent zelf uit wat boven het minimum valt. Deze schatting wordt altijd door de gebruiker nagekeken.",
     telbaar: true,
+    inCm: true,
   },
   {
     sleutel: "kraan",

@@ -436,7 +436,11 @@ function Uitslag({ ruimte, b, fotos }: { ruimte: FotoRuimte; b: Beoordeling; fot
           if (!o) return null;
           const extra = [
             o.soort,
-            o.aantal !== null && o.status !== "niet_vast_te_stellen" ? o.aantal + "×" : null,
+            o.aantal !== null && o.status !== "niet_vast_te_stellen"
+              ? e.inCm
+                ? "ca. " + o.aantal + " cm"
+                : o.aantal + "×"
+              : null,
           ].filter(Boolean);
           return (
             <li key={e.sleutel} className="grid gap-1 px-3 py-2 sm:grid-cols-[14rem_9rem_1fr]">

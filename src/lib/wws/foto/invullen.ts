@@ -20,6 +20,15 @@ import type { FotoRuimte } from "./elementen";
 
 const clone = <T>(o: T): T => JSON.parse(JSON.stringify(o));
 
+/**
+ * Basisniveau keuken (beleidsboek WWS, rubriek 5.1 en 5.4): twee inbouwkasten van minimaal 50 cm,
+ * samen 1 m. Pas daarboven telt "extra kastruimte", 0,75 punt per 60 cm breedte (min. 60 cm hoog,
+ * buitenmaat).
+ */
+export const KAST_BASIS_CM = 100;
+/** Het aantal keer 60 cm kastruimte boven het basisniveau */
+export const extraKasten = (cm: number) => Math.floor(Math.max(0, cm - KAST_BASIS_CM) / 60);
+
 /** Welke fotobeoordeling bij deze voorziening hoort; null als die er niet is */
 export function fotoRuimteVoor(f: Fac | undefined): FotoRuimte | null {
   if (f?.kind === "keuken" || f?.kind === "badkamer" || f?.kind === "toilet") return f.kind;
@@ -39,8 +48,11 @@ interface Aantal {
   veld: string;
   get: () => number;
   zet: (n: number) => void;
-  /** Het aantal is altijd een schatting (keukenkasten) */
-  schatting?: boolean;
+  /**
+   * Keukenkasten: de AI geeft de totale kastbreedte in cm; in de telling komt het aantal keer 60 cm
+   * boven het basisniveau (altijd met !)
+   */
+  vanCm?: boolean;
 }
 /** Eén keuze uit een rij, van laag naar hoog */
 interface Keuze {
@@ -105,7 +117,7 @@ function keukenDoelen(f: FacKeuken): Record<string, Doel> {
       veld: "kast",
       get: () => num(v.kast),
       zet: (n) => (v.kast = n),
-      schatting: true,
+      vanCm: true,
     },
   };
   for (const k of KEUKEN_VINK)
@@ -203,13 +215,26 @@ function vulIn(d: Doel, o: ElementOordeel, markeer: (r: string) => void) {
     if (!gevuld) d.zet();
     return;
   }
+  if (d.soort === "aantal" && d.vanCm) {
+    const cm = o.aantal ?? 0;
+    if (cm <= 0) return markeer("De kastbreedte was niet te schatten. " + o.bewijs);
+    const extra = extraKasten(cm);
+    markeer(
+      `Ca. ${cm} cm kastruimte geschat. De eerste ${KAST_BASIS_CM} cm (twee kasten van 50 cm) hoort bij het basisniveau; daarboven ${extra} × 60 cm.` +
+        (cm < KAST_BASIS_CM
+          ? " Let op: minder dan het basisniveau; dan krijgt de keuken geen punten."
+          : ""),
+    );
+    if (d.get() > extra) markeer(`Op de foto's ${extra}; in de telling staan er meer.`);
+    else if (extra > 0) d.zet(extra);
+    return;
+  }
   if (d.soort === "aantal") {
     let n = o.aantal ?? 0;
     if (n < 1) {
       n = 1;
       markeer("Aantal niet te tellen; 1 ingevuld.");
     }
-    if (d.schatting) markeer("Het aantal is een schatting: " + o.bewijs);
     if (d.get() > n) markeer(`Op de foto's ${n}; in de telling staan er meer.`);
     else d.zet(n);
     return;
