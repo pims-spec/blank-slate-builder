@@ -12,15 +12,19 @@ import { SEGMENT_NAMEN, eur, fmt, num, overigType, vertrekType, type WwsInput } 
 import {
   berekenVarianten,
   blokjes,
+  keukenOpenStandaard,
+  meerWoonlagen,
   ruimteToevoegen,
-  ruimtenUitTelling,
+  ruimtenVoorAdvies,
   ruimteWijzigen,
+  standaardVoorzieningen,
   toepassen,
   vloerplanLayout,
   type IndelingRuimte,
   type IndelingStatus,
   type IndelingVariant,
   type RuimteWijziging,
+  type Voorzieningen,
 } from "@/lib/wws/indeling";
 import { maakVariantAfbeelding } from "@/lib/wws/ai/ai.functions";
 import type { Afbeelding } from "@/lib/wws/ai/dienst";
@@ -31,6 +35,7 @@ import { schemaDataUrl, type SchemaCanvas } from "@/lib/wws/schemaTekening";
 import { volgendeStatus } from "@/lib/wws/tekenen";
 import PlattegrondTekenen from "./PlattegrondTekenen";
 import { PlattegrondInlezen } from "./PlattegrondDialoog";
+import { BadkamerVelden, KeukenVelden, ToiletVelden } from "./PveDialoog";
 import type { NieuwBeeld } from "./plattegrondBeeld";
 import type { Klant, TellingMeta } from "@/lib/wws/opslag";
 import { actievePves } from "@/lib/wws/pve";
@@ -98,6 +103,15 @@ interface Props {
     onPlattegrond: (input: WwsInput, beeld: NieuwBeeld) => void;
   };
   /**
+   * Bestaande telling zonder plattegrond: in stap Ruimten een plattegrond toevoegen (inlezen),
+   * daarna kun je erop tekenen en een AI-afbeelding maken. Ontbreekt bij alleen-lezen.
+   */
+  plattegrond?: {
+    meta: TellingMeta;
+    /** De ingelezen invoer en afbeelding in de werkversie */
+    onPlattegrond: (input: WwsInput, beeld: NieuwBeeld) => void;
+  };
+  /**
    * Stap 1: de blokken "Adres en WOZ" en "Energielabel" boven Eigenaar (renderIndelingEigenaar).
    * Gemaakt door de editor, met de velden van de telling zelf; wijzigingen komen terug via `input`.
    */
@@ -147,6 +161,7 @@ function IndelingInhoud({
   onInputWijziging,
   onToepassen,
   blanco,
+  plattegrond,
   stap1,
 }: Props) {
   const N = useNormen();
@@ -164,7 +179,7 @@ function IndelingInhoud({
   // werkversie in het venster: tekenen wijzigt ruimten én de telling (zoals de bron)
   const [werk, setWerk] = useState(() => ({
     input: startInput,
-    rooms: ruimtenUitTelling(startInput),
+    rooms: ruimtenVoorAdvies(startInput),
   }));
   const werkRef = useRef(werk);
   werkRef.current = werk;
@@ -189,14 +204,46 @@ function IndelingInhoud({
   const aiCtl = useRef<Record<number, AbortController>>({});
   const [extraSlaap, setExtraSlaap] = useState("");
   const [varianten, setVarianten] = useState<IndelingVariant[]>([]);
+  const [halBijWoon, setHalBijWoon] = useState(false);
+  const [keukenOpen, setKeukenOpen] = useState(() => keukenOpenStandaard(startInput));
+  /** Zelf aangepaste voorzieningen; null = de beginwaarden (PvE of telling) */
+  const [eigenVz, setEigenVz] = useState<Voorzieningen | null>(null);
+  const [platToevoegen, setPlatToevoegen] = useState(false);
 
   const klant = klanten.find((k) => k.id === klantId) ?? null;
   const actief = actievePves(klant?.pves ?? []);
   const pve = klant && pveId ? (klant.pves.find((x) => x.id === pveId) ?? null) : null;
   const energieMist = energieOntbreekt(input.energie);
+  const vz = eigenVz ?? standaardVoorzieningen(input, pve);
+  const wijzigVz = (f: (v: Voorzieningen) => void) => {
+    const n = structuredClone(vz);
+    f(n);
+    setEigenVz(n);
+  };
+  const typen = new Set(rooms.filter((r) => r.m2 > 0).map((r) => r.type));
+  const heeftHal = rooms.some((r) => r.m2 > 0 && overigType(r.type).verkeer && r.key === "overig");
+  const toiletKeuze =
+    !meerWoonlagen(input) && rooms.filter((r) => r.kind === "toilet" && r.m2 > 0).length > 1;
+
+  /** Nieuwe invoer met een (andere) plattegrond: ruimten en beginwaarden opnieuw uit de telling */
+  function nieuweIndeling(nieuw: WwsInput) {
+    const w = { input: nieuw, rooms: ruimtenVoorAdvies(nieuw) };
+    werkRef.current = w;
+    setWerk(w);
+    setKeukenOpen(keukenOpenStandaard(nieuw));
+    setEigenVz(null);
+    setVarianten([]);
+    setAi({});
+  }
 
   function genereer() {
-    setVarianten(berekenVarianten(input, rooms, pve, extraSlaap, N));
+    setVarianten(
+      berekenVarianten(input, rooms, pve, extraSlaap, N, {
+        halBijWoon,
+        keukenOpen,
+        voorzieningen: vz,
+      }),
+    );
     setAi({});
     setStap("resultaten");
   }
@@ -265,11 +312,7 @@ function IndelingInhoud({
             knopTekst="Doorgaan met Indelingsadvies →"
             onOvernemen={(nieuw, beeld) => {
               // applyIndPlat() → openIndeling(true): ruimten opnieuw uit de telling, naar stap 1
-              const w = { input: nieuw, rooms: ruimtenUitTelling(nieuw) };
-              werkRef.current = w;
-              setWerk(w);
-              setVarianten([]);
-              setAi({});
+              nieuweIndeling(nieuw);
               blanco.onPlattegrond(nieuw, beeld);
               setStap("eigenaar");
             }}
@@ -317,6 +360,7 @@ function IndelingInhoud({
               onChange={(e) => {
                 setKlantId(e.target.value);
                 setPveId(standaardPve(e.target.value, ""));
+                setEigenVz(null);
               }}
             >
               <option value="">Geen eigenaar</option>
@@ -330,7 +374,14 @@ function IndelingInhoud({
           {klant && actief.length > 0 ? (
             <label className="flex max-w-md flex-col gap-1 text-sm">
               <span className="text-muted-foreground">Uitgangspunten (PvE) van {klant.naam}</span>
-              <select className={selCls} value={pveId} onChange={(e) => setPveId(e.target.value)}>
+              <select
+                className={selCls}
+                value={pveId}
+                onChange={(e) => {
+                  setPveId(e.target.value);
+                  setEigenVz(null);
+                }}
+              >
                 <option value="">Geen — gebruik redelijke standaarden</option>
                 {actief.map((x) => (
                   <option key={x.id} value={x.id}>
@@ -383,6 +434,39 @@ function IndelingInhoud({
               }
             />
           )}
+          {!plattegrondUrl &&
+            magToepassen &&
+            plattegrond &&
+            (platToevoegen ? (
+              <section
+                className="space-y-2 rounded-lg border border-border p-3"
+                aria-label="Plattegrond toevoegen"
+              >
+                <h3 className="font-semibold">Plattegrond toevoegen</h3>
+                <PlattegrondInlezen
+                  input={input}
+                  meta={plattegrond.meta}
+                  onOvernemen={(nieuw, beeld) => {
+                    nieuweIndeling(nieuw);
+                    plattegrond.onPlattegrond(nieuw, beeld);
+                    setPlatToevoegen(false);
+                  }}
+                />
+                <Button variant="ghost" onClick={() => setPlatToevoegen(false)}>
+                  Annuleren
+                </Button>
+              </section>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-3 py-2 text-sm">
+                <span className="flex-1">
+                  Deze telling heeft nog geen plattegrond. Voeg er een toe om erop te tekenen en een
+                  AI-afbeelding van een variant te maken.
+                </span>
+                <Button variant="outline" onClick={() => setPlatToevoegen(true)}>
+                  Plattegrond toevoegen
+                </Button>
+              </div>
+            ))}
           {rooms.length ? (
             <ul className="divide-y divide-border rounded-lg border border-border">
               {rooms.map((r, i) => {
@@ -401,6 +485,27 @@ function IndelingInhoud({
                       )}
                     </span>
                     <span className="tabular-nums text-muted-foreground">{fmt(r.m2)} m²</span>
+                    {!(r.key === "overig" && overigType(r.type).verkeer) && (
+                      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-primary"
+                          aria-label={"Raam naar buiten: " + label}
+                          checked={!!r.raam}
+                          onChange={(e) => {
+                            const raam = e.target.checked;
+                            if (magToepassen)
+                              wijzig(
+                                ruimteWijzigen(werkRef.current.input, werkRef.current.rooms, i, {
+                                  raam,
+                                }),
+                              );
+                            else setRooms((rs) => rs.map((x, j) => (j === i ? { ...x, raam } : x)));
+                          }}
+                        />
+                        raam
+                      </label>
+                    )}
                     <select
                       className={selCls}
                       aria-label={"Status van " + label}
@@ -429,6 +534,67 @@ function IndelingInhoud({
               daarna opnieuw.
             </p>
           )}
+          {toiletKeuze && (
+            <p className="text-xs text-muted-foreground" role="note">
+              Eén woonlaag: één toilet is genoeg. Eén toiletruimte blijft vast, de andere staat op
+              ‘Vrij herindelen’. Is een ander toilet logischer, zet dan die op ‘Vast houden’.
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Alleen een ruimte met een raam naar buiten kan een woon- of slaapkamer worden. Er komen
+            dus niet meer woon- en slaapkamers dan er vrije ruimten met raam zijn.
+          </p>
+          {((typen.has("keuken") && typen.has("woonkamer")) || heeftHal) && (
+            <fieldset className="space-y-2 rounded-lg border border-border p-3">
+              <legend className="px-1 text-sm font-medium">Keuzes</legend>
+              {typen.has("keuken") && typen.has("woonkamer") && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-primary"
+                    checked={keukenOpen}
+                    onChange={(e) => setKeukenOpen(e.target.checked)}
+                  />
+                  Keuken is open naar de woonkamer (samen één woonkamer met open keuken)
+                </label>
+              )}
+              {heeftHal && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-primary"
+                    checked={halBijWoon}
+                    onChange={(e) => setHalBijWoon(e.target.checked)}
+                  />
+                  Hal zo klein mogelijk (2 m²), de rest bij de woonkamer trekken
+                </label>
+              )}
+            </fieldset>
+          )}
+          <details className="rounded-lg border border-border p-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              Wat komt er in de woning (voorzieningen)
+            </summary>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Geldt voor elke keuken, badkamer en toiletruimte in de varianten. Begint met het PvE,
+              anders met wat er in de telling staat, anders met een standaarduitrusting. Zo zie je
+              per variant of de woning in de vrije sector komt.
+            </p>
+            <div className="mt-3 space-y-3">
+              <fieldset className="space-y-3 rounded-lg border border-border p-3">
+                <legend className="px-1 text-sm font-medium">Keuken</legend>
+                <KeukenVelden waarde={vz.keuken} wijzig={(f) => wijzigVz((v) => f(v.keuken))} />
+              </fieldset>
+              <fieldset className="space-y-3 rounded-lg border border-border p-3">
+                <legend className="px-1 text-sm font-medium">Badkamer</legend>
+                <BadkamerVelden waarde={vz.san} wijzig={(f) => wijzigVz((v) => f(v.san))} />
+              </fieldset>
+              <fieldset className="space-y-3 rounded-lg border border-border p-3">
+                <legend className="px-1 text-sm font-medium">Toiletruimte</legend>
+                <ToiletVelden waarde={vz.toilet} wijzig={(f) => wijzigVz((v) => f(v.toilet))} />
+              </fieldset>
+            </div>
+          </details>
           <label className="flex max-w-md flex-col gap-1 text-sm">
             <span className="text-muted-foreground">
               Specifiek aantal slaapkamers voorstellen (optioneel)
@@ -490,6 +656,8 @@ function Resultaten({
   onTerug: () => void;
   onToepassen: (i: number, v: IndelingVariant) => void;
 }) {
+  const N = useNormen();
+  const vrijVanaf = N.grensMidden + 1;
   const gelijkeTotalen =
     varianten.length > 1 && varianten.every((v) => v.R.totaal === varianten[0]!.R.totaal);
   const extra = extraSlaap ? Math.round(num(extraSlaap)) : 0;
@@ -508,8 +676,9 @@ function Resultaten({
       {extraMislukt && (
         <p className="text-sm text-muted-foreground">
           Met {extra} slaapkamer{extra === 1 ? "" : "s"} blijft er te weinig vrije ruimte per
-          slaapkamer over (minimaal zo’n 6 m² per slaapkamer); dit voorstel kon niet gemaakt worden.
-          Ga terug en zet meer ruimten op ‘Vrij herindelen’, of pas het aantal aan.
+          slaapkamer over (minimaal zo’n 6 m² per slaapkamer), of zijn er te weinig vrije ruimten
+          met een raam; dit voorstel kon niet gemaakt worden. Ga terug en zet meer ruimten op ‘Vrij
+          herindelen’, of pas het aantal aan.
         </p>
       )}
       {varianten.length ? (
@@ -532,11 +701,12 @@ function Resultaten({
               <article
                 key={v.nSlaap}
                 className="space-y-2 rounded-lg border border-border p-3"
-                aria-label={`Variant met ${v.nSlaap} slaapkamer${v.nSlaap === 1 ? "" : "s"}`}
+                aria-label={`Variant met ${v.slaapTotaal ?? v.nSlaap} slaapkamer${(v.slaapTotaal ?? v.nSlaap) === 1 ? "" : "s"}`}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="font-semibold">
-                    {v.nSlaap} slaapkamer{v.nSlaap === 1 ? "" : "s"}
+                    {v.slaapTotaal ?? v.nSlaap} slaapkamer
+                    {(v.slaapTotaal ?? v.nSlaap) === 1 ? "" : "s"}
                   </h3>
                   <div className="text-sm">
                     <b>{v.R.totaal} punten</b>
@@ -547,6 +717,13 @@ function Resultaten({
                     </span>
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {v.R.totaal >= vrijVanaf
+                    ? `Vrije sector (vanaf ${vrijVanaf} punten).`
+                    : `Vrije sector vanaf ${vrijVanaf} punten: nog ${fmt(vrijVanaf - v.R.totaal)} punten.`}
+                  {v.halWinst != null &&
+                    ` Hal bij de woonkamer: ${v.halWinst >= 0 ? "+" : ""}${fmt(v.halWinst)} punten.`}
+                </p>
                 <Schema v={v} />
                 {v.toiletToegevoegd && (
                   <p
@@ -599,7 +776,8 @@ function Resultaten({
       ) : (
         <p className="text-sm text-muted-foreground">
           Met de huidige keuzes (vast/vervalt) blijft er te weinig vrije ruimte over voor een
-          realistisch programma. Ga terug en zet meer ruimten op ‘Vrij herindelen’.
+          realistisch programma, of zijn er te weinig vrije ruimten met een raam. Ga terug en zet
+          meer ruimten op ‘Vrij herindelen’, of vink aan welke ruimten een raam hebben.
         </p>
       )}
     </div>

@@ -14,6 +14,7 @@ import {
   meerWoonlagen,
   ruimtenUitTelling,
   ruimtenVoorAdvies,
+  ruimteWijzigen,
   standaardVoorzieningen,
   toepassen,
   voorzieningenToepassen,
@@ -192,6 +193,16 @@ describe("raamregel: een woon- of slaapkamer heeft een raam", () => {
     const y = daCosta();
     y.vertrekken[0]!.raam = false;
     expect(berekenVarianten(y, ruimtenVoorAdvies(y), null, "", N, {})).toEqual([]);
+  });
+
+  it("raam aanvinken in stap Ruimten: in de ruimtelijst én in de telling", () => {
+    const x = daCosta();
+    const rooms = ruimtenVoorAdvies(x);
+    const i = rooms.findIndex((r) => r.type === "wasruimte");
+    const uit = ruimteWijzigen(x, rooms, i, { raam: true });
+    expect(uit.rooms[i]!.raam).toBe(true);
+    expect(uit.input.overig[0]!.raam).toBe(true);
+    expect(x.overig[0]!.raam).toBe(false); // origineel ongewijzigd
   });
 
   it("onbekend raam: een vertrek wel, een overige ruimte niet", () => {

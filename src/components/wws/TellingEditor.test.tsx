@@ -6,7 +6,13 @@ import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, maakVersie, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
 import { facDefault, type WwsInput } from "@/lib/wws";
 import type { Pve } from "@/lib/wws/pve";
-import { berekenVarianten, ruimtenUitTelling, toepassen } from "@/lib/wws/indeling";
+import {
+  berekenVarianten,
+  keukenOpenStandaard,
+  ruimtenVoorAdvies,
+  standaardVoorzieningen,
+  toepassen,
+} from "@/lib/wws/indeling";
 import { rechtenVan, type AppRole } from "@/lib/rollen";
 import TellingEditor from "./TellingEditor";
 
@@ -637,9 +643,14 @@ describe("TellingEditor", () => {
     t.meta = { ...t.meta, klantId: "", pveId: "" };
     t.input.vertrekken.push({ type: "woonkamer", m2: 30, verwarmd: true });
     store.haal.mockResolvedValue(t);
+    // zoals het venster: ruimten met raam en één toilet, voorzieningen uit het PvE
     const verwacht = toepassen(
       t.input,
-      berekenVarianten(t.input, ruimtenUitTelling(t.input), PVE, "", N)[0]!,
+      berekenVarianten(t.input, ruimtenVoorAdvies(t.input), PVE, "", N, {
+        halBijWoon: false,
+        keukenOpen: keukenOpenStandaard(t.input),
+        voorzieningen: standaardVoorzieningen(t.input, PVE),
+      })[0]!,
     );
     // via het startscherm Indelingsadvies ("Bestaande telling kiezen")
     renderEditor("t-pve", ADMIN.id, ["admin", "member"], "indeling");
@@ -687,6 +698,46 @@ describe("TellingEditor", () => {
       "Alles opgeslagen",
     );
     expect(screen.getByRole("button", { name: "Eigenaar: geen" })).toBeInTheDocument();
+  });
+
+  it("indelingsadvies: raam per ruimte, open keuken, voorzieningen, plattegrond toevoegen en vrije sector", async () => {
+    klantenStore.lijst.mockResolvedValue([]);
+    const t = tellingMetPve();
+    t.meta = { ...t.meta, klantId: "", pveId: "" };
+    t.input.vertrekken.push(
+      { type: "woonkamer", m2: 20, verwarmd: true },
+      { type: "keuken", m2: 5, verwarmd: true, openKeuken: true, fac: facDefault("keuken") },
+    );
+    t.input.overig.push({ type: "hal", m2: 6, verwarmd: true });
+    store.haal.mockResolvedValue(t);
+    renderEditor("t-pve", ADMIN.id, ["admin", "member"], "indeling");
+    fireEvent.click(await screen.findByRole("button", { name: "Volgende stap: ruimten →" }));
+    const dlg = within(screen.getByRole("dialog"));
+    // raam: vertrekken standaard aan, de toiletruimte uit, de hal heeft geen vinkje
+    expect(dlg.getByLabelText("Raam naar buiten: Slaapkamer")).toBeChecked();
+    expect(dlg.getByLabelText("Raam naar buiten: Toiletruimte")).not.toBeChecked();
+    expect(dlg.queryByLabelText("Raam naar buiten: Hal of gang")).toBeNull();
+    // ingelezen als open keuken: staat aan
+    expect(dlg.getByLabelText(/Keuken is open naar de woonkamer/)).toBeChecked();
+    fireEvent.click(dlg.getByLabelText(/Hal zo klein mogelijk/));
+    // voorzieningen: standaard staand toilet
+    expect(dlg.getByText("Wat komt er in de woning (voorzieningen)")).toBeInTheDocument();
+    expect(dlg.getByLabelText("Toilet")).toHaveValue("staand");
+    fireEvent.change(dlg.getByLabelText("Toilet"), { target: { value: "hangend" } });
+    // geen plattegrond: toevoegen opent het inleesblok
+    fireEvent.click(dlg.getByRole("button", { name: "Plattegrond toevoegen" }));
+    expect(dlg.getByRole("region", { name: "Plattegrond toevoegen" })).toBeInTheDocument();
+    fireEvent.click(dlg.getByRole("button", { name: "Annuleren" }));
+
+    fireEvent.click(dlg.getByRole("button", { name: "Genereer varianten →" }));
+    const kaart = (await dlg.findAllByRole("article"))[0]!;
+    // woonkamer met open keuken in plaats van een losse keuken; afstand tot de vrije sector
+    expect(within(kaart).getByRole("img").getAttribute("aria-label")).toContain(
+      "Woonkamer met open keuken",
+    );
+    expect(within(kaart).getByRole("img").getAttribute("aria-label")).not.toMatch(/Keuken \d/);
+    expect(kaart).toHaveTextContent(/Vrije sector vanaf 187 punten: nog \d+ punten\./);
+    expect(kaart).toHaveTextContent(/Hal bij de woonkamer: [+-]?\d/);
   });
 
   describe("venster Nieuwe telling (#dlgNieuweTelling)", () => {

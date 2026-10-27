@@ -1603,6 +1603,9 @@ export default function TellingEditor({
         {...(indelingBlanco && !alleenLezen
           ? { blanco: { meta: staat.meta, onPlattegrond: blancoPlattegrond } }
           : {})}
+        {...(!alleenLezen
+          ? { plattegrond: { meta: staat.meta, onPlattegrond: blancoPlattegrond } }
+          : {})}
         stap1={indelingStap1}
         onInputWijziging={(i) => setInput(i)}
         onToepassen={(input, keuze, v, beeld, ai) =>

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { OVERIG_TYPES, VERTREK_TYPES, fmt, type VoorzDef } from "@/lib/wws";
 import { autoVerwarmd } from "@/lib/wws/indeling";
 import { pveVoorFormulier, type Pve, type PveWerk } from "@/lib/wws/pve";
+import type { FacBadkamer, FacKeuken, FacToilet } from "@/lib/wws/types";
 import { useNormen } from "./NormenContext";
 
 interface Props {
@@ -52,7 +53,6 @@ export default function PveDialoog(p: Props) {
 }
 
 function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
-  const N = useNormen();
   const [werk, setWerk] = useState<PveWerk>(() => pveVoorFormulier(pve));
   const [naam, setNaam] = useState(pve?.naam ?? "");
   const k = werk.keuken!;
@@ -66,23 +66,6 @@ function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
       f(n);
       return n;
     });
-
-  const teller = (label: string, max: number, waarde: unknown, zetW: (n: number) => void) => (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <select
-        className={selCls}
-        value={Number(waarde) || 0}
-        onChange={(e) => zetW(+e.target.value)}
-      >
-        {Array.from({ length: max + 1 }, (_, n) => (
-          <option key={n} value={n}>
-            {n}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
 
   return (
     <form
@@ -108,31 +91,7 @@ function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
         actief={k.actief}
         zetActief={(a) => zet((w) => void (w.keuken!.actief = a))}
       >
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Lengte aanrecht</span>
-          <select
-            className={selCls + " max-w-xs"}
-            value={k.keuken.lengte}
-            onChange={(e) =>
-              zet((w) => void (w.keuken!.keuken.lengte = e.target.value as typeof k.keuken.lengte))
-            }
-          >
-            <option value="<1">Korter dan 1 m (0 p)</option>
-            <option value="1-2">1 tot 2 m (4 p)</option>
-            <option value=">=2">Langer dan 2 m (7 p)</option>
-          </select>
-        </label>
-        <Voorzieningen
-          lijst={N.voorzKeuken}
-          waarden={k.keuken.voorz as Record<string, unknown>}
-          zet={(key, v) =>
-            zet((w) => {
-              const vz = w.keuken!.keuken.voorz as Record<string, unknown>;
-              if (v === undefined) delete vz[key];
-              else vz[key] = v;
-            })
-          }
-        />
+        <KeukenVelden waarde={k.keuken} wijzig={(f) => zet((w) => f(w.keuken!.keuken))} />
       </Onderdeel>
 
       <Onderdeel
@@ -140,41 +99,7 @@ function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
         actief={b.actief}
         zetActief={(a) => zet((w) => void (w.badkamer!.actief = a))}
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {(
-            [
-              ["Staand toilet", "toiletStaand", 2],
-              ["Hangend toilet", "toiletHang", 2],
-              ["Wastafel", "wastafel", 4],
-              ["Meerpersoonswastafel", "meerpers", 2],
-              ["Douche", "douche", 3],
-              ["Bad", "bad", 2],
-              ["Bad met douche", "badDouche", 2],
-            ] as const
-          ).map(([label, key, max]) =>
-            teller(label, max, b.san[key], (n) => zet((w) => void (w.badkamer!.san[key] = n))),
-          )}
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className={vinkCls}
-            checked={b.san.eisenOk}
-            onChange={(e) => zet((w) => void (w.badkamer!.san.eisenOk = e.target.checked))}
-          />
-          Voldoet aan de eisen (waterdichte vloer/wand, mengkraan, spiegel)
-        </label>
-        <Voorzieningen
-          lijst={N.voorzSan}
-          waarden={b.san.voorz as Record<string, unknown>}
-          zet={(key, v) =>
-            zet((w) => {
-              const vz = w.badkamer!.san.voorz as Record<string, unknown>;
-              if (v === undefined) delete vz[key];
-              else vz[key] = v;
-            })
-          }
-        />
+        <BadkamerVelden waarde={b.san} wijzig={(f) => zet((w) => f(w.badkamer!.san))} />
       </Onderdeel>
 
       <Onderdeel
@@ -182,29 +107,7 @@ function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
         actief={t.actief}
         zetActief={(a) => zet((w) => void (w.toilet!.actief = a))}
       >
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Toilet</span>
-          <select
-            className={selCls + " max-w-xs"}
-            value={t.toilet.toilet}
-            onChange={(e) =>
-              zet((w) => void (w.toilet!.toilet.toilet = e.target.value as typeof t.toilet.toilet))
-            }
-          >
-            <option value="geen">Geen toilet</option>
-            <option value="staand">Staand toilet (3 p)</option>
-            <option value="hangend">Hangend toilet (3,75 p)</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className={vinkCls}
-            checked={t.toilet.fontein}
-            onChange={(e) => zet((w) => void (w.toilet!.toilet.fontein = e.target.checked))}
-          />
-          Fontein of wastafel in de toiletruimte (1 p)
-        </label>
+        <ToiletVelden waarde={t.toilet} wijzig={(f) => zet((w) => f(w.toilet!.toilet))} />
       </Onderdeel>
 
       <IndelingWensen
@@ -227,6 +130,149 @@ function PveFormulier({ pve, bezig, onOpslaan, onOpenChange }: Props) {
         </Button>
       </DialogFooter>
     </form>
+  );
+}
+
+/** Wijzigt (een kopie van) de waarde; de aanroeper zorgt voor het kopiëren */
+type Wijzig<T> = (f: (w: T) => void) => void;
+
+/** Aanrecht en keukenvoorzieningen; ook voor "wat komt er in de woning" in het indelingsadvies */
+export function KeukenVelden({
+  waarde,
+  wijzig,
+}: {
+  waarde: FacKeuken["keuken"];
+  wijzig: Wijzig<FacKeuken["keuken"]>;
+}) {
+  const N = useNormen();
+  return (
+    <>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Lengte aanrecht</span>
+        <select
+          className={selCls + " max-w-xs"}
+          value={waarde.lengte}
+          onChange={(e) =>
+            wijzig((k) => void (k.lengte = e.target.value as FacKeuken["keuken"]["lengte"]))
+          }
+        >
+          <option value="<1">Korter dan 1 m (0 p)</option>
+          <option value="1-2">1 tot 2 m (4 p)</option>
+          <option value=">=2">Langer dan 2 m (7 p)</option>
+        </select>
+      </label>
+      <Voorzieningen
+        lijst={N.voorzKeuken}
+        waarden={waarde.voorz as Record<string, unknown>}
+        zet={(key, v) =>
+          wijzig((k) => {
+            const vz = k.voorz as Record<string, unknown>;
+            if (v === undefined) delete vz[key];
+            else vz[key] = v;
+          })
+        }
+      />
+    </>
+  );
+}
+
+/** Sanitair en voorzieningen van een badkamer */
+export function BadkamerVelden({
+  waarde,
+  wijzig,
+}: {
+  waarde: FacBadkamer["san"];
+  wijzig: Wijzig<FacBadkamer["san"]>;
+}) {
+  const N = useNormen();
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {(
+          [
+            ["Staand toilet", "toiletStaand", 2],
+            ["Hangend toilet", "toiletHang", 2],
+            ["Wastafel", "wastafel", 4],
+            ["Meerpersoonswastafel", "meerpers", 2],
+            ["Douche", "douche", 3],
+            ["Bad", "bad", 2],
+            ["Bad met douche", "badDouche", 2],
+          ] as const
+        ).map(([label, key, max]) => (
+          <label key={key} className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">{label}</span>
+            <select
+              className={selCls}
+              value={Number(waarde[key]) || 0}
+              onChange={(e) => wijzig((b) => void (b[key] = +e.target.value))}
+            >
+              {Array.from({ length: max + 1 }, (_, n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className={vinkCls}
+          checked={waarde.eisenOk}
+          onChange={(e) => wijzig((b) => void (b.eisenOk = e.target.checked))}
+        />
+        Voldoet aan de eisen (waterdichte vloer/wand, mengkraan, spiegel)
+      </label>
+      <Voorzieningen
+        lijst={N.voorzSan}
+        waarden={waarde.voorz as Record<string, unknown>}
+        zet={(key, v) =>
+          wijzig((b) => {
+            const vz = b.voorz as Record<string, unknown>;
+            if (v === undefined) delete vz[key];
+            else vz[key] = v;
+          })
+        }
+      />
+    </>
+  );
+}
+
+/** Toilet en fontein van een toiletruimte */
+export function ToiletVelden({
+  waarde,
+  wijzig,
+}: {
+  waarde: FacToilet["toilet"];
+  wijzig: Wijzig<FacToilet["toilet"]>;
+}) {
+  return (
+    <>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Toilet</span>
+        <select
+          className={selCls + " max-w-xs"}
+          value={waarde.toilet}
+          onChange={(e) =>
+            wijzig((t) => void (t.toilet = e.target.value as FacToilet["toilet"]["toilet"]))
+          }
+        >
+          <option value="geen">Geen toilet</option>
+          <option value="staand">Staand toilet (3 p)</option>
+          <option value="hangend">Hangend toilet (3,75 p)</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className={vinkCls}
+          checked={waarde.fontein}
+          onChange={(e) => wijzig((t) => void (t.fontein = e.target.checked))}
+        />
+        Fontein of wastafel in de toiletruimte (1 p)
+      </label>
+    </>
   );
 }
 

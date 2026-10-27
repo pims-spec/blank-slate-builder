@@ -891,6 +891,8 @@ export type RuimteWijziging = Partial<{
   m2: number;
   notch: Notches;
   herkomst: string | undefined;
+  /** Raam naar de buitenlucht (stap Ruimten) */
+  raam: boolean;
 }>;
 
 /**
@@ -909,8 +911,13 @@ export function ruimteWijzigen(
   if (w.bbox) nr.bbox = w.bbox;
   if (w.m2 !== undefined) nr.m2 = w.m2;
   if (w.notch) nr.notch = w.notch;
+  if (w.raam !== undefined) nr.raam = w.raam;
   const uit = { ...input, [r.key]: [...input[r.key]] } as WwsInput;
-  const lijst = uit[r.key] as (IndelingRij & { notch?: unknown; herkomst?: string })[];
+  const lijst = uit[r.key] as (IndelingRij & {
+    notch?: unknown;
+    herkomst?: string;
+    raam?: boolean;
+  })[];
   const bron = lijst[r.idx];
   if (bron) {
     const b = { ...bron };
@@ -921,6 +928,7 @@ export function ruimteWijzigen(
       else b.notch = w.notch;
     }
     if (w.herkomst !== undefined) b.herkomst = w.herkomst;
+    if (w.raam !== undefined) b.raam = w.raam;
     lijst[r.idx] = b;
   }
   return { input: uit, rooms: rooms.map((x, j) => (j === i ? nr : x)) };
