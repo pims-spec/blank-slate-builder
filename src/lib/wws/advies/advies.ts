@@ -13,7 +13,7 @@
 import { INDEX_KLASSEN, LABELS, num, r2 } from "../basis";
 import { calc, deriveFac, normaliseer } from "../calc";
 import { AFMELD_KOSTEN_STANDAARD, DEFAULT_NORMEN, type Normen } from "../normen";
-import type { WwsInput } from "../types";
+import type { Labelklasse, WwsInput } from "../types";
 import { beginlabel, gekozenOptie } from "./energieAdvies";
 import {
   energieVanOmschrijving,
@@ -66,8 +66,9 @@ export interface AdviesOpties {
    */
   brongetrouw?: boolean;
   /**
-   * Labelstappen tellen nooit als lastig (ook niet bij 3 of meer stappen). Voor de adviesopties
-   * (opties.ts), zoals de GoHome-adviesrapporten; de route in het adviesvenster gebruikt dit niet.
+   * Labelstappen tellen nooit als lastig (ook niet bij 3 of meer stappen), zoals de
+   * GoHome-adviesrapporten. De route in het adviesvenster (berekenAdvies) doet dit altijd; voor
+   * berekenRoute geeft opties.ts het mee.
    */
   labelNietLastig?: boolean;
 }
@@ -335,9 +336,8 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     (vanAdvies || x.energie.soort === "label" || x.energie.soort === "labelOud")
   ) {
     const i0 = labelIndex(vanAdvies ? aStart.label! : x.energie.label);
-    if (i0 > 0) {
-      const target = LABELS[i0 - 1]!;
-      const applyFn: Toepassing = vanAdvies
+    const naar = (target: Labelklasse): Toepassing =>
+      vanAdvies
         ? (y) => {
             if (y.energie.soort === "label" || y.energie.soort === "labelOud")
               y.energie.label = target;
@@ -353,6 +353,19 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
         : (y) => {
             y.energie.label = target;
           };
+    // Bewuste afwijking van de bron (die altijd precies één klasse nam): de sprong gaat naar het
+    // eerste label dat punten oplevert. Levert de volgende klasse niets op (bijv. B en A tellen
+    // even zwaar), dan zou die stap alleen geld kosten.
+    let j = i0 - 1;
+    if (!brongetrouw && i0 > 0) {
+      const b0 = calc(x, N).exact;
+      const levertOp = (k: number) => calc(pasToe(naar(LABELS[k]!), x), N).exact - b0 > 0.009;
+      while (j >= 0 && !levertOp(j)) j--;
+    }
+    if (i0 > 0 && j >= 0) {
+      const target = LABELS[j]!;
+      const st = i0 - j;
+      const applyFn = naar(target);
       const b = calc(x, N).exact;
       x = pasToe(applyFn, x);
       const R = calc(x, N);
@@ -364,9 +377,10 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
           LABELS[i0] +
           (vanAdvies ? " (volgens energieadvies)" : "") +
           " naar " +
-          target,
+          target +
+          (st > 1 ? " (" + st + " stappen)" : ""),
         g: r2(R.exact - b),
-        c: K.labelStap,
+        c: K.labelStap * st,
         h: "gemiddeld",
         hr: "Isolatie, glas of installatie; nieuw label laten opnemen",
         tot: R.totaal,
@@ -602,7 +616,14 @@ export function berekenAdvies(
   const vandaag = vandaagVan(opties);
   const doel = N.grensMidden + 1 + (inst.marge || 0);
   const brongetrouw = !!opties.brongetrouw;
-  const k = routeKern(input, N, inst, { doel, metNaarLabel: false, vandaag, brongetrouw });
+  // labelstappen tellen nooit als lastig, net als in de adviesopties (bewuste afwijking van de bron)
+  const k = routeKern(input, N, inst, {
+    doel,
+    metNaarLabel: false,
+    vandaag,
+    brongetrouw,
+    labelNietLastig: true,
+  });
   // Absoluut plafond: wat is maximaal haalbaar, ook met de lastige maatregelen?
   let xMax = k.begin;
   let guardMax = 0;

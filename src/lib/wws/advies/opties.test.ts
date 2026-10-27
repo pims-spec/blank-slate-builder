@@ -193,12 +193,12 @@ describe("adviesOpties", () => {
 });
 
 describe("labelstappen in de opties niet lastig", () => {
-  it("label G: de opties nemen een grote labelsprong mee, de route in het venster niet", () => {
+  it("label G: de opties en de route in het venster nemen allebei een grote labelsprong mee", () => {
     const x = woning("D");
     x.energie.label = "G";
     const route = berekenAdvies(x, N, inst(), { vandaag: VANDAAG });
     const sprong = (o: string) => /naar A/.test(o);
-    expect(route.stappen.some((s) => s.key === "label" && sprong(s.o))).toBe(false);
+    expect(route.stappen.some((s) => s.key === "label" && sprong(s.o))).toBe(true);
     const opties = adviesOpties(x, N, inst(), { vandaag: VANDAAG });
     expect(
       opties.some((o) => o.route.stappen.some((s) => s.key === "label" && /naar A/.test(s.o))),
