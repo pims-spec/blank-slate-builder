@@ -2,11 +2,15 @@
 // paar parameters. Gedeeld door browser (vooraf controleren) en server (validator).
 import * as z from "zod";
 import { OVERIG_TYPES, VERTREK_TYPES } from "../basis";
+import { MAX_FOTOS } from "../foto/beoordeling";
 import { typeVanBase64 } from "./dienst";
 
 /** ca. 5,2 MB aan afbeelding (zoals de bron), in base64 */
 export const MAX_AFBEELDING_BASE64 = 7_200_000;
 export const MAX_ADVIES_TEKST = 90_000;
+/** Fotobeoordeling: per foto (verkleind tot 1.568 px past dat ruim) en alle foto's samen, in base64 */
+export const MAX_FOTO_BASE64 = 2_500_000;
+export const MAX_FOTOS_BASE64 = 8_000_000;
 
 export const AfbeeldingVraag = z
   .object({
@@ -29,6 +33,19 @@ export type PlattegrondVraag = z.input<typeof PlattegrondVraag>;
 export const EnergieAdviesVraag = z.object({
   tekst: z.string().min(20).max(MAX_ADVIES_TEKST),
 });
+
+export const FotoVraag = z.object({
+  ruimte: z.enum(["keuken", "badkamer", "toilet"]),
+  fotos: z
+    .array(AfbeeldingVraag.refine((a) => a.data.length <= MAX_FOTO_BASE64, "Foto te groot."))
+    .min(1)
+    .max(MAX_FOTOS)
+    .refine(
+      (fs) => fs.reduce((n, f) => n + f.data.length, 0) <= MAX_FOTOS_BASE64,
+      "Samen te groot.",
+    ),
+});
+export type FotoVraag = z.input<typeof FotoVraag>;
 
 const VERTREK_KEYS = new Set<string>(VERTREK_TYPES.map((t) => t.k));
 const OVERIG_KEYS = new Set<string>(OVERIG_TYPES.map((t) => t.k));

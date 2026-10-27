@@ -8,6 +8,8 @@ export const CLAUDE_URL = "https://api.anthropic.com/v1/messages";
 export const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
 export const STANDAARD_CLAUDE_MODEL = "claude-sonnet-5-5";
 export const STANDAARD_GEMINI_MODEL = "gemini-3.1-flash-image";
+/** Fotobeoordeling (keuken, badkamer, toilet); gekozen na de vergelijkingstest van oktober 2026 */
+export const STANDAARD_GEMINI_FOTO_MODEL = "gemini-4-argon";
 /** Zoals de bron (55 seconden) */
 export const AI_TIMEOUT_MS = 55_000;
 /** Grootste afbeelding die terug mag komen (base64-tekens) */
@@ -193,6 +195,70 @@ export async function vraagGeminiAfbeelding(
     return { ok: false, fout: "onbruikbaar_antwoord" };
   }
   return { ok: true, data: { data, type } };
+}
+
+/** De laatste tekst in een (onbekend gevormd) Interactions-antwoord */
+export function zoekTekst(x: unknown, diepte = 0): string | null {
+  if (!x || typeof x !== "object" || diepte > 8) return null;
+  if (Array.isArray(x)) {
+    for (let i = x.length - 1; i >= 0; i--) {
+      const t = zoekTekst(x[i], diepte + 1);
+      if (t) return t;
+    }
+    return null;
+  }
+  const o = x as Record<string, unknown>;
+  if (o["type"] === "text" && typeof o["text"] === "string") return o["text"];
+  for (const k of ["outputs", "steps", "content", "output"]) {
+    const t = zoekTekst(o[k], diepte + 1);
+    if (t) return t;
+  }
+  return typeof o["output_text"] === "string" ? o["output_text"] : null;
+}
+
+/**
+ * Gemini: JSON-antwoord (volgens schema) op foto's met een instructie. Elke foto gaat mee met
+ * "Foto n" ervoor, de instructie erna. Geeft de tekst terug; controleren doet de aanroeper.
+ */
+export async function vraagGeminiJson(
+  fetchFn: typeof fetch,
+  sleutel: string | undefined,
+  model: string | undefined,
+  prompt: string,
+  fotos: readonly Afbeelding[],
+  schema: Record<string, unknown>,
+): Promise<AiUitkomst<string>> {
+  if (!sleutel) {
+    logFout("Gemini", "sleutel_ontbreekt");
+    return { ok: false, fout: "sleutel_ontbreekt" };
+  }
+  const r = await post(
+    fetchFn,
+    "Gemini",
+    GEMINI_URL,
+    { "x-goog-api-key": sleutel },
+    {
+      model: model || STANDAARD_GEMINI_FOTO_MODEL,
+      // niet bewaren bij Google (standaard 55 dagen)
+      store: false,
+      input: [
+        ...fotos.flatMap((f, i) => [
+          { type: "text", text: `Foto ${i + 1}` },
+          { type: "image", mime_type: f.type, data: f.data },
+        ]),
+        { type: "text", text: prompt },
+      ],
+      response_format: { type: "text", mime_type: "application/json", schema },
+    },
+    fotos.length > 0,
+  );
+  if (!r.ok) return r;
+  const tekst = zoekTekst(r.data);
+  if (!tekst) {
+    logFout("Gemini", "onbruikbaar_antwoord");
+    return { ok: false, fout: "onbruikbaar_antwoord" };
+  }
+  return { ok: true, data: tekst };
 }
 
 /** Echt een JPEG/PNG/WebP? Controleert de eerste bytes van base64-data */

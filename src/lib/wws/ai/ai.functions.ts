@@ -1,68 +1,28 @@
-// Server functions voor de AI: plattegrond en verduurzamingsadvies inlezen (Claude) en een
-// AI-afbeelding van een indelingsvariant (Gemini). Elke aanroep:
+// Server functions voor de AI: plattegrond en verduurzamingsadvies inlezen (Claude), een
+// AI-afbeelding van een indelingsvariant en de fotobeoordeling van keuken, badkamer of toilet
+// (Gemini). Elke aanroep:
 // - vereist een ingelogde gebruiker met schrijfrol (rollenMiddleware, met het eigen token);
 // - controleert de invoer met zod (ook de echte inhoud van afbeeldingen);
-// - boekt het gebruik via ai_gebruik_boeken() met het eigen token (daglimiet per gebruiker);
+// - boekt het gebruik via ai_gebruik_boeken() met het eigen token (daglimiet per gebruiker,
+//   limiet.ts);
 // - bouwt de instructie zelf op (prompts.ts) en stuurt alleen afbeelding/tekst + instructie;
 // - geeft alleen eigen foutcodes terug, nooit de foutmelding van de dienst.
 import { createServerFn } from "@tanstack/react-start";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { beoordeelMetGemini } from "../foto/gemini";
+import type { Beoordeling } from "../foto/beoordeling";
 import { vereisSchrijfrol } from "../rollenMiddleware";
 import type { PlattegrondAntwoord } from "./antwoorden";
-import { vraagClaude, vraagGeminiAfbeelding, type AiFout, type Afbeelding } from "./dienst";
+import { vraagClaude, vraagGeminiAfbeelding, type Afbeelding } from "./dienst";
+import { metLimiet, type AiAntwoord } from "./limiet";
 import { verwijderPatronen } from "./privacy";
 import { energieAdviesPrompt, indelingAIPrompt, platPrompt } from "./prompts";
 import { verwerkEnergieAdvies, verwerkPlattegrond } from "./verwerken";
-import {
-  Boeking,
-  EnergieAdviesVraag,
-  PlattegrondVraag,
-  VariantAfbeeldingVraag,
-  type Gebruik,
-} from "./vragen";
+import { EnergieAdviesVraag, FotoVraag, PlattegrondVraag, VariantAfbeeldingVraag } from "./vragen";
 import type { EnergieAdvies } from "../types";
 
-export type AiServerFout = AiFout | "limiet_bereikt" | "geen_maatregelen" | "geen_toegang";
-export type AiAntwoord<T> =
-  { ok: true; data: T; gebruik: Gebruik } | { ok: false; fout: AiServerFout; gebruik?: Gebruik };
-
-type Soort = "lezen" | "afbeelding";
-
-/** Boekt één aanroep; null = niet gelukt (geen toegang of database-fout) */
-async function boek(
-  db: SupabaseClient<Database>,
-  soort: Soort,
-): Promise<{ toegestaan: boolean; gebruik: Gebruik } | null> {
-  const { data, error } = await db.rpc("ai_gebruik_boeken", { _soort: soort });
-  if (error) {
-    console.warn(`[ai] gebruik boeken mislukt (${error.code ?? "?"})`);
-    return null;
-  }
-  const b = Boeking.safeParse(data);
-  if (!b.success) return null;
-  return {
-    toegestaan: b.data.toegestaan,
-    gebruik: { gebruikt: b.data.gebruikt, limiet: b.data.limiet },
-  };
-}
+export type { AiAntwoord, AiServerFout } from "./limiet";
 
 const env = (k: string) => process.env[k] || undefined;
-
-/** Eerst sleutel, dan limiet boeken, dan de dienst — een ontbrekende sleutel telt niet mee */
-async function metLimiet<T>(
-  db: SupabaseClient<Database>,
-  soort: Soort,
-  sleutelNaam: string,
-  roep: () => Promise<{ ok: true; data: T } | { ok: false; fout: AiServerFout }>,
-): Promise<AiAntwoord<T>> {
-  if (!env(sleutelNaam)) return { ok: false, fout: "sleutel_ontbreekt" };
-  const b = await boek(db, soort);
-  if (!b) return { ok: false, fout: "geen_toegang" };
-  if (!b.toegestaan) return { ok: false, fout: "limiet_bereikt", gebruik: b.gebruik };
-  const r = await roep();
-  return r.ok ? { ok: true, data: r.data, gebruik: b.gebruik } : { ...r, gebruik: b.gebruik };
-}
 
 export const leesPlattegrond = createServerFn({ method: "POST" })
   .middleware([vereisSchrijfrol])
@@ -113,6 +73,22 @@ export const maakVariantAfbeelding = createServerFn({ method: "POST" })
         env("GEMINI_IMAGE_MODEL"),
         indelingAIPrompt(data.ruimten),
         data.afbeelding,
+      ),
+    ),
+  );
+
+/** De fotobeoordeling telt als één keer "lezen", ook bij meerdere foto's */
+export const beoordeelFotos = createServerFn({ method: "POST" })
+  .middleware([vereisSchrijfrol])
+  .validator((d: unknown) => FotoVraag.parse(d))
+  .handler(async ({ data, context }): Promise<AiAntwoord<Beoordeling>> =>
+    metLimiet(context.supabase, "lezen", "GEMINI_API_KEY", () =>
+      beoordeelMetGemini(
+        fetch,
+        env("GEMINI_API_KEY"),
+        env("GEMINI_FOTO_MODEL"),
+        data.ruimte,
+        data.fotos,
       ),
     ),
   );
