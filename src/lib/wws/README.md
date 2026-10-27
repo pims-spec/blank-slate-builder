@@ -791,6 +791,14 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
 - **Adresregel** (puntentelling, kaart "Woning"): "Straat huisnummer, postcode plaats". De bron
   zette de postcode vóór het huisnummer ("IJdoornlaan, 1024 KM 251T-1, Amsterdam"); brongetrouw
   blijft dat zo.
+- **Voorblad:** ook "Opgesteld door" (alle rapporten met `pdfCoverPage`).
+- **Adviesrapport zonder blok "Woning"** bij de huidige situatie en bij elke optie
+  (`pdfTellingBody` met `zonderWoning`); adres en opsteller staan op het voorblad. De losse
+  puntentelling en de route-PDF houden het blok.
+- **Samenvatting:** past de kaart met de puntentotalen niet meer op de overzichtspagina, dan gaat
+  het kopje "Samenvatting" mee naar de volgende pagina (de bron liet het kopje los staan).
+- **Energielabel en WOZ-waarde op één pagina:** compactere labelrijen (7 in plaats van 8,4 mm).
+- Brongetrouw blijft alles zoals de bron. Test: `pdf.afwijkingen.test.ts`.
 - **Brongetrouw** (`brongetrouw: true`, `bronGetrouw: true`): de twee oude opties, geen afmelden,
   geen doelzin en geen waarschuwing.
 - Tests: `opties.test.ts`, `AdviesDialoog.test.tsx`, `NormenBeheer.test.tsx`,

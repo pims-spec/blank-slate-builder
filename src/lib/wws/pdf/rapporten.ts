@@ -392,7 +392,9 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   );
   if (!x.bronGetrouw) y = terugvalWaarschuwing(doc, y, cur, N);
   y = pdfPlattegrondBlok(doc, y, x.plattegrond);
-  const body1 = pdfTellingBody(lib, doc, y, meta, cur, N);
+  // bewuste afwijking: zonder het blok "Woning" (adres en opsteller staan op het voorblad)
+  const zonderWoning = !x.bronGetrouw;
+  const body1 = pdfTellingBody(lib, doc, y, meta, cur, N, { zonderWoning });
   const R1 = body1.R;
 
   // De opties, elk met hun eigen volledige puntentelling
@@ -409,6 +411,7 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
       undefined,
       meta,
       o.doelzin,
+      zonderWoning,
     );
     y = p.y;
     if (p.R) Ropties.push(p.R);

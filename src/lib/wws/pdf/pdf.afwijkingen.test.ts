@@ -379,6 +379,38 @@ describe("bewuste afwijkingen in de PDF's", () => {
     expect(await tekst(true)).toContain("zich niet in de vrije sector bevindt");
   });
 
+  it("adviesrapport: samenvatting onder het kopje, energielabel en WOZ op één pagina", async () => {
+    const inst = standaardInstellingen(N);
+    for (let n = 1; n <= 8; n++) {
+      const input = normaliseer(genereer(n));
+      const meta = willekeurigeMeta(n);
+      const pag = await pdfTekst(maakAdviesPdf(LIB, { meta, input, normen: N, inst }).blob);
+      const op = (t: string) => pag.findIndex((p) => p.includes(t));
+      expect(op("Samenvatting"), "seed " + n).toBe(op("Huidige status"));
+      expect(op("Hieronder is een overzicht van de punten per energielabel."), "seed " + n).toBe(
+        op("Deel 2"),
+      );
+    }
+  });
+
+  it("voorblad: opgesteld door; adviesrapport zonder blok Woning, de puntentelling met", async () => {
+    const input = normaliseer(genereer(2));
+    const meta = { ...willekeurigeMeta(2), opsteller: "Test Opsteller" };
+    const inst = standaardInstellingen(N);
+    const advies = await pdfTekst(maakAdviesPdf(LIB, { meta, input, normen: N, inst }).blob);
+    expect(advies[0]).toContain("Opgesteld door");
+    expect(advies[0]).toContain("Test Opsteller");
+    expect(advies.flat()).not.toContain("Bouwjaar");
+    const telling = await pdfTekst(maakTellingPdf(LIB, { meta, input, normen: N }).blob);
+    expect(telling[0]).toContain("Opgesteld door");
+    expect(telling.flat()).toContain("Bouwjaar");
+    const bron = await pdfTekst(
+      maakAdviesPdf(LIB, { meta, input, normen: N, inst, bronGetrouw: true }).blob,
+    );
+    expect(bron[0]).not.toContain("Opgesteld door");
+    expect(bron.flat()).toContain("Bouwjaar");
+  });
+
   it("adresregel: straat + huisnummer, postcode plaats (de bron zette de postcode ervoor)", async () => {
     const input = normaliseer(genereer(1));
     const meta = {

@@ -175,7 +175,7 @@ export function pdfTellingBody(
   meta: TellingMeta,
   input: WwsInput,
   normen: Normen,
-  opts: { skipGauge?: boolean } = {},
+  opts: { skipGauge?: boolean; zonderWoning?: boolean } = {},
 ): { y: number; R: WwsResultaat } {
   const W = PDF_W,
     M = PDF_M,
@@ -200,34 +200,39 @@ export function pdfTellingBody(
     sectieKop(doc, t, M, y);
     y += 4;
   };
-  // Woning
-  h3("Woning");
-  // bewuste afwijking: de bron zette de postcode vóór het huisnummer ("Straat, 1234 AB 12, Plaats")
-  const adres = isBronModus()
-    ? [meta.adres, [meta.postcode, meta.huisnummer].filter(Boolean).join(" "), meta.plaats]
-        .filter(Boolean)
-        .join(", ")
-    : [
-        [meta.adres, meta.huisnummer].filter(Boolean).join(" "),
-        [meta.postcode, meta.plaats].filter(Boolean).join(" "),
-      ]
-        .filter(Boolean)
-        .join(", ");
-  y =
-    tabel(lib, doc, {
-      startY: y,
-      body: [
-        ["Adres", txt(adres || "-")],
-        ["Bouwjaar", meta.bouwjaar || "-"],
-        ["Type", input.woningtype === "eengezins" ? "Eengezinswoning" : "Meergezinswoning"],
-        ["Peildatum", meta.peildatum ? new Date(meta.peildatum).toLocaleDateString("nl-NL") : "-"],
-        ["Opgesteld door", meta.opsteller || "-"],
-      ],
-      theme: "plain",
-      styles: { fontSize: 9.5, textColor: INK, cellPadding: 1.4 },
-      columnStyles: { 0: { fontStyle: "bold", cellWidth: 40, textColor: MUT } },
-      margin: { left: M, right: M },
-    }) + 7;
+  // Woning (niet in het adviesrapport: daar staan adres en opsteller op het voorblad)
+  if (!opts.zonderWoning) {
+    h3("Woning");
+    // bewuste afwijking: de bron zette de postcode vóór het huisnummer ("Straat, 1234 AB 12, Plaats")
+    const adres = isBronModus()
+      ? [meta.adres, [meta.postcode, meta.huisnummer].filter(Boolean).join(" "), meta.plaats]
+          .filter(Boolean)
+          .join(", ")
+      : [
+          [meta.adres, meta.huisnummer].filter(Boolean).join(" "),
+          [meta.postcode, meta.plaats].filter(Boolean).join(" "),
+        ]
+          .filter(Boolean)
+          .join(", ");
+    y =
+      tabel(lib, doc, {
+        startY: y,
+        body: [
+          ["Adres", txt(adres || "-")],
+          ["Bouwjaar", meta.bouwjaar || "-"],
+          ["Type", input.woningtype === "eengezins" ? "Eengezinswoning" : "Meergezinswoning"],
+          [
+            "Peildatum",
+            meta.peildatum ? new Date(meta.peildatum).toLocaleDateString("nl-NL") : "-",
+          ],
+          ["Opgesteld door", meta.opsteller || "-"],
+        ],
+        theme: "plain",
+        styles: { fontSize: 9.5, textColor: INK, cellPadding: 1.4 },
+        columnStyles: { 0: { fontStyle: "bold", cellWidth: 40, textColor: MUT } },
+        margin: { left: M, right: M },
+      }) + 7;
+  }
   // Punten per onderdeel (compact overzicht)
   const onderdelen: [string, string, number][] = [
     ["Woning", "energieprestatie en WOZ-waarde", byNr(4) + byNr(11)],
@@ -587,6 +592,8 @@ export function pdfCoverPage(doc: Doc, meta: TellingMeta, titel?: string) {
       ["Toevoeging", mHn ? mHn[2]! : ""],
       ["Plaats", meta.plaats || "-"],
       ["Postcode", meta.postcode || "-"],
+      // bewuste afwijking: de bron noemde de opsteller niet op het voorblad
+      ...(isBronModus() ? [] : [["Opgesteld door", meta.opsteller || "-"]]),
     ] as [string, string][]
   ).filter((r) => r[0] !== "Toevoeging" || r[1]);
   const pc = String(meta.postcode || "").replace(/^(\d{4})\s*([A-Za-z]{2})$/, "$1 $2");
@@ -1021,6 +1028,8 @@ export function pdfOptiePagina(
   meta?: TellingMeta,
   /** Bewuste afwijking: de doelzin van de optie ("Om de woning …, moet …") */
   doelzin?: string,
+  /** Zonder het blok "Woning" in de telling (adviesrapport) */
+  zonderWoning = false,
 ): { y: number; R: WwsResultaat | null } {
   const W = PDF_W,
     M = PDF_M,
@@ -1090,7 +1099,10 @@ export function pdfOptiePagina(
     }
     sectieKop(doc, "Volledige puntentelling met deze optie", M, y);
     y += 5.5;
-    const body = pdfTellingBody(lib, doc, y, meta, route.input, normen, { skipGauge: true });
+    const body = pdfTellingBody(lib, doc, y, meta, route.input, normen, {
+      skipGauge: true,
+      zonderWoning,
+    });
     y = body.y;
     R = body.R;
   }
@@ -1417,9 +1429,11 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
     "Energielabel",
     "Hieronder is een overzicht van de punten per energielabel.",
   );
+  // bewuste afwijking: compactere rijen, zodat energielabel en WOZ-waarde op één pagina passen
+  const bron = isBronModus();
   const cardW = W - 2 * M,
     padX = 7,
-    rowH = 8.4,
+    rowH = bron ? 8.4 : 7,
     chevW = 26,
     chevH = 5.6,
     col1 = M + 66,
@@ -1470,7 +1484,7 @@ export function pdfEnergieUitlegPagina(doc: Doc, normen: Normen): number {
   doc.setFont("helvetica", "normal");
   doc.text(fmt(normen.epv[0]), col1, ty);
   doc.text(fmt(normen.epv[1]), col2, ty);
-  y += cardH + 12;
+  y += cardH + (bron ? 12 : 8);
 
   // Kaart: WOZ-waarde, in twee delen plus de cap
   const wj = Object.keys(normen.woz).sort().reverse()[0]!;
@@ -1692,8 +1706,14 @@ export function pdfSamenvattingPagina(
     y += 5.8 + (lines.length - 1) * 5.2;
   });
   y += 8;
-  y = pdfKaartHeader(doc, M, y, "Samenvatting");
   const cardH = 14 + (1 + opties.length) * 29;
+  // bewuste afwijking: past de kaart niet meer, dan gaat het kopje mee naar de volgende pagina (de
+  // bron liet "Samenvatting" los onderaan de pagina staan)
+  if (!isBronModus() && y + 7 + cardH > 270) {
+    doc.addPage();
+    y = 20;
+  }
+  y = pdfKaartHeader(doc, M, y, "Samenvatting");
   if (y + cardH > 270) {
     doc.addPage();
     y = 20;
