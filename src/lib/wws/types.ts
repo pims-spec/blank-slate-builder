@@ -76,12 +76,20 @@ export interface FacKeuken {
   kind: "keuken";
   /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
   uitPve?: boolean;
+  /** Ingevuld uit een fotobeoordeling, nog niet gecontroleerd */
+  uitFoto?: boolean;
+  /** Velden die de fotobeoordeling niet zeker wist (veld → reden); de app toont er een ! bij */
+  fotoOnzeker?: Record<string, string>;
   keuken: { lengte: Aanrecht; voorz: Partial<Record<KeukenVoorzKey, VoorzWaarde>> };
 }
 export interface FacBadkamer {
   kind: "badkamer";
   /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
   uitPve?: boolean;
+  /** Ingevuld uit een fotobeoordeling, nog niet gecontroleerd */
+  uitFoto?: boolean;
+  /** Velden die de fotobeoordeling niet zeker wist (veld → reden); de app toont er een ! bij */
+  fotoOnzeker?: Record<string, string>;
   san: {
     toiletStaand: NumLike;
     toiletHang: NumLike;
@@ -105,6 +113,10 @@ export interface FacToilet {
   kind: "toilet";
   /** Overgenomen uit het PvE van de eigenaar, nog niet gecontroleerd */
   uitPve?: boolean;
+  /** Ingevuld uit een fotobeoordeling, nog niet gecontroleerd */
+  uitFoto?: boolean;
+  /** Velden die de fotobeoordeling niet zeker wist (veld → reden); de app toont er een ! bij */
+  fotoOnzeker?: Record<string, string>;
   toilet: { toilet: "geen" | "staand" | "hangend"; fontein: boolean };
 }
 export interface FacWas {
