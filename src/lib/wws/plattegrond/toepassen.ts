@@ -181,7 +181,7 @@ export function platToepassen(
         .filter((f): f is NonNullable<typeof f> => !!f && !facIsOnbewerkt(f));
       [...newV, ...newO].forEach((r) => {
         const i = oud.findIndex((f) => f.kind === r.fac?.kind);
-        if (i >= 0) r.fac = oud.splice(i, 1)[0];
+        if (i >= 0) r.fac = oud.splice(i, 1)[0]!;
       });
     }
     I.vertrekken = newV as Vertrek[];
