@@ -24,7 +24,7 @@ import {
   heeftFilters,
   matchFilters,
   matchZoek,
-  sorteerFavNaam,
+  sorteerFavGewijzigd,
   versieKeuzes,
   versiesTekst,
   type ArchiefFilters,
@@ -75,8 +75,8 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
     [data, NORMEN, klanten],
   );
   const zichtbaar = useMemo(
-    // favorieten eerst, dan op naam — zoals de bron
-    () => sorteerFavNaam(rijen.filter((r) => matchZoek(r, zoek) && matchFilters(r, filters))),
+    // favorieten eerst, dan laatst gewijzigd bovenaan (de bron sorteert op naam)
+    () => sorteerFavGewijzigd(rijen.filter((r) => matchZoek(r, zoek) && matchFilters(r, filters))),
     [rijen, zoek, filters],
   );
   const collegas = useMemo(() => collegasInLijst(rijen), [rijen]);

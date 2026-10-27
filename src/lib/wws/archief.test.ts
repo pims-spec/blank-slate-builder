@@ -127,6 +127,28 @@ describe("sorteerFavNaam (zoals de bron)", () => {
   });
 });
 
+describe("sorteerFavGewijzigd (standaard in het archief)", () => {
+  it("favorieten eerst, dan laatst gewijzigd bovenaan, bij gelijke datum op naam", async () => {
+    const { sorteerFavGewijzigd } = await import("./archief");
+    const r = (titel: string, gewijzigdOp: string, favoriet = false) =>
+      ({ titel, t: { gewijzigdOp, meta: { favoriet } } }) as never;
+    const uit = sorteerFavGewijzigd([
+      r("oud", "2026-01-01T10:00:00Z"),
+      r("fav oud", "2025-06-01T10:00:00Z", true),
+      r("nieuw", "2026-10-27T09:00:00Z"),
+      r("fav nieuw", "2026-10-01T10:00:00Z", true),
+      r("Bakker", "2026-01-01T10:00:00Z"),
+    ]);
+    expect((uit as { titel: string }[]).map((x) => x.titel)).toEqual([
+      "fav nieuw",
+      "fav oud",
+      "nieuw",
+      "Bakker",
+      "oud",
+    ]);
+  });
+});
+
 describe("versies in het archief", () => {
   it("aantal zoals archiefRow() in de bron", () => {
     expect(versiesTekst({ aantalVersies: 0, versieCount: 0 })).toBe("geen versies");

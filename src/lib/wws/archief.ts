@@ -133,6 +133,22 @@ export function sorteerFavNaam<T extends { t: Telling; titel: string }>(rijen: r
   );
 }
 
+/**
+ * Favorieten eerst, dan laatst gewijzigd bovenaan (standaard in het archief; de bron sorteert op
+ * naam, zie sorteerFavNaam). Gelijke datum: op naam.
+ */
+export function sorteerFavGewijzigd<T extends { t: Telling; titel: string }>(
+  rijen: readonly T[],
+): T[] {
+  const fav = (r: T) => (r.t.meta && r.t.meta["favoriet"] ? 1 : 0);
+  return [...rijen].sort(
+    (a, b) =>
+      fav(b) - fav(a) ||
+      b.t.gewijzigdOp.localeCompare(a.t.gewijzigdOp) ||
+      a.titel.localeCompare(b.titel, "nl", { sensitivity: "base" }),
+  );
+}
+
 /** "geen versies" / "1 versie" / "3 versies" — archiefRow() in wws-site.html */
 export const versiesTekst = (t: Pick<Telling, "aantalVersies" | "versieCount">) => {
   const av = t.aantalVersies != null ? t.aantalVersies : t.versieCount;
