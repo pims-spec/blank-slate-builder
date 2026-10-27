@@ -89,7 +89,8 @@ describe("verbeteradvies: eenvoudigste maatregel eerst", () => {
     const delen = sanDelen(x, doel, false);
     expect(delen.length).toBeGreaterThan(0);
     expect(delen.join("; ")).not.toMatch(/Handdoekenradiator|Stopcontact/);
-    expect(delen.join("; ")).toMatch(/Ingebouwd kastje/);
+    // een eenvoudige voorziening; bij het laatste stuk de goedkoopste die het doel haalt
+    expect(delen.join("; ")).toMatch(/Ingebouwd kastje|Gemonteerde volledige afscheiding/);
     // de bron neemt de radiator wél mee
     expect(sanDelen(x, doel, true).join("; ")).toMatch(/Handdoekenradiator/);
   });

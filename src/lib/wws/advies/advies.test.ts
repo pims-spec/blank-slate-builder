@@ -184,3 +184,14 @@ describe("labelsprong en labelstappen in de route", () => {
     expect(A.stappen.some((s) => s.key === "label")).toBe(false);
   });
 });
+
+describe("het laatste stuk van de route: de goedkoopste maatregel die het doel haalt", () => {
+  it("Da Costastraat: label naar A++ (€ 30.000, 189 punten) in plaats van A+++ (€ 37.500, 197)", () => {
+    const A = berekenAdvies(indexWoning(), N, standaardInstellingen(N), { vandaag: VANDAAG });
+    expect(A.gehaald).toBe(true);
+    const label = A.stappen.find((s) => s.key === "label")!;
+    expect(label.o).toMatch(/naar label A\+\+$/);
+    expect(A.stappen.reduce((t, s) => t + s.c, 0)).toBe(30000);
+    expect(A.eind.totaal).toBe(189);
+  });
+});

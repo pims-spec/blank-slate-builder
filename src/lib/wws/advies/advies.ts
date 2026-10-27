@@ -425,6 +425,56 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
     }
   }
 
+  // Overbodige maatregelen schrappen, duurste eerst (niet brongetrouw: lastigste eerst, dan duurste)
+  const schrap = (lijst: Stap[]): Stap[] => {
+    const order = lijst
+      .map((_st, i) => i)
+      .filter((i) => !lijst[i]!.forced)
+      .sort((a, b) =>
+        brongetrouw
+          ? lijst[b]!.c - lijst[a]!.c
+          : RANK[lijst[b]!.h] - RANK[lijst[a]!.h] || lijst[b]!.c - lijst[a]!.c,
+      );
+    const keep = new Set(lijst.map((_st, i) => i));
+    for (const i of order) {
+      keep.delete(i);
+      let y = begin;
+      lijst.forEach((st, k) => {
+        if (keep.has(k)) y = pasToe(st.apply, y);
+      });
+      if (calc(y, N).totaal < doel) keep.add(i);
+    }
+    return lijst.filter((_st, k) => keep.has(k));
+  };
+  // De kosten zoals de route ze uiteindelijk toont (zie het samenvoegen hieronder): de labelstappen
+  // samen kosten de labelafstand vanaf het beginlabel; vanaf index of bouwjaar de losse stappen.
+  const vanLabelKern = vanAdvies ? aStart.label! : begin.energie.label;
+  const labelBegin =
+    vanAdvies || begin.energie.soort === "label" || begin.energie.soort === "labelOud";
+  const kostenVan = (lijst: Stap[]) => {
+    let y = begin;
+    for (const st of lijst) y = pasToe(st.apply, y);
+    const label = lijst.filter((st) => st.key === "label");
+    const overig = lijst.filter((st) => st.key !== "label").reduce((t, st) => t + st.c, 0);
+    if (!label.length) return overig;
+    if (labelBegin && !label.some((st) => st.bron === "advies"))
+      return (
+        overig + Math.max(0, labelIndex(vanLabelKern) - labelIndex(y.energie.label)) * K.labelStap
+      );
+    return overig + label.reduce((t, st) => t + st.c, 0);
+  };
+  const stapVan = (z: Kandidaat, y: WwsInput): Stap => ({
+    key: z.key,
+    o: z.o,
+    g: z.g,
+    c: z.c,
+    h: z.h,
+    hr: z.hr,
+    tot: calc(pasToe(z.apply, y), N).totaal,
+    apply: z.apply,
+    ...bronVan(z),
+  });
+
   while (calc(x, N).totaal < doel && guard++ < 40) {
     const c = kandidaten(
       x,
@@ -438,7 +488,21 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
       labelNietLastig,
     );
     if (!c.length) break;
-    const best = c[0]!;
+    let best = c[0]!;
+    // Het laatste stuk (bewuste afwijking van de bron): haalt de goedkoopste-per-punt het doel, kies
+    // dan van de even eenvoudige maatregelen die het doel ook halen degene met de laagste totale
+    // routekosten na het schrappen. Bij gelijke kosten blijft de goedkoopste-per-punt.
+    if (!brongetrouw && calc(pasToe(best.apply, x), N).totaal >= doel) {
+      let beste = kostenVan(schrap([...stappen, stapVan(best, x)]));
+      for (const z of c) {
+        if (z === best || z.h !== best.h || calc(pasToe(z.apply, x), N).totaal < doel) continue;
+        const k = kostenVan(schrap([...stappen, stapVan(z, x)]));
+        if (k < beste) {
+          beste = k;
+          best = z;
+        }
+      }
+    }
     x = pasToe(best.apply, x);
     const R = calc(x, N);
     stappen.push({
@@ -453,27 +517,9 @@ function routeKern(input: WwsInput, N: Normen, inst: AdviesInstellingen, o: Kern
       ...bronVan(best),
     });
   }
-  // Overbodige maatregelen schrappen, duurste eerst (niet brongetrouw: lastigste eerst, dan duurste)
   let route = stappen;
   if (calc(x, N).totaal >= doel) {
-    const order = stappen
-      .map((_st, i) => i)
-      .filter((i) => !stappen[i]!.forced)
-      .sort((a, b) =>
-        brongetrouw
-          ? stappen[b]!.c - stappen[a]!.c
-          : RANK[stappen[b]!.h] - RANK[stappen[a]!.h] || stappen[b]!.c - stappen[a]!.c,
-      );
-    const keep = new Set(stappen.map((_st, i) => i));
-    for (const i of order) {
-      keep.delete(i);
-      let y = begin;
-      stappen.forEach((st, k) => {
-        if (keep.has(k)) y = pasToe(st.apply, y);
-      });
-      if (calc(y, N).totaal < doel) keep.add(i);
-    }
-    route = stappen.filter((_st, k) => keep.has(k));
+    route = schrap(stappen);
     x = begin;
     let prev = calc(x, N).exact;
     for (const st of route) {
