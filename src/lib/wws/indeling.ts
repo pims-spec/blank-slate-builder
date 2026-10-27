@@ -10,11 +10,23 @@
 //   app het schema live;
 // - eigenaar en gebruikt PvE (meta.klantId/meta.pveId) worden pas bij toepassen gekoppeld, door
 //   de aanroeper; de bron zet klantId al bij stap 1 → 2 en zet geen pveId.
+// - de app geeft bouwVariant IndelingOpties mee (raamregel, één toilet, hal bij de woonkamer,
+//   open keuken, voorzieningen); zonder opties rekent bouwVariant precies als de bron.
 import { ensureFac, facDefault, facKind, num, overigType, r2, vertrekType } from "./basis";
 import { calc } from "./calc";
 import type { Normen } from "./normen";
-import { pasPveOpFac, type Pve } from "./pve";
-import type { Fac, FacKind, OverigeRuimte, Vertrek, WwsInput, WwsResultaat } from "./types";
+import { facIsOnbewerkt, pasPveOpFac, type Pve } from "./pve";
+import type {
+  Fac,
+  FacBadkamer,
+  FacKeuken,
+  FacKind,
+  FacToilet,
+  OverigeRuimte,
+  Vertrek,
+  WwsInput,
+  WwsResultaat,
+} from "./types";
 
 const clone = <T>(o: T): T => JSON.parse(JSON.stringify(o));
 
@@ -42,14 +54,38 @@ export interface IndelingRuimte {
   /** Positie op de ingelezen plattegrond (fracties 0–1) */
   bbox: Bbox | null;
   notch: Notches;
+  /** Raam naar de buitenlucht (alleen in de app, zie ruimtenVoorAdvies); ontbreekt = vertrek ja */
+  raam?: boolean;
 }
 
 /** Een voorgestelde ruimte; _indVast/_indNieuw alleen voor het schema, niet om op te slaan */
 export type IndelingRij = (Vertrek | OverigeRuimte) & {
   _indVast?: boolean;
   _indNieuw?: boolean;
+  /** Vaste ruimte vergroot met m² uit de hal (opties.halBijWoon) */
+  _indErbij?: number;
   bbox?: Bbox;
 };
+
+/**
+ * Keuzes van de app bij het genereren (bewuste afwijkingen van de bron). Wordt er niets
+ * meegegeven, dan rekent bouwVariant als de bron.
+ */
+export interface IndelingOpties {
+  /** Hal en overloop tot 2 m², de rest bij de (nieuwe of vaste) woonkamer */
+  halBijWoon?: boolean;
+  /** De keuken loopt open over in de woonkamer: samen één "woonkamer met open keuken" */
+  keukenOpen?: boolean;
+  /** Wat er in elke keuken, badkamer en toiletruimte van de varianten komt */
+  voorzieningen?: Voorzieningen | null;
+}
+
+/** De voorzieningen die in de woning komen (punt "wat komt er in de woning") */
+export interface Voorzieningen {
+  keuken: FacKeuken["keuken"];
+  san: FacBadkamer["san"];
+  toilet: FacToilet["toilet"];
+}
 
 export interface IndelingVariant {
   vertrekken: IndelingRij[];
@@ -61,6 +97,10 @@ export interface IndelingVariant {
   toiletToegevoegd?: boolean;
   /** Ook na het vangnet geen toilet (geen badkamer in de variant) */
   geenToilet?: boolean;
+  /** Aantal slaapkamers in de variant, vaste meegeteld (alleen in de app) */
+  slaapTotaal?: number;
+  /** Extra punten doordat de hal bij de woonkamer/keuken is getrokken (opties.halBijWoon) */
+  halWinst?: number;
 }
 
 const typeVan = (key: Groep, t: string) => (key === "vertrekken" ? vertrekType(t) : overigType(t));
@@ -167,13 +207,18 @@ function genFacRow(
  * Een vrije hal/overloop verdwijnt niet helemaal: ca. 30% (min. 2 m²) blijft behouden, de
  * rest gaat de pot in — indelingSplitsCirculatie().
  */
-export function splitsCirculatie(rooms: readonly IndelingRuimte[], input: WwsInput) {
+export function splitsCirculatie(
+  rooms: readonly IndelingRuimte[],
+  input: WwsInput,
+  /** Alleen 2 m² behouden (opties.halBijWoon), niet 30% */
+  minimaal = false,
+) {
   const gewoneVrij: IndelingRuimte[] = [];
   const behoudenCirculatie: { key: Groep; row: IndelingRij }[] = [];
   let poolUitVerkeer = 0;
   rooms.forEach((r) => {
     if (typeVan(r.key, r.type).verkeer) {
-      const behoud = Math.min(r.m2, Math.max(2, r2(r.m2 * 0.3)));
+      const behoud = minimaal ? Math.min(r.m2, 2) : Math.min(r.m2, Math.max(2, r2(r.m2 * 0.3)));
       poolUitVerkeer += r2(r.m2 - behoud);
       if (behoud > 0) {
         const bron = (input[r.key] || [])[r.idx];
@@ -196,6 +241,7 @@ export function splitsCirculatie(rooms: readonly IndelingRuimte[], input: WwsInp
   });
   return {
     poolBasis: gewoneVrij.reduce((s, r) => s + r.m2, 0) + poolUitVerkeer,
+    poolUitVerkeer,
     behoudenCirculatie,
   };
 }
@@ -217,11 +263,18 @@ export function bouwVariant(
   pve: Pve | null,
   rooms: readonly IndelingRuimte[],
   input: WwsInput,
+  opties?: IndelingOpties,
 ): { vertrekken: IndelingRij[]; overig: IndelingRij[]; nSlaap: number } | null {
   const vast = rooms.filter((r) => r.status === "vast");
   const vrij = rooms.filter((r) => r.status === "vrij");
-  const circulatie = splitsCirculatie(vrij, input);
+  const circulatie = splitsCirculatie(vrij, input, !!opties?.halBijWoon);
   let pool = circulatie.poolBasis;
+  // m² uit de hal die naar de woonkamer of keuken gaan, niet naar de slaapkamers
+  let halPool = 0;
+  if (opties?.halBijWoon) {
+    halPool = circulatie.poolUitVerkeer;
+    pool -= halPool;
+  }
   const nieuweFac: { key: Groep; row: IndelingRij }[] = [];
   const heeftVasteWoonkamer = vast.some(
     (r) => ["woonkamer", "woonkamer_ok", "woonslaap", "woonslaap_ok"].includes(r.type) && r.m2 > 0,
@@ -251,7 +304,8 @@ export function bouwVariant(
     let verplicht = kind !== "was";
     if (kind === "was" && wens.wasruimte === "ja") verplicht = true;
     if (!heeftVaste && (heeftVrije || verplicht)) {
-      const standaardM2 = { keuken: 8, badkamer: 5, toilet: 2, was: 3 }[kind];
+      // app: een toiletruimte hoeft niet groter te zijn dan ca. 1 m² (Bouwbesluit 0,9 × 1,2 m)
+      const standaardM2 = { keuken: 8, badkamer: 5, toilet: opties ? 1.1 : 2, was: 3 }[kind];
       const m2 = Math.min(standaardM2, Math.max(2, pool * 0.12));
       pool -= m2;
       const type =
@@ -289,13 +343,22 @@ export function bouwVariant(
   ) {
     bi.san.toiletStaand = 1;
   }
+  // app: een woon- of slaapkamer moet een raam hebben, dus er komen niet meer van dan er vrije
+  // ruimten met raam zijn
+  if (opties) {
+    const metRaam = vrij.filter(
+      (r) => r.m2 > 0 && !typeVan(r.key, r.type).verkeer && (r.raam ?? r.key === "vertrekken"),
+    ).length;
+    if (nSlaap + (heeftVasteWoonkamer ? 0 : 1) > metRaam) return null;
+  }
   let woon: IndelingRij | null = null;
   if (!heeftVasteWoonkamer) {
     const GEWICHT_WOON = 1.35;
     let woonBasisM2 = nSlaap > 0 ? (pool * GEWICHT_WOON) / (GEWICHT_WOON + nSlaap) : pool;
     woonBasisM2 = Math.max(12, woonBasisM2);
     pool -= woonBasisM2;
-    const woonM2 = woonBasisM2 + keukenOpenM2;
+    const woonM2 = woonBasisM2 + keukenOpenM2 + halPool;
+    halPool = 0;
     woon = {
       type: keukenOpenM2 > 0 ? "woonkamer_ok" : "woonkamer",
       naam: keukenOpenM2 > 0 ? "Woonkamer met open keuken" : "Woonkamer",
@@ -309,6 +372,25 @@ export function bouwVariant(
       if (pve) pasPveOpFac(fac, pve);
       woon.fac = fac as never;
     }
+  }
+  // app: zonder nieuwe woonkamer gaan de m² uit de hal (en bij 0 slaapkamers de rest van de pot)
+  // naar de vaste woonkamer (ook een woonkamer met open keuken). Zonder vaste woonkamer is er
+  // altijd een nieuwe, en daar zitten ze al in.
+  let erbij = halPool + (opties && nSlaap === 0 && !woon ? pool : 0);
+  const erbijNaar =
+    erbij > 0
+      ? vast.find(
+          (r) =>
+            r.key === "vertrekken" &&
+            ["woonkamer", "woonkamer_ok", "woonslaap", "woonslaap_ok"].includes(r.type) &&
+            r.m2 > 0,
+        )
+      : undefined;
+  if (erbijNaar) {
+    pool -= erbij - halPool;
+  } else {
+    pool += halPool;
+    erbij = 0;
   }
   const perSlaap = nSlaap > 0 ? pool / nSlaap : 0;
   if (nSlaap > 0 && perSlaap < 6) return null;
@@ -337,6 +419,11 @@ export function bouwVariant(
       san["toiletHang"] = 0;
     }
     row._indVast = true;
+    if (r === erbijNaar) {
+      row.m2 = String(r2(num(row.m2) + erbij)).replace(".", ",");
+      row.maten = [];
+      row._indErbij = r2(erbij);
+    }
     (r.key === "vertrekken" ? vertrekken : overig).push(row);
   });
   circulatie.behoudenCirculatie.forEach((c) =>
@@ -353,6 +440,8 @@ export function kandidaten(
   rooms: readonly IndelingRuimte[],
   extraSlaap: string,
   pve: Pve | null,
+  /** App: ook 0 nieuwe slaapkamers als er al een vaste slaapkamer is (bijv. alleen de hal erbij) */
+  metNul = false,
 ): number[] {
   const huidigSlaap = rooms.filter((r) => r.type === "slaapkamer" || r.type === "slaap_san").length;
   const extra = extraSlaap ? Math.round(num(extraSlaap)) : 0;
@@ -366,6 +455,13 @@ export function kandidaten(
   ]);
   if (extra > 0) set.add(extra);
   if (pveSlaap > 0) set.add(pveSlaap);
+  if (
+    metNul &&
+    rooms.some(
+      (r) => r.status === "vast" && (r.type === "slaapkamer" || r.type === "slaap_san") && r.m2 > 0,
+    )
+  )
+    set.add(0);
   return Array.from(set).sort((a, b) => a - b);
 }
 
@@ -380,18 +476,31 @@ export function berekenVariantenKern(
   extraSlaap: string,
   N: Normen,
 ): IndelingVariant[] {
-  return varianten(input, rooms, pve, extraSlaap, N, false);
+  return varianten(input, rooms, pve, extraSlaap, N, undefined);
 }
 
-/** Alle varianten met het toiletvangnet (bewuste afwijking, zie toiletVangnet), doorgerekend met calc */
+/**
+ * Alle varianten zoals de app ze toont, doorgerekend met calc. Bewuste afwijkingen van de bron:
+ * de opties in bouwVariant (raamregel, toiletruimte van 1,1 m², hal bij de woonkamer) en daarna
+ * keukenOpenSamenvoegen, voorzieningenToepassen, eenToilet, toiletVangnet en
+ * slaapkamersDoornummeren.
+ */
 export function berekenVarianten(
   input: WwsInput,
   rooms: readonly IndelingRuimte[],
   pve: Pve | null,
   extraSlaap: string,
   N: Normen,
+  opties: IndelingOpties = {},
 ): IndelingVariant[] {
-  return varianten(input, rooms, pve, extraSlaap, N, true);
+  const uit = varianten(input, rooms, pve, extraSlaap, N, opties);
+  if (!opties.halBijWoon) return uit;
+  // wat levert de hal bij de woonkamer op? Vergelijk met dezelfde variant zonder
+  const zonder = varianten(input, rooms, pve, extraSlaap, N, { ...opties, halBijWoon: false });
+  return uit.map((v) => {
+    const z = zonder.find((x) => x.nSlaap === v.nSlaap);
+    return z ? { ...v, halWinst: r2(v.R.totaal - z.R.totaal) } : v;
+  });
 }
 
 function varianten(
@@ -400,20 +509,190 @@ function varianten(
   pve: Pve | null,
   extraSlaap: string,
   N: Normen,
-  metVangnet: boolean,
+  opties: IndelingOpties | undefined,
 ): IndelingVariant[] {
   const out: IndelingVariant[] = [];
-  kandidaten(rooms, extraSlaap, pve).forEach((n) => {
-    const kaal = bouwVariant(n, pve, rooms, input);
+  kandidaten(rooms, extraSlaap, pve, !!opties).forEach((n) => {
+    const kaal = bouwVariant(n, pve, rooms, input, opties);
     if (!kaal) return;
-    // de bewuste afwijkingen als aparte stappen na de letterlijk overgezette bouwVariant
-    const v = metVangnet ? slaapkamersDoornummeren(toiletVangnet(kaal)) : kaal;
+    // de bewuste afwijkingen als aparte stappen na bouwVariant
+    let v: Omit<IndelingVariant, "R" | "input"> = kaal;
+    if (opties) {
+      if (opties.keukenOpen) v = keukenOpenSamenvoegen(v);
+      if (opties.voorzieningen) v = voorzieningenToepassen(v, opties.voorzieningen);
+      if (!meerWoonlagen(input)) v = eenToilet(v);
+      v = slaapkamersDoornummeren(toiletVangnet(v));
+      v = { ...v, slaapTotaal: aantalSlaapkamers(v) };
+    }
     const genInput = clone(input);
     genInput.vertrekken = v.vertrekken as Vertrek[];
     genInput.overig = v.overig as OverigeRuimte[];
     out.push({ ...v, R: calc(genInput, N), input: genInput });
   });
   return out;
+}
+
+const aantalSlaapkamers = (v: Pick<IndelingVariant, "vertrekken">) =>
+  v.vertrekken.filter((r) => (r.type === "slaapkamer" || r.type === "slaap_san") && num(r.m2) > 0)
+    .length;
+
+// ---------- woonlagen, raam en toilet (bewuste afwijking van de bron) ----------
+
+const VERDIEPING_TYPES = new Set(["overloop", "zolderkamer", "zolder"]);
+
+/** Meer dan één woonlaag: een eengezinswoning, of een overloop, zolderkamer of zolder in de telling */
+export function meerWoonlagen(input: WwsInput): boolean {
+  if (input.woningtype === "eengezins") return true;
+  return [...input.vertrekken, ...input.overig].some(
+    (r) => VERDIEPING_TYPES.has(r.type) && num(r.m2) > 0,
+  );
+}
+
+/** Heeft de ruimte een raam naar buiten? Onbekend: een vertrek wel, de rest niet */
+export function heeftRaam(key: Groep, rij: { type: string; raam?: boolean }): boolean {
+  if (typeof rij.raam === "boolean") return rij.raam;
+  return key === "vertrekken";
+}
+
+const midden = (b: Bbox) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+
+/**
+ * Welk toilet blijft er bij twee of meer toiletruimten? Het toilet op de meest logische plek: het
+ * dichtst bij een getekende hal of gang. Weet de app dat niet, dan het kleinste toilet van minstens
+ * 0,9 m² (een toilet hoeft niet groter te zijn dan ca. 1 m²), anders het grootste.
+ */
+export function logischToilet(
+  toiletten: readonly IndelingRuimte[],
+  rooms: readonly IndelingRuimte[],
+): IndelingRuimte | undefined {
+  const hal = rooms.find((r) => r.bbox && typeVan(r.key, r.type).verkeer)?.bbox;
+  const metBbox = toiletten.filter((t) => t.bbox);
+  if (hal && metBbox.length) {
+    const h = midden(hal);
+    const afstand = (t: IndelingRuimte) => {
+      const m = midden(t.bbox!);
+      return Math.hypot(m.x - h.x, m.y - h.y);
+    };
+    return metBbox.reduce((a, b) => (afstand(b) < afstand(a) ? b : a));
+  }
+  const groot = toiletten.filter((t) => t.m2 >= 0.9);
+  if (groot.length) return groot.reduce((a, b) => (b.m2 < a.m2 ? b : a));
+  return toiletten.reduce((a, b) => (b.m2 > a.m2 ? b : a), toiletten[0]!);
+}
+
+/**
+ * De ruimten voor het advies in de app: ruimtenUitTelling plus het raam per ruimte, en in een
+ * woning met één woonlaag blijft er één toiletruimte vast (logischToilet); de andere staan op
+ * "vrij herindelen", zodat hun m² naar andere ruimten gaan.
+ */
+export function ruimtenVoorAdvies(input: WwsInput): IndelingRuimte[] {
+  const rooms = ruimtenUitTelling(input).map((r) => {
+    const rij = input[r.key][r.idx] as { type: string; raam?: boolean };
+    return { ...r, raam: heeftRaam(r.key, rij) };
+  });
+  if (meerWoonlagen(input)) return rooms;
+  const toiletten = rooms.filter((r) => r.kind === "toilet" && r.m2 > 0);
+  if (toiletten.length < 2) return rooms;
+  const blijft = logischToilet(toiletten, rooms);
+  return rooms.map((r) => (toiletten.includes(r) && r !== blijft ? { ...r, status: "vrij" } : r));
+}
+
+/**
+ * Eén woonlaag: is er een toiletruimte met toilet, dan krijgt de badkamer geen toilet meer.
+ * Eén toilet is genoeg. Wijzigt de variant niet.
+ */
+export function eenToilet<T extends Pick<IndelingVariant, "vertrekken" | "overig">>(v: T): T {
+  const toiletruimte = v.overig.some(
+    (r) => r.fac?.kind === "toilet" && r.fac.toilet.toilet !== "geen" && num(r.m2) > 0,
+  );
+  if (!toiletruimte) return v;
+  const uit = { ...v, vertrekken: clone(v.vertrekken) };
+  uit.vertrekken.forEach((r) => {
+    if (r.fac?.kind === "badkamer") {
+      r.fac.san.toiletStaand = 0;
+      r.fac.san.toiletHang = 0;
+    }
+  });
+  return uit;
+}
+
+// ---------- open keuken en voorzieningen (bewuste afwijking van de bron) ----------
+
+/**
+ * De keuken loopt open over in de woonkamer: de eerste keuken en de eerste woonkamer worden
+ * samen één "woonkamer met open keuken" (m² opgeteld, de voorzieningen van de keuken). Een open
+ * keuken is geen aparte keuken. Wijzigt de variant niet.
+ */
+export function keukenOpenSamenvoegen<T extends Pick<IndelingVariant, "vertrekken" | "overig">>(
+  v: T,
+): T {
+  const ki = v.vertrekken.findIndex((r) => r.type === "keuken" && num(r.m2) > 0);
+  const wi = v.vertrekken.findIndex((r) => r.type === "woonkamer" && num(r.m2) > 0);
+  if (ki < 0 || wi < 0) return v;
+  const k = v.vertrekken[ki]!,
+    w = v.vertrekken[wi]!;
+  const samen = {
+    type: "woonkamer_ok",
+    naam: "Woonkamer met open keuken",
+    m2: String(r2(num(k.m2) + num(w.m2))).replace(".", ","),
+    maten: [],
+    verwarmd: !!(w.verwarmd || k.verwarmd),
+    fac: clone(k.fac),
+  } as IndelingRij;
+  if (k._indVast && w._indVast) samen._indVast = true;
+  else samen._indNieuw = true;
+  if (k.raam || w.raam) samen.raam = true;
+  const erbij = num(k._indErbij) + num(w._indErbij);
+  if (erbij > 0) samen._indErbij = r2(erbij);
+  const vertrekken = v.vertrekken.filter((_, i) => i !== ki);
+  vertrekken[vertrekken.indexOf(w)] = samen;
+  return { ...v, vertrekken };
+}
+
+/**
+ * Wat erin komt: elke keuken (ook een woonkamer met open keuken), badkamer en toiletruimte van
+ * de variant krijgt deze voorzieningen. Wijzigt de variant niet.
+ */
+export function voorzieningenToepassen<T extends Pick<IndelingVariant, "vertrekken" | "overig">>(
+  v: T,
+  vz: Voorzieningen,
+): T {
+  const zet = (r: IndelingRij): IndelingRij => {
+    const f = r.fac;
+    if (!f) return r;
+    if (f.kind === "keuken") return { ...r, fac: { kind: "keuken", keuken: clone(vz.keuken) } };
+    if (f.kind === "badkamer") return { ...r, fac: { kind: "badkamer", san: clone(vz.san) } };
+    if (f.kind === "toilet") return { ...r, fac: { kind: "toilet", toilet: clone(vz.toilet) } };
+    return r;
+  };
+  return { ...v, vertrekken: v.vertrekken.map(zet), overig: v.overig.map(zet) };
+}
+
+/**
+ * Beginwaarden voor "wat komt er in de woning": per voorziening het PvE (als dat onderdeel actief
+ * is), anders wat er in de telling al is ingevuld, anders de standaard (staand toilet, wastafel en
+ * douche, aanrecht 1–2 m).
+ */
+export function standaardVoorzieningen(input: WwsInput, pve: Pve | null): Voorzieningen {
+  const facs = [...input.vertrekken, ...input.overig].map((r) => r.fac).filter(Boolean) as Fac[];
+  const ingevuld = <K extends FacKind>(kind: K) =>
+    facs.find((f) => f.kind === kind && !facIsOnbewerkt(f)) as
+      Extract<Fac, { kind: K }> | undefined;
+  const keuken = pve?.keuken?.actief
+    ? pve.keuken.keuken
+    : (ingevuld("keuken")?.keuken ?? (facDefault("keuken") as FacKeuken).keuken);
+  const san = pve?.badkamer?.actief
+    ? pve.badkamer.san
+    : (ingevuld("badkamer")?.san ?? (facDefault("badkamer") as FacBadkamer).san);
+  const toilet = pve?.toilet?.actief
+    ? pve.toilet.toilet
+    : (ingevuld("toilet")?.toilet ?? (facDefault("toilet") as FacToilet).toilet);
+  return clone({ keuken, san, toilet });
+}
+
+/** Beginwaarde van "keuken is open naar de woonkamer": een keuken die zo is ingelezen */
+export function keukenOpenStandaard(input: WwsInput): boolean {
+  return input.vertrekken.some((r) => r.type === "keuken" && r.openKeuken === true);
 }
 
 // ---------- slaapkamers doornummeren (bewuste afwijking van de bron) ----------
@@ -594,6 +873,7 @@ export function toepassen(
     const x = clone(r);
     delete x._indVast;
     delete x._indNieuw;
+    delete x._indErbij;
     delete x.bbox;
     return x;
   };

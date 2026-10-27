@@ -20,7 +20,10 @@ import type { WwsInput } from "./types";
 
 const N = DEFAULT_NORMEN as unknown as Normen;
 
-/** De telling uit de browsertest: woonkamer, slaapkamer, keuken, badkamer, hal, toiletruimte */
+/**
+ * De telling uit de browsertest: woonkamer, slaapkamer, keuken, badkamer, hal, toiletruimte; plus
+ * twee kleine studeerkamers, zodat er genoeg ruimten met raam zijn voor 1 tot 3 slaapkamers.
+ */
 function woning(): WwsInput {
   const x = legeInput();
   x.vertrekken.push(
@@ -28,6 +31,8 @@ function woning(): WwsInput {
     { type: "slaapkamer", m2: 12, verwarmd: true },
     { type: "keuken", m2: 8, verwarmd: true, fac: facDefault("keuken", false) },
     { type: "badkamer", m2: 5, verwarmd: true, fac: facDefault("badkamer", false) },
+    { type: "studeer", m2: 7, verwarmd: true },
+    { type: "studeer", m2: 7, verwarmd: true },
   );
   x.overig.push(
     { type: "hal", m2: 6, verwarmd: false },
@@ -209,7 +214,9 @@ describe("slaapkamers doornummeren (bewuste afwijking van wws-site.html)", () =>
       (v) => v.vertrekken.filter((r) => r.type === "slaapkamer" && r._indNieuw).length === 1,
     )!;
     expect(namen(k1)).toEqual(["Slaapkamer 1", "Slaapkamer 1"]);
-    met.forEach((v, i) => {
+    // de app rekent ook 0 nieuwe slaapkamers door (er is een vaste); die kent de bron niet
+    expect(met[0]!.nSlaap).toBe(0);
+    met.slice(1).forEach((v, i) => {
       const n = namen(v);
       expect(new Set(n).size, n.join(", ")).toBe(n.length);
       expect(n[0]).toBe("Slaapkamer 1");
