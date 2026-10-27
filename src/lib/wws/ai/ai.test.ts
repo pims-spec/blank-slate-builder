@@ -15,6 +15,7 @@ import {
 import { anonimiseer, verwijderPatronen } from "./privacy";
 import {
   INDELING_EXTRA_REGELS,
+  PLAT_EXTRA_REGELS,
   ENERGIEADVIES_EXTRA_REGELS,
   energieAdviesPrompt,
   indelingAIPrompt,
@@ -56,7 +57,19 @@ function nepFetch(status: number, body: unknown, gooit?: Error) {
 describe("instructies gelijk aan wws-site.html", () => {
   it("platPrompt en energieAdviesPrompt", () => {
     for (const notitie of ["", "maten in mm, 2e verdieping", "x".repeat(800)])
-      for (const n of [1, 3]) expect(platPrompt(n, notitie)).toBe(BRON.platPrompt(n, notitie));
+      for (const n of [1, 3])
+        // bewuste afwijking: regels over raam en open keuken, en die velden in het voorbeeld
+        expect(platPrompt(n, notitie)).toBe(
+          BRON.platPrompt(n, notitie)
+            .replace(
+              "waar de ruimte op de tekening staat.",
+              "waar de ruimte op de tekening staat.\n" + PLAT_EXTRA_REGELS.join("\n"),
+            )
+            .replace(
+              '"opmerking":"","bbox"',
+              '"opmerking":"","raam":true,"open_keuken":null,"bbox"',
+            ),
+        );
     // bewuste afwijking: extra regels na de regel over meerdere opties, en een datum in het voorbeeld
     const meerdere = "de tool kiest er later zelf uit.";
     for (const t of ["", "Advies voor de woning: label G naar A, € 12.000"])
@@ -111,6 +124,9 @@ describe("instructies gelijk aan wws-site.html", () => {
     expect(p).toContain("algemene trappenhuis");
     expect(p).toContain("woningscheidende wand) krijgt nooit een raam");
     expect(p).toContain("ook de badkamer en het toilet");
+    // een slaapkamer nooit alleen via de badkamer
+    expect(p).toContain("Elke slaapkamer heeft een eigen deur vanuit de hal");
+    expect(p).toContain("nooit alleen bereikbaar via een badkamer");
     expect(p.indexOf("Teken alleen binnen deze woning")).toBeLessThan(p.indexOf("Nogmaals:"));
   });
 
@@ -180,14 +196,22 @@ describe("antwoorden van Claude", () => {
             m2: "12,5",
             bron: "x",
             bbox: "?",
+            raam: "ja",
           },
           { soort: "raar", m2: null },
+          { soort: "vertrek", type: "keuken", raam: false, open_keuken: true },
         ],
         sanitair: { douche: 99, bad: "1" },
         geheim: "weg",
       }),
     )!;
-    expect(p.ruimten[0]).toMatchObject({ m2: 12.5, bron: "ingeschat", bbox: undefined });
+    expect(p.ruimten[0]).toMatchObject({
+      m2: 12.5,
+      bron: "ingeschat",
+      bbox: undefined,
+      raam: null,
+    });
+    expect(p.ruimten[2]).toMatchObject({ raam: false, open_keuken: true });
     expect(p.ruimten[1]!.soort).toBe("overig");
     expect(p.sanitair).toEqual({ douche: 20, bad: 1 });
     expect("geheim" in p).toBe(false);

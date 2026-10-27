@@ -36,6 +36,10 @@ const Ruimte = z.object({
   zekerheid: tekst(20),
   opmerking: tekst(200),
   bbox: Bbox,
+  /** Raam of glazen buitendeur naar de buitenlucht; null = onbekend */
+  raam: z.boolean().nullish().catch(null),
+  /** Keuken loopt zonder deur of tussenmuur over in de woonkamer */
+  open_keuken: z.boolean().nullish().catch(null),
 });
 
 export const PlattegrondAntwoord = z.object({
