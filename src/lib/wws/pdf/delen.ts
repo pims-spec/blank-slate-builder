@@ -1545,20 +1545,23 @@ export function pdfEnergieUitlegPagina(
       pdfLabelKleur(i, LABELS.length),
     );
     if (markTekst.length) {
-      const cx = M + padX + chevW / 2,
-        cy = ty - chevH / 2 + 1.5;
+      // de hele rij omcirkeld: label en beide puntenkolommen
+      const rx = M + padX - 2,
+        rw = cardW - 2 * padX + 4,
+        ry = ty - chevH + 1.5 - 0.5,
+        rh = chevH + 1;
       const isOud = markering!.oud === l,
         isNieuw = markering!.nieuw.some((n) => n.label === l);
       doc.setLineWidth(0.6);
       if (isOud) {
         doc.setDrawColor(...MARK_ROOD);
-        doc.ellipse(cx, cy, chevW / 2 + 2.5, chevH / 2 + 0.7, "S");
+        doc.roundedRect(rx, ry, rw, rh, rh / 2, rh / 2, "S");
       }
       if (isNieuw) {
         // gelijk aan het huidige label: een groene ring om de rode heen
-        const extra = isOud ? 1 : 0;
+        const e = isOud ? 1 : 0;
         doc.setDrawColor(...MARK_GROEN);
-        doc.ellipse(cx, cy, chevW / 2 + 2.5 + extra, chevH / 2 + 0.7 + extra, "S");
+        doc.roundedRect(rx - e, ry - e, rw + 2 * e, rh + 2 * e, rh / 2 + e, rh / 2 + e, "S");
       }
     }
     doc.setFont("helvetica", "normal");
