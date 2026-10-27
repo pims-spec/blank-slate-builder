@@ -8,6 +8,7 @@ import type { Rechten } from "@/lib/rollen";
 import type { Klant } from "@/lib/wws/opslag";
 import {
   analyseer,
+  metPeilmoment,
   isBeoordeeld,
   klasseVan,
   type PortefeuilleNormen,
@@ -128,7 +129,7 @@ export function CombiAnalyse({
       await portefeuilleStore.slaCombiAnalyseOp(
         titelTekst,
         delen.map((p) => ({ id: p.id, naam: p.naam, klantId: p.klantId })),
-        uitkomst,
+        metPeilmoment(uitkomst, new Date().toISOString()),
       );
       toast.success("Analyse opgeslagen in het archief.");
       await qc.invalidateQueries({ queryKey: ["archief-analyses"] });
@@ -271,7 +272,7 @@ export function CombiAnalyse({
                     portefeuille: titelTekst,
                     eigenaar: eigenaren.length ? eigenaren.join(", ") : null,
                     delen: delen.map((p) => p.naam),
-                    uitkomst,
+                    uitkomst: metPeilmoment(uitkomst, new Date().toISOString()),
                     ...pdfOpties(),
                   }),
                 )

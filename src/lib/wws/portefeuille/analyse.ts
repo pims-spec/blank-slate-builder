@@ -239,6 +239,11 @@ export interface AnalyseUitkomst {
     fout: string[];
     nietOpgehaald: string[];
   };
+  /**
+   * Moment waarop de analyse is gedraaid (ISO), gezet bij opslaan of bij de PDF van de actuele
+   * analyse; de peildatum in het rapport. Ontbreekt bij analyses van vóór deze functie.
+   */
+  berekendOp?: string;
   /** Oudste en nieuwste moment van opvragen bij EP-Online */
   epOpgehaaldVan: string | null;
   epOpgehaaldTot: string | null;
@@ -284,6 +289,11 @@ export function zonderLabelLijst(
     adres,
     opmerking: nietGevonden.has(adres) ? "BAG niet gecontroleerd" : null,
   }));
+}
+
+/** De analyse met het moment waarop hij is gedraaid; een eerder gezet moment blijft staan */
+export function metPeilmoment(u: AnalyseUitkomst, nu: string): AnalyseUitkomst {
+  return u.berekendOp ? u : { ...u, berekendOp: nu };
 }
 
 /** De analyse van een portefeuille op `datum`, met een venster van `maanden` (standaard 3) */

@@ -60,8 +60,9 @@ export function AnalyseWeergave({
     <div className="space-y-4">
       <AdresLijstDialoog d={doorklik} onSluit={() => setDoorklik(null)} />
       <p className="text-sm text-muted-foreground">
-        Analyse per {nlDatum(u.datum)} · {u.aantalAdressen} adressen, waarvan {u.aantalBeoordeeld}{" "}
-        beoordeeld · EP-Online opgehaald{" "}
+        Analyse per {nlDatum(u.datum)}
+        {u.berekendOp && <> · peildatum {tijd(u.berekendOp)}</>} · {u.aantalAdressen} adressen,
+        waarvan {u.aantalBeoordeeld} beoordeeld · EP-Online opgehaald{" "}
         {u.epOpgehaaldVan ? periode(u.epOpgehaaldVan, u.epOpgehaaldTot, tijd) : "nog niet"}
       </p>
 

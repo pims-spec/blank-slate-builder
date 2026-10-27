@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import type { Rechten } from "@/lib/rollen";
 import {
   analyseer,
+  metPeilmoment,
   isBeoordeeld,
   klasseVan,
   portefeuilleNormen,
@@ -266,7 +267,7 @@ export default function PortefeuilleAnalyse({
   async function slaOp() {
     if (!p) return;
     try {
-      await portefeuilleStore.slaAnalyseOp(p.id, live);
+      await portefeuilleStore.slaAnalyseOp(p.id, metPeilmoment(live, new Date().toISOString()));
       toast.success("Analyse opgeslagen.");
       await qc.invalidateQueries({ queryKey: ["portefeuille-analyses", p.id] });
       void qc.invalidateQueries({ queryKey: ["archief-analyses"] });
@@ -605,7 +606,10 @@ export default function PortefeuilleAnalyse({
                   </Button>
                 )}
                 <Button
-                  onClick={() => void pdf(toon, "pdf")}
+                  onClick={() =>
+                    // nieuwe analyse: de peildatum is nu; een opgeslagen analyse houdt de zijne
+                    void pdf(bekeken ? toon : metPeilmoment(live, new Date().toISOString()), "pdf")
+                  }
                   disabled={!!download.bezig || !adressen.length}
                 >
                   {download.bezig === "pdf" ? "PDF maken…" : "PDF"}

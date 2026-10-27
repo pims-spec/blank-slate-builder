@@ -79,6 +79,18 @@ export function opgehaaldTekst(van: string | null, tot: string | null): string {
   return periode(van, tot, dag);
 }
 
+/**
+ * De peildatum in de samenvatting: het moment waarop de analyse is gedraaid. Oudere opgeslagen
+ * analyses weten dat niet; daar de periode waarin de labels bij EP-Online zijn opgehaald.
+ */
+export function peildatumRegel(
+  u: Pick<AnalyseUitkomst, "berekendOp" | "epOpgehaaldVan" | "epOpgehaaldTot">,
+): [string, string] {
+  return u.berekendOp
+    ? ["Peildatum", dag(u.berekendOp)]
+    : ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)];
+}
+
 export function maakPortefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
   return binnenTekenset(false, () => portefeuillePdf(lib, x));
 }
@@ -162,7 +174,7 @@ function portefeuillePdf(lib: PdfLib, x: PortefeuillePdfInvoer) {
         ...(combi
           ? [["Portefeuilles", String(x.delen!.length) + " (zie de lijst hieronder)"]]
           : []),
-        ["Peildatum EP-Online-gegevens", opgehaaldTekst(u.epOpgehaaldVan, u.epOpgehaaldTot)],
+        peildatumRegel(u),
         ["Adressen", u.aantalAdressen + " (waarvan " + u.aantalBeoordeeld + " beoordeeld)"],
         ["Venster verloopdatum", "± " + u.vensterMaanden + " maanden rond de analysedatum"],
         ...(metEfg

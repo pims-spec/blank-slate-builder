@@ -2,11 +2,17 @@ import { jsPDF, type jsPDFOptions } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { describe, expect, it } from "vitest";
 import { normaliseerAdres } from "../portefeuille/adres";
-import { PORTEFEUILLE_STANDAARD, analyseer, type AnalyseAdres } from "../portefeuille/analyse";
+import {
+  PORTEFEUILLE_STANDAARD,
+  analyseer,
+  metPeilmoment,
+  type AnalyseAdres,
+} from "../portefeuille/analyse";
 import {
   lijstInKolommen,
   maakPortefeuillePdf,
   opgehaaldTekst,
+  peildatumRegel,
   zonderLabelAdressen,
 } from "./portefeuille";
 import { INTER, pdfTekst } from "./testhulp";
@@ -257,6 +263,31 @@ describe("PDF portefeuille-analyse", () => {
     expect(opgehaaldTekst("2026-10-01T08:00:00Z", "2026-10-15T09:00:00Z")).toBe(
       "1 oktober 2026 t/m 15 oktober 2026",
     );
+  });
+
+  it("peildatum: het moment van de analyse; oudere analyses de periode van ophalen", () => {
+    const ep = { epOpgehaaldVan: "2026-10-01T08:00:00Z", epOpgehaaldTot: "2026-10-15T09:00:00Z" };
+    expect(peildatumRegel(ep)).toEqual([
+      "Peildatum EP-Online-gegevens",
+      "1 oktober 2026 t/m 15 oktober 2026",
+    ]);
+    expect(peildatumRegel({ ...ep, berekendOp: "2026-10-27T12:00:00Z" })).toEqual([
+      "Peildatum",
+      "27 oktober 2026",
+    ]);
+  });
+
+  it("PDF van een nieuwe analyse: de peildatum is het moment van de analyse", async () => {
+    const u = analyseer([adres(1, "A", "2023-03-01")], "2026-10-27", 3, PORTEFEUILLE_STANDAARD);
+    const nieuw = metPeilmoment(u, "2026-10-27T12:00:00Z");
+    // een eerder gezet moment (opgeslagen analyse) blijft staan
+    expect(metPeilmoment(nieuw, "2026-11-30T12:00:00Z").berekendOp).toBe("2026-10-27T12:00:00Z");
+    const pdf = maakPortefeuillePdf(LIB, { portefeuille: "TEST", eigenaar: null, uitkomst: nieuw });
+    const t = (await pdfTekst(pdf.blob)).flat().join(" ").replace(/\s+/g, " ");
+    expect(t).toContain("Peildatum 27 oktober 2026");
+    expect(t).not.toContain("Peildatum EP-Online-gegevens");
+    // de bronregel houdt het moment van ophalen
+    expect(t).toContain("Bron: EP-Online (RVO), opgehaald op 14 oktober 2026");
   });
 
   it("lijst met portefeuilles: tot 8 één kolom, daarboven twee kolommen van boven naar beneden", () => {
