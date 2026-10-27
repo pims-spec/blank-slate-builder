@@ -2,7 +2,7 @@
 // (pdf.vergelijk.test.ts) draait met bronGetrouw: true; hier staan de afwijkingen aan.
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { adviesOpties, berekenAdvies, selectieResultaat, standaardInstellingen } from "../advies";
 import { normaliseer } from "../calc";
 import { DEFAULT_NORMEN, type Normen } from "../normen";
@@ -479,6 +479,37 @@ describe("bewuste afwijkingen in de PDF's", () => {
       maakTellingPdf(LIB, { meta, input, normen: N, rapportPlattegronden }).blob,
     );
     expect(telling[1]!.beelden).toBe(1);
+  });
+
+  it("plattegronden nooit vervormd: een staande plattegrond houdt zijn verhouding (de bron drukte hem plat)", () => {
+    const beelden: number[][] = [];
+    const api = jsPDF.API as unknown as { addImage: (...a: unknown[]) => unknown };
+    const echt = api.addImage;
+    const spion = vi.spyOn(api, "addImage").mockImplementation(function (
+      this: unknown,
+      ...a: unknown[]
+    ) {
+      beelden.push([a[4] as number, a[5] as number]);
+      return echt.apply(this, a);
+    });
+    const lib = LIB;
+    const input = normaliseer(genereer(2));
+    const meta = willekeurigeMeta(2);
+    // KLEIN_JPEG is 3 px breed en 4 px hoog
+    const rapportPlattegronden = [
+      { titel: "Plattegrond 1 - Situatie", img: KLEIN_JPEG, soort: "situatie" as const },
+      { titel: "Plattegrond 2 - 3D", img: KLEIN_JPEG, soort: "3d" as const },
+    ];
+    maakAdviesPdf(lib, {
+      meta,
+      input,
+      normen: N,
+      inst: standaardInstellingen(N),
+      rapportPlattegronden,
+    });
+    spion.mockRestore();
+    expect(beelden.length).toBeGreaterThan(1);
+    for (const [w, h] of beelden) expect(w! / h!).toBeCloseTo(3 / 4, 3);
   });
 
   it("adresregel: straat + huisnummer, postcode plaats (de bron zette de postcode ervoor)", async () => {

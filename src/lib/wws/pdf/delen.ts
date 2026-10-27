@@ -1723,8 +1723,17 @@ export function pdfSamenvattingPagina(
   if (hasImg && img) {
     try {
       const props = doc.getImageProperties(img);
-      imgW = 70;
-      imgH = Math.min(50, (imgW * props.height) / props.width);
+      if (isBronModus()) {
+        imgW = 70;
+        imgH = Math.min(50, (imgW * props.height) / props.width);
+      } else {
+        // Bewuste afwijking: de bron kapte de hoogte af op 50 mm bij een vaste breedte van 70 mm,
+        // waardoor een staande plattegrond platgedrukt werd. Nu past hij in 70 × 50 mm zonder te
+        // vervormen.
+        const schaal = Math.min(70 / props.width, 50 / props.height);
+        imgW = props.width * schaal;
+        imgH = props.height * schaal;
+      }
     } catch {
       hasImg = false;
     }
