@@ -4,6 +4,13 @@
 import type { Energie, MonumentKeuze } from "../types";
 import type { MonumentStatus } from "./monument";
 
+/** Wat het scherm van een ophaalpoging laat zien: bezig, de uitslag of een foutmelding */
+export interface OphaalStaat<T> {
+  uitslag?: T;
+  fout?: string;
+  bezig?: boolean;
+}
+
 /** Staat het energiedeel nog leeg (geen label, index, bouwjaar of datum)? */
 export function energieIsLeeg(e: Energie): boolean {
   return !e.label && !e.indexKlasse && !String(e.bouwjaar ?? "") && !e.datum;

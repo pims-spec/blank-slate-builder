@@ -35,6 +35,7 @@ import {
 } from "@/lib/wws/opslag";
 import {
   adresSleutel,
+  type OphaalStaat,
   energieIsLeeg,
   monumentIsLeeg,
   monumentKeuzeVoor,
@@ -49,6 +50,7 @@ import AdviesDialoog from "./AdviesDialoog";
 import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
 import FotoDialoog from "./FotoDialoog";
+import EnergielabelUitslag from "./EnergielabelUitslag";
 import MonumentUitslag from "./MonumentUitslag";
 import PlattegrondDialoog from "./PlattegrondDialoog";
 import NieuweTellingDialoog from "./NieuweTellingDialoog";
@@ -340,10 +342,12 @@ export default function TellingEditor({
   useEffect(() => () => clearTimeout(adresTimer.current), []);
   // het adres waarvoor energielabel en monumentstatus al zijn opgehaald, en de laatste uitslag
   const gegevensVoor = useRef("");
-  const [monumentUitslag, setMonumentUitslag] = useState<MonumentStatus | null>(null);
+  const [ep, setEp] = useState<OphaalStaat<EpLabel>>({});
+  const [mon, setMon] = useState<OphaalStaat<MonumentStatus>>({});
   useEffect(() => {
     gegevensVoor.current = "";
-    setMonumentUitslag(null);
+    setEp({});
+    setMon({});
   }, [id]);
 
   /**
@@ -356,7 +360,7 @@ export default function TellingEditor({
       const meta = staatRef.current.meta;
       const velden = adresZoekVelden(meta);
       if (!velden) return;
-      void haalGegevensOp();
+      haalGegevensOp();
       if (!adresOpzoekenNodig(meta)) return;
       const poging = velden.postcode + "|" + velden.huisnummer;
       const voorId = idRef.current;
@@ -387,49 +391,94 @@ export default function TellingEditor({
   /**
    * Na het invullen van postcode en huisnummer: energielabel (EP-Online) en monumentstatus
    * (Kadaster en RCE) ophalen en invullen, maar alleen wat nog leeg is (of op de standaard staat).
-   * Eén keer per adres; een uitslag voor een inmiddels ander adres wordt niet gebruikt.
+   * Eén keer per adres.
    */
-  async function haalGegevensOp() {
+  function haalGegevensOp() {
     if (!rechten.magSchrijven) return;
-    const s0 = staatRef.current;
-    const v = EpVraagSchema.safeParse(epAdresVelden(s0.meta));
+    const v = EpVraagSchema.safeParse(epAdresVelden(staatRef.current.meta));
     if (!v.success) return;
     const sleutel = adresSleutel(v.data);
     if (gegevensVoor.current === sleutel) return;
     gegevensVoor.current = sleutel;
+    void haalLabelOp(false);
+    void haalMonumentOp(false);
+  }
+
+  /** De zoekvraag voor het huidige adres, en een controle dat het adres sindsdien niet veranderde */
+  function adresVraag() {
+    const v = EpVraagSchema.safeParse(epAdresVelden(staatRef.current.meta));
+    if (!v.success) return null;
+    const sleutel = adresSleutel(v.data);
     const voorId = idRef.current;
     const nogActueel = () => {
       const nu = EpVraagSchema.safeParse(epAdresVelden(staatRef.current.meta));
       return idRef.current === voorId && nu.success && adresSleutel(nu.data) === sleutel;
     };
-    const [e, mon] = await Promise.all([
-      energieIsLeeg(s0.input.energie)
-        ? zoekEnergielabel({ data: v.data }).catch(() => "geen_verbinding" as const)
-        : null,
-      monumentIsLeeg(s0.input.opslag.keuze)
-        ? zoekMonument({ data: v.data }).catch(() => "geen_verbinding" as const)
-        : null,
-    ]);
-    if (!nogActueel()) return;
-    if (e === "geen_verbinding") toast(epFoutMelding("geen_verbinding"));
-    else if (e?.ok) {
-      if (energieIsLeeg(staatRef.current.input.energie)) energielabelToepassen(e.data);
-    } else if (e)
-      toast(
-        e.fout === "niet_gevonden"
-          ? "Geen geregistreerd energielabel gevonden bij EP-Online; vul het zelf in."
-          : epFoutMelding(e.fout),
-      );
-    if (mon === "geen_verbinding") toast(monumentFoutMelding("geen_verbinding"));
-    else if (mon?.ok) {
-      setMonumentUitslag(mon.data);
-      const k = monumentKeuzeVoor(mon.data);
-      if (k && monumentIsLeeg(staatRef.current.input.opslag.keuze)) {
-        setStaat((x) => ({ ...x, input: { ...x.input, opslag: { ...x.input.opslag, keuze: k } } }));
-        setDirty(true);
-        toast(monumentMelding(mon.data));
-      }
-    } else if (mon) toast(monumentFoutMelding(mon.fout));
+    return { data: v.data, nogActueel };
+  }
+
+  /**
+   * Energielabel ophalen bij EP-Online. Automatisch (forceer false): alleen als het energiedeel
+   * nog leeg is. Met de knop "opnieuw ophalen": altijd, en het label wordt opnieuw overgenomen.
+   */
+  async function haalLabelOp(forceer: boolean) {
+    const a = adresVraag();
+    if (!a) {
+      if (forceer) setEp({ fout: epFoutMelding("ongeldige_invoer") });
+      return;
+    }
+    if (!forceer && !energieIsLeeg(staatRef.current.input.energie)) return;
+    setEp({ bezig: true });
+    let r;
+    try {
+      r = await zoekEnergielabel({ data: a.data });
+    } catch {
+      r = null;
+    }
+    if (!a.nogActueel()) return setEp({});
+    if (!r) return setEp({ fout: epFoutMelding("geen_verbinding") });
+    if (!r.ok)
+      return setEp({
+        fout:
+          r.fout === "niet_gevonden"
+            ? "Geen geregistreerd energielabel gevonden bij EP-Online; vul het zelf in."
+            : epFoutMelding(r.fout),
+      });
+    setEp({ uitslag: r.data });
+    if (forceer || energieIsLeeg(staatRef.current.input.energie)) energielabelToepassen(r.data);
+  }
+
+  /**
+   * Monumentstatus ophalen bij het Kadaster en de RCE. Automatisch: alleen als de keuze nog op
+   * "Geen monument" staat. Met de knop: altijd; een gevonden status wordt overgenomen (een al
+   * aangevinkt "contract vóór 1 juli 2024" blijft staan).
+   */
+  async function haalMonumentOp(forceer: boolean) {
+    const a = adresVraag();
+    if (!a) {
+      if (forceer) setMon({ fout: monumentFoutMelding("ongeldige_invoer") });
+      return;
+    }
+    if (!forceer && !monumentIsLeeg(staatRef.current.input.opslag.keuze)) return;
+    setMon({ bezig: true });
+    let r;
+    try {
+      r = await zoekMonument({ data: a.data });
+    } catch {
+      r = null;
+    }
+    if (!a.nogActueel()) return setMon({});
+    if (!r) return setMon({ fout: monumentFoutMelding("geen_verbinding") });
+    if (!r.ok) return setMon({ fout: monumentFoutMelding(r.fout) });
+    setMon({ uitslag: r.data });
+    const k = monumentKeuzeVoor(r.data);
+    const nu = staatRef.current.input.opslag.keuze;
+    if (!k || (!forceer && !monumentIsLeeg(nu))) return;
+    const nieuw = k === "rijks_na" && nu === "rijks_voor" ? nu : k;
+    if (nieuw === nu) return;
+    setStaat((x) => ({ ...x, input: { ...x.input, opslag: { ...x.input.opslag, keuze: nieuw } } }));
+    setDirty(true);
+    toast(monumentMelding(r.data));
   }
 
   /** EP-Online-label overnemen in de werkversie — applyEpLabel() */
@@ -1007,6 +1056,10 @@ export default function TellingEditor({
         />
       </div>
       <OpzoekLink meta={m} soort="ep" />
+      <EnergielabelUitslag
+        staat={ep}
+        onOpnieuw={!alleenLezen && rechten.magSchrijven ? () => haalLabelOp(true) : undefined}
+      />
       <WozWaardeVeld
         waarde={staat.input.woz.waarde}
         zet={(v) =>
@@ -1430,10 +1483,21 @@ export default function TellingEditor({
               </p>
             )}
             <OpzoekLink meta={m} soort="ep" />
+            <EnergielabelUitslag
+              staat={ep}
+              onOpnieuw={!alleenLezen && rechten.magSchrijven ? () => haalLabelOp(true) : undefined}
+            />
           </>
         }
         wozExtra={<OpzoekLink meta={m} soort="woz" />}
-        monumentExtra={monumentUitslag ? <MonumentUitslag status={monumentUitslag} /> : undefined}
+        monumentExtra={
+          <MonumentUitslag
+            staat={mon}
+            onOpnieuw={
+              !alleenLezen && rechten.magSchrijven ? () => haalMonumentOp(true) : undefined
+            }
+          />
+        }
         woningtypeElders
       />
       {!alleenLezen && (

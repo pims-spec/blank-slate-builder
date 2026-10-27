@@ -739,6 +739,14 @@ describe("TellingEditor", () => {
         expect(screen.getByRole("combobox", { name: "Labelklasse" })).toHaveValue("C"),
       );
       expect(screen.getByRole("link", { name: "nr. 2249" })).toBeInTheDocument();
+      // groene vlakken met de gegevens
+      expect(screen.getByText("✓ Succesvol opgehaald bij EP-Online")).toBeInTheDocument();
+      expect(
+        screen.getByText("✓ Succesvol opgehaald bij het Kadaster en de RCE"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("status", { name: "Resultaat EP-Online" })).toHaveTextContent(
+        /Label C, registratiedatum 2022-03-01/,
+      );
       const vink = screen.getByRole("checkbox", { name: "Huurcontract gesloten vóór 1 juli 2024" });
       expect(vink).not.toBeChecked();
       fireEvent.click(vink);
@@ -747,9 +755,22 @@ describe("TellingEditor", () => {
       const doc = store.maakAan.mock.calls[0]![1];
       expect(doc.input.opslag.keuze).toBe("rijks_voor");
       expect(doc.input.energie.label).toBe("C");
-      // geen knoppen meer
-      expect(screen.queryByRole("button", { name: /Energielabel automatisch ophalen/ })).toBeNull();
-      expect(screen.queryByRole("button", { name: /Monumentstatus opzoeken/ })).toBeNull();
+      // opnieuw ophalen: haalt nog een keer op en neemt het nieuwe label over, ook als er al iets stond
+      zoekEnergielabel.mockResolvedValue({
+        ok: true,
+        data: { Energieklasse: "B", Registratiedatum: "2025-01-10T00:00:00", Bouwjaar: 1650 },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Energielabel opnieuw ophalen/ }));
+      await waitFor(() =>
+        expect(screen.getByRole("combobox", { name: "Labelklasse" })).toHaveValue("B"),
+      );
+      expect(zoekEnergielabel).toHaveBeenCalledTimes(2);
+      // monument opnieuw: het aangevinkte "vóór 1 juli 2024" blijft staan
+      fireEvent.click(screen.getByRole("button", { name: /Monumentstatus opnieuw ophalen/ }));
+      await waitFor(() => expect(zoekMonument).toHaveBeenCalledTimes(2));
+      expect(
+        screen.getByRole("checkbox", { name: "Huurcontract gesloten vóór 1 juli 2024" }),
+      ).toBeChecked();
     });
 
     it("ongeldige invoer: melding van de bron, venster blijft open", async () => {
