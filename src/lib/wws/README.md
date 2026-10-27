@@ -797,8 +797,10 @@ Afgeleid uit 69 CBRE-adviesrapporten (147 opties). De bron maakte twee opties (1
 - **Adviesrapport zonder blok "Woning"** bij de huidige situatie en bij elke optie
   (`pdfTellingBody` met `zonderWoning`); adres en opsteller staan op het voorblad. De losse
   puntentelling en de route-PDF houden het blok.
-- **Samenvatting:** past de kaart met de puntentotalen niet meer op de overzichtspagina, dan gaat
-  het kopje "Samenvatting" mee naar de volgende pagina (de bron liet het kopje los staan).
+- **Samenvatting:** compacte regels (label links naast de balk, 24 in plaats van 29 mm), zodat de
+  samenvatting op de overzichtspagina past, bij de inhoudsopgave, ook met drie opties. Past de kaart
+  toch niet, dan gaat het kopje "Samenvatting" mee naar de volgende pagina (de bron liet het kopje
+  los staan).
 - **Energielabel en WOZ-waarde op één pagina:** compactere labelrijen (7 in plaats van 8,4 mm).
 - **Woningplattegrond** (`plattegrond/rapport.ts`, `pdfPlattegrondPaginas`): plattegronden alleen
   voor het rapport, zonder de maten over te nemen ("Plattegrond toevoegen aan rapport" in de

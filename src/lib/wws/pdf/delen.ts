@@ -1635,6 +1635,8 @@ function pdfMiniGaugeRow(
   label: string,
   totaal: number,
   normen: Normen,
+  /** Bewuste afwijking: het label links naast de balk, regel van 24 in plaats van 29 mm */
+  compact = false,
 ): number {
   const PUR = PDF_PUR,
     INK = PDF_INK,
@@ -1643,8 +1645,12 @@ function pdfMiniGaugeRow(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
   doc.setTextColor(...INK);
-  doc.text(label, x, y);
-  const barY = y + 10,
+  doc.text(label, x, compact ? y + 3 : y);
+  if (compact) {
+    x += 42;
+    w -= 42;
+  }
+  const barY = compact ? y : y + 10,
     barH = 3.4,
     scale = Math.max(250, totaal + 20);
   const w1 = (w * normen.grensLaag) / scale,
@@ -1682,7 +1688,7 @@ function pdfMiniGaugeRow(
   doc.text("middenhuur", x + w1 + w2 / 2, barY + barH + 8.3, { align: "center" });
   doc.text(normen.grensMidden + 1 + "+", x + w, barY + barH + 5, { align: "right" });
   doc.text("vrije sector", x + w, barY + barH + 8.3, { align: "right" });
-  return y + 29;
+  return y + (compact ? 24 : 29);
 }
 
 /** Overzichtspagina met inhoudsopgave en de drie puntentotalen — pdfSamenvattingPagina() */
@@ -1770,7 +1776,10 @@ export function pdfSamenvattingPagina(
     y += 5.8 + (lines.length - 1) * 5.2;
   });
   y += 8;
-  const cardH = 14 + (1 + opties.length) * 29;
+  // bewuste afwijking: compacte regels, zodat de samenvatting bij het overzicht en de
+  // inhoudsopgave past (de bron: 29 mm per regel, label boven de balk)
+  const compact = !isBronModus();
+  const cardH = compact ? 31 + opties.length * 24 : 14 + (1 + opties.length) * 29;
   // bewuste afwijking: past de kaart niet meer, dan gaat het kopje mee naar de volgende pagina (de
   // bron liet "Samenvatting" los onderaan de pagina staan)
   if (!isBronModus() && y + 7 + cardH > 270) {
@@ -1785,13 +1794,13 @@ export function pdfSamenvattingPagina(
   kaartRand(doc, CARDBORDER, doc.getLineWidth());
   doc.setFillColor(...SOFT);
   doc.roundedRect(M, y, W - 2 * M, cardH, kaartHoek(5), kaartHoek(5), "FD");
-  let by = y + 13;
+  let by = y + (compact ? 15 : 13);
   const items: [string, number][] = [
     ["Huidige status", R.totaal],
     ...opties.map(([naam, route]): [string, number] => [naam, route.eind.totaal]),
   ];
   items.forEach((it) => {
-    by = pdfMiniGaugeRow(doc, M + 10, by, W - 2 * M - 20, it[0], it[1], normen);
+    by = pdfMiniGaugeRow(doc, M + 10, by, W - 2 * M - 20, it[0], it[1], normen, compact);
   });
   return y + cardH + 8;
 }

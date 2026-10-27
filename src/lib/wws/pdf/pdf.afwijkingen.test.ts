@@ -382,7 +382,7 @@ describe("bewuste afwijkingen in de PDF's", () => {
     expect(await tekst(true)).toContain("zich niet in de vrije sector bevindt");
   });
 
-  it("adviesrapport: samenvatting onder het kopje, energielabel en WOZ op één pagina", async () => {
+  it("adviesrapport: samenvatting bij het overzicht, energielabel en WOZ op één pagina", async () => {
     const inst = standaardInstellingen(N);
     for (let n = 1; n <= 8; n++) {
       const input = normaliseer(genereer(n));
@@ -390,6 +390,8 @@ describe("bewuste afwijkingen in de PDF's", () => {
       const pag = await pdfTekst(maakAdviesPdf(LIB, { meta, input, normen: N, inst }).blob);
       const op = (t: string) => pag.findIndex((p) => p.includes(t));
       expect(op("Samenvatting"), "seed " + n).toBe(op("Huidige status"));
+      // compacte samenvatting: op het overzicht, bij de inhoudsopgave (ook met drie opties)
+      expect(op("Samenvatting"), "seed " + n).toBe(op("Inhoudsopgave"));
       expect(op("Hieronder is een overzicht van de punten per energielabel."), "seed " + n).toBe(
         op("Deel 2"),
       );
