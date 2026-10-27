@@ -24,7 +24,6 @@ import {
 import {
   buitenTekst,
   platToepassen,
-  sanitairTekst,
   standaardKeuzes,
   type PlatKeuzes,
 } from "@/lib/wws/plattegrond/toepassen";
@@ -165,7 +164,6 @@ export function PlattegrondInlezen({
   const zetRuimte = (i: number, w: Partial<PlatKeuzes["ruimten"][number]>) =>
     setK((x) => x && { ...x, ruimten: x.ruimten.map((r, j) => (j === i ? { ...r, ...w } : r)) });
 
-  const san = R ? sanitairTekst(R) : "";
   const aanrecht = R ? num(R.keuken.aanrecht_m) : 0;
 
   return (
@@ -302,12 +300,6 @@ export function PlattegrondInlezen({
             </table>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Vink
-              aan={k.sanitair}
-              uit={!san}
-              zet={(v) => setK({ ...k, sanitair: v })}
-              tekst={"Sanitair overnemen" + (san ? ": " + san : " (niets gevonden)")}
-            />
             <Vink
               aan={k.keuken}
               uit={!(aanrecht > 0)}

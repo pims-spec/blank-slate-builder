@@ -42,7 +42,11 @@ export function voorgesteldeSoort(r: PlattegrondAntwoord["ruimten"][number]): st
   return (key === "vertrekken" ? "v:" : "o:") + tk;
 }
 
-/** Wat het venster bij het openen voorstelt (alles aangevinkt wat iets gevonden heeft) */
+/**
+ * Wat het venster bij het openen voorstelt (alles aangevinkt wat iets gevonden heeft). Bewuste
+ * afwijking van de bron: het sanitair wordt niet uit de plattegrond overgenomen (dat komt uit de
+ * fotobeoordeling of wordt met de hand ingevuld); van de voorzieningen alleen de aanrechtlengte.
+ */
 export function standaardKeuzes(R: PlattegrondAntwoord): PlatKeuzes {
   return {
     ruimten: R.ruimten.map((r) => ({
@@ -50,7 +54,7 @@ export function standaardKeuzes(R: PlattegrondAntwoord): PlatKeuzes {
       soort: voorgesteldeSoort(r),
       m2: r.m2 != null ? String(r.m2).replace(".", ",") : "",
     })),
-    sanitair: !!sanitairTekst(R),
+    sanitair: false,
     keuken: num(R.keuken.aanrecht_m) > 0,
     buiten: R.buitenruimten.length > 0,
     vervangen: false,
