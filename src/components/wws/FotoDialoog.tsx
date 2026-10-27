@@ -44,6 +44,7 @@ const SOORT_NAAM: Record<FotoSortering["soort"], string> = {
   badkamer: "Badkamer",
   toilet: "Toilet",
   anders: "Andere ruimte",
+  plattegrond: "Plattegrond",
 };
 /** Hoogstens zoveel ruimtes tegelijk bij Gemini */
 const TEGELIJK = 3;

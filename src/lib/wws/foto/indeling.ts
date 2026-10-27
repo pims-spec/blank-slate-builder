@@ -7,7 +7,7 @@ import type { Beoordeling } from "./beoordeling";
 import { MAX_FOTOS } from "./beoordeling";
 import { RUIMTE_NAAM, type FotoRuimte } from "./elementen";
 import { fotoRuimteVoor, pasFotosToe } from "./invullen";
-import type { FotoSortering } from "./sorteren";
+import { isFotoRuimte, type FotoSortering } from "./sorteren";
 
 export type Doel = string;
 export const GEEN: Doel = "geen";
@@ -79,12 +79,12 @@ export function doelOpties(input: WwsInput): DoelOptie[] {
 
 /**
  * Het begin van de indeling na het sorteren: één ruimte van die soort → die; geen → een nieuwe;
- * meer → nog kiezen; "anders" → niet gebruiken.
+ * meer → nog kiezen; "anders" (en "plattegrond") → niet gebruiken.
  */
 export function beginIndeling(input: WwsInput, sortering: readonly FotoSortering[]): Doel[] {
   const opties = doelOpties(input).filter((o) => !o.doel.startsWith("nieuw:"));
   return sortering.map((s) => {
-    if (s.soort === "anders") return GEEN;
+    if (!isFotoRuimte(s.soort)) return GEEN;
     const zelfde = opties.filter((o) => o.ruimte === s.soort);
     if (zelfde.length === 1) return zelfde[0]!.doel;
     return zelfde.length === 0 ? "nieuw:" + s.soort : KIEZEN;

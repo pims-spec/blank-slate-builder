@@ -5,7 +5,12 @@ import * as z from "zod";
 import type { FotoRuimte } from "./elementen";
 
 export const FOTO_SOORTEN = ["keuken", "badkamer", "toilet", "anders"] as const;
-export type FotoSoort = (typeof FOTO_SOORTEN)[number];
+/** Bij een hele map ("Map inlezen") kan een afbeelding ook de plattegrond zijn */
+export const MAP_SOORTEN = [...FOTO_SOORTEN, "plattegrond"] as const;
+export type FotoSoort = (typeof MAP_SOORTEN)[number];
+
+const soortenVoor = (metPlattegrond: boolean): readonly FotoSoort[] =>
+  metPlattegrond ? MAP_SOORTEN : FOTO_SOORTEN;
 
 /** Hoogstens zoveel foto's per woning */
 export const MAX_WONING_FOTOS = 30;
@@ -17,7 +22,7 @@ export interface FotoSortering {
   reden: string;
 }
 
-export function sorteerPrompt(nFotos: number): string {
+export function sorteerPrompt(nFotos: number, metPlattegrond = false): string {
   return [
     `Je krijgt ${nFotos === 1 ? "een foto" : nFotos + " foto's"} van een Nederlandse huurwoning, elk voorafgegaan door "Foto n". Zeg per foto welke ruimte erop staat.`,
     "",
@@ -26,6 +31,11 @@ export function sorteerPrompt(nFotos: number): string {
     "- badkamer: een ruimte met een douche of bad, of een wastafel buiten het toilet. Een badkamer met een toilet erin is een badkamer.",
     "- toilet: een aparte toiletruimte met alleen een toilet en eventueel een fontein (klein handenwasbakje).",
     "- anders: elke andere ruimte (woonkamer zonder keuken, slaapkamer, hal, berging, buiten), of als niet te zien is welke ruimte het is.",
+    ...(metPlattegrond
+      ? [
+          "- plattegrond: geen foto maar een tekening van de woning van bovenaf (plattegrond of bouwtekening), met wanden en ruimten.",
+        ]
+      : []),
     "",
     "Regels:",
     "- Beoordeel alleen wat op de foto te zien is. Twijfel je, kies dan anders.",
@@ -37,7 +47,7 @@ export function sorteerPrompt(nFotos: number): string {
 }
 
 /** JSON Schema van het antwoord (structured output bij Gemini) */
-export function sorteerSchema(): Record<string, unknown> {
+export function sorteerSchema(metPlattegrond = false): Record<string, unknown> {
   return {
     type: "object",
     additionalProperties: false,
@@ -51,7 +61,7 @@ export function sorteerSchema(): Record<string, unknown> {
           required: ["foto", "soort", "reden"],
           properties: {
             foto: { type: "integer" },
-            soort: { type: "string", enum: [...FOTO_SOORTEN] },
+            soort: { type: "string", enum: [...soortenVoor(metPlattegrond)] },
             reden: { type: "string" },
           },
         },
@@ -64,7 +74,11 @@ export function sorteerSchema(): Record<string, unknown> {
  * Het antwoord controleren. null als het niet klopt: verkeerde vorm, een foto die ontbreekt,
  * dubbel is of niet bestaat. Geeft de sortering in de volgorde van de foto's.
  */
-export function controleerSortering(nFotos: number, data: unknown): FotoSortering[] | null {
+export function controleerSortering(
+  nFotos: number,
+  data: unknown,
+  metPlattegrond = false,
+): FotoSortering[] | null {
   const r = z
     .object({
       fotos: z
@@ -72,7 +86,7 @@ export function controleerSortering(nFotos: number, data: unknown): FotoSorterin
           z
             .object({
               foto: z.number().int().min(1).max(nFotos),
-              soort: z.enum(FOTO_SOORTEN),
+              soort: metPlattegrond ? z.enum(MAP_SOORTEN) : z.enum(FOTO_SOORTEN),
               reden: z.string().max(MAX_REDEN * 2),
             })
             .strict(),
@@ -93,4 +107,5 @@ export function controleerSortering(nFotos: number, data: unknown): FotoSorterin
   return uit as FotoSortering[];
 }
 
-export const isFotoRuimte = (s: FotoSoort): s is FotoRuimte => s !== "anders";
+export const isFotoRuimte = (s: FotoSoort): s is FotoRuimte =>
+  s === "keuken" || s === "badkamer" || s === "toilet";

@@ -35,23 +35,27 @@ export async function beoordeelMetGemini(
   return { ok: true, data: b };
 }
 
-/** Foto's van een woning sorteren: per foto keuken, badkamer, toilet of anders */
+/**
+ * Foto's van een woning sorteren: per foto keuken, badkamer, toilet of anders (bij een hele map ook
+ * plattegrond)
+ */
 export async function sorteerMetGemini(
   fetchFn: typeof fetch,
   sleutel: string | undefined,
   model: string | undefined,
   fotos: readonly Afbeelding[],
+  metPlattegrond = false,
 ): Promise<AiUitkomst<FotoSortering[]>> {
   const r = await vraagGeminiJson(
     fetchFn,
     sleutel,
     model,
-    sorteerPrompt(fotos.length),
+    sorteerPrompt(fotos.length, metPlattegrond),
     fotos,
-    sorteerSchema(),
+    sorteerSchema(metPlattegrond),
   );
   if (!r.ok) return r;
-  const s = controleerSortering(fotos.length, leesJson(r.data));
+  const s = controleerSortering(fotos.length, leesJson(r.data), metPlattegrond);
   if (!s) {
     console.warn("[ai] Gemini: onbruikbaar_antwoord (foto's sorteren)");
     return { ok: false, fout: "onbruikbaar_antwoord" };

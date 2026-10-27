@@ -54,6 +54,17 @@ describe("sorteren", () => {
     );
   });
 
+  it("met plattegrond: extra soort in instructie, schema en controle; zonder blijft hij ongeldig", () => {
+    expect(sorteerPrompt(2)).not.toContain("- plattegrond:");
+    expect(sorteerPrompt(2, true)).toContain("- plattegrond:");
+    expect(JSON.stringify(sorteerSchema(true))).toContain(
+      '"enum":["keuken","badkamer","toilet","anders","plattegrond"]',
+    );
+    const data = { fotos: [{ foto: 1, soort: "plattegrond", reden: "Tekening." }] };
+    expect(controleerSortering(1, data)).toBeNull();
+    expect(controleerSortering(1, data, true)).toEqual([{ soort: "plattegrond", reden: "Tekening." }]);
+  });
+
   it("controleerSortering: in fotovolgorde; ontbrekend, dubbel of onbekend → null", () => {
     const r = controleerSortering(2, {
       fotos: [
@@ -109,6 +120,7 @@ describe("indeling", () => {
       "vertrekken:2",
     ]);
     expect(beginIndeling(legeInput(), [s("toilet")])).toEqual(["nieuw:toilet"]);
+    expect(beginIndeling(legeInput(), [s("plattegrond")])).toEqual([GEEN]);
   });
 
   it("groepeer: per ruimte; fout bij kiezen, meer dan 10, of niets", () => {

@@ -61,6 +61,8 @@ export const FotoSorteerVraag = z.object({
       (fs) => fs.reduce((n, f) => n + f.data.length, 0) <= MAX_FOTOS_BASE64,
       "Samen te groot.",
     ),
+  /** "Map inlezen": een afbeelding kan ook de plattegrond zijn */
+  metPlattegrond: z.boolean().optional(),
 });
 export type FotoSorteerVraag = z.input<typeof FotoSorteerVraag>;
 

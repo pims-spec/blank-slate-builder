@@ -260,6 +260,24 @@ describe("sorteerMetGemini en FotoSorteerVraag", () => {
     expect(body.input.at(-1)).toEqual({ type: "text", text: sorteerPrompt(2) });
     expect(body.response_format.schema).toEqual(sorteerSchema());
 
+    const kaart = {
+      outputs: [
+        {
+          type: "text",
+          text: JSON.stringify({ fotos: [{ foto: 1, soort: "plattegrond", reden: "Tekening." }] }),
+        },
+      ],
+    };
+    const map = nepFetch(200, kaart);
+    expect(await sorteerMetGemini(map.fn, "s", undefined, [foto], true)).toEqual({
+      ok: true,
+      data: [{ soort: "plattegrond", reden: "Tekening." }],
+    });
+    const mapBody = JSON.parse(map.aanroepen[0]!.init.body as string);
+    expect(mapBody.input.at(-1)).toEqual({ type: "text", text: sorteerPrompt(1, true) });
+    expect(mapBody.response_format.schema).toEqual(sorteerSchema(true));
+    expect((await sorteerMetGemini(nepFetch(200, kaart).fn, "s", undefined, [foto])).ok).toBe(false);
+
     const fout = nepFetch(200, { outputs: [{ type: "text", text: '{"fotos":[]}' }] });
     expect(await sorteerMetGemini(fout.fn, "s", undefined, [foto])).toEqual({
       ok: false,

@@ -106,6 +106,12 @@ export const sorteerFotos = createServerFn({ method: "POST" })
   .validator((d: unknown) => FotoSorteerVraag.parse(d))
   .handler(async ({ data, context }): Promise<AiAntwoord<FotoSortering[]>> =>
     metLimiet(context.supabase, "lezen", "GEMINI_API_KEY", () =>
-      sorteerMetGemini(fetch, env("GEMINI_API_KEY"), env("GEMINI_FOTO_MODEL"), data.fotos),
+      sorteerMetGemini(
+        fetch,
+        env("GEMINI_API_KEY"),
+        env("GEMINI_FOTO_MODEL"),
+        data.fotos,
+        data.metPlattegrond,
+      ),
     ),
   );
