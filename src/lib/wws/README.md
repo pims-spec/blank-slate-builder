@@ -156,6 +156,30 @@ De AI kent geen punten toe. Nog niet in de app: eerst een vergelijkingstest (Cla
 Claude Sonnet 5.5, Gemini 4 Argon, Gemini 3.8 Flash) met dezelfde instructie en hetzelfde schema,
 buiten de repo.
 
+## Map inlezen (plattegrond en foto's in één keer)
+
+Knop "Map inlezen" in de telling (`MapDialoog.tsx`). Een map van de computer (Map kiezen met
+`webkitdirectory`, Bestanden kiezen, of slepen via `map/slepen.ts`) of uit Google Drive.
+
+- `map/verdelen.ts` (puur): verborgen bestanden weg; een PDF is een plattegrond; een afbeelding met
+  "plattegrond", "bouwtekening", "floorplan", "tekening", "plan" of "PG" in de naam ook; HEIC,
+  andere bestanden, groter dan 25 MB en meer dan 30 foto's worden overgeslagen met de reden.
+- Herkennen: de foto's gaan door dezelfde sortering als de fotobeoordeling, met `metPlattegrond`
+  (extra soort `plattegrond`). Eén AI-aanroep voor de hele map. Lukt dat niet, dan kijkt de
+  gebruiker zelf na.
+- Nakijken: per bestand Plattegrond / Foto / Niet gebruiken; bij meer plattegronden wordt er één
+  ingelezen (voorkeur PDF, dan naam, dan Gemini).
+- Daarna de bestaande stappen: `PlattegrondInlezen` met de controletabel (de ruimten komen in de
+  telling bij Overnemen), dan `FotosBeoordelen` vanaf de indeling, met de telling inclusief de
+  nieuwe ruimten.
+- Google Drive (`map/drive.ts` puur, `map/googleDrive.ts` in de browser): Google Identity Services
+  met scope `drive.file` en de Google Picker; de gebruiker opent de map en selecteert alles. Het
+  token blijft in het geheugen, de bestanden gaan rechtstreeks van Drive naar de browser; geen
+  server function. Antwoorden van Google gaan door zod. De knop verschijnt alleen als
+  `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_API_KEY` en `VITE_GOOGLE_APP_ID` (projectnummer) gezet
+  zijn. Dit zijn publieke waarden (geen geheimen); beperk de API-sleutel in Google Cloud tot de
+  domeinen van de app en de Picker API.
+
 ## AI en plattegronden (fase 4c)
 
 ```
