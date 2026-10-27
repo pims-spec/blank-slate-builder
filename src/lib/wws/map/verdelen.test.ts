@@ -3,7 +3,6 @@ import { MAX_WONING_FOTOS } from "../foto/sorteren";
 import {
   bestandSoort,
   isVerborgen,
-  kiesPlattegrond,
   labelOpties,
   mapStappen,
   MAX_BESTAND_MB,
@@ -116,19 +115,12 @@ describe("na het sorteren", () => {
     ]);
   });
 
-  it("kiesPlattegrond: PDF voor naam voor AI; geen → null", () => {
-    const m = metSortering(items, [s("keuken"), s("plattegrond"), s("anders")]);
-    expect(kiesPlattegrond(m)).toBe(3);
-    expect(kiesPlattegrond(m.filter((x) => x.soort !== "pdf"))).toBe(1);
-    expect(kiesPlattegrond(items.filter((x) => x.soort !== "pdf"))).toBeNull();
-  });
-
   it("labelOpties: een PDF kan geen foto zijn", () => {
     expect(labelOpties(items[3]!)).toEqual(["plattegrond", "niet"]);
     expect(labelOpties(items[0]!)).toEqual(["plattegrond", "foto", "niet"]);
   });
 
-  it("mapStappen: gekozen plattegrond, foto's met sortering; zelf omgezet → anders", () => {
+  it("mapStappen: alle plattegronden, foto's met sortering; zelf omgezet → anders", () => {
     const m = metSortering(items, [s("keuken"), s("plattegrond"), s("toilet")]);
     // b.jpg zette de gebruiker terug naar foto; c.jpg niet gebruiken
     const na = m.map((x) =>
@@ -138,18 +130,26 @@ describe("na het sorteren", () => {
           ? { ...x, label: "niet" as const }
           : x,
     );
-    const r = mapStappen(na, 3);
-    expect(r.plattegrond).toBe(3);
+    const r = mapStappen(na);
+    expect(r.plattegronden).toEqual([3]);
     expect(r.fotos).toEqual([0, 1]);
     expect(r.sortering.map((x) => x.soort)).toEqual(["keuken", "anders"]);
     expect(r.fout).toBeNull();
-    // een plattegrond die niet (meer) zo gelabeld is, telt niet
-    expect(mapStappen(na, 1).plattegrond).toBeNull();
-    expect(
-      mapStappen(
-        na.map((x) => ({ ...x, label: "niet" as const })),
-        3,
-      ).fout,
-    ).toContain("Kies een plattegrond");
+    // twee plattegronden (verdiepingen) gaan allebei mee
+    expect(mapStappen(m).plattegronden).toEqual([1, 3]);
+    expect(mapStappen(na.map((x) => ({ ...x, label: "niet" as const }))).fout).toContain(
+      "Kies een plattegrond",
+    );
+  });
+
+  it("mapStappen: meer dan 4 plattegronden → fout", () => {
+    const veel = verdeelMap(
+      Array.from({ length: 5 }, (_, i) => ({
+        pad: `p${i}.pdf`,
+        type: "application/pdf",
+        grootte: 1,
+      })),
+    ).items;
+    expect(mapStappen(veel).fout).toContain("Hoogstens 4 plattegronden");
   });
 });

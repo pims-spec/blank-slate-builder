@@ -3,6 +3,7 @@
 // "bouwtekening", "floorplan"…); daarna kan de foto-sortering van Gemini een afbeelding nog als
 // plattegrond herkennen (metSortering). De gebruiker kijkt alles na voordat er iets gebeurt.
 import { MAX_WONING_FOTOS, type FotoSortering } from "../foto/sorteren";
+import { MAX_VERDIEPINGEN } from "../plattegrond/verdiepingen";
 
 /** Groter wordt overgeslagen (een telefoonfoto is een paar MB, een PDF-tekening zelden meer) */
 export const MAX_BESTAND_MB = 25;
@@ -125,35 +126,23 @@ export function metSortering(
   });
 }
 
-const BRON_VOORKEUR: Record<MapBron, number> = { pdf: 0, naam: 1, ai: 2 };
-
-/** Welke plattegrond standaard wordt ingelezen: liefst een PDF, dan op naam, dan door de AI */
-export function kiesPlattegrond(items: readonly MapItem[]): number | null {
-  const p = items
-    .filter((x) => x.label === "plattegrond")
-    .sort((a, b) => BRON_VOORKEUR[a.bron ?? "ai"] - BRON_VOORKEUR[b.bron ?? "ai"]);
-  return p[0]?.i ?? null;
-}
-
 /** De keuzes per label; een PDF kan geen foto zijn */
 export const labelOpties = (x: MapItem): MapLabel[] =>
   x.soort === "pdf" ? ["plattegrond", "niet"] : ["plattegrond", "foto", "niet"];
 
 /**
- * Wat er na het nakijken gebeurt: de plattegrond die wordt ingelezen (index of null) en de foto's
- * met hun sortering. Een foto zonder sortering (de gebruiker maakte er zelf een foto van) of met
- * "plattegrond" telt als "anders": die kiest de gebruiker daarna zelf bij een ruimte.
+ * Wat er na het nakijken gebeurt: de plattegronden die worden ingelezen (elk een verdieping, in de
+ * volgorde van de map) en de foto's met hun sortering. Een foto zonder sortering (de gebruiker
+ * maakte er zelf een foto van) of met "plattegrond" telt als "anders": die kiest de gebruiker
+ * daarna zelf bij een ruimte.
  */
-export function mapStappen(
-  items: readonly MapItem[],
-  plattegrond: number | null,
-): {
-  plattegrond: number | null;
+export function mapStappen(items: readonly MapItem[]): {
+  plattegronden: number[];
   fotos: number[];
   sortering: FotoSortering[];
   fout: string | null;
 } {
-  const p = items.find((x) => x.i === plattegrond && x.label === "plattegrond")?.i ?? null;
+  const plattegronden = items.filter((x) => x.label === "plattegrond").map((x) => x.i);
   const fotos = items.filter((x) => x.label === "foto");
   const sortering = fotos.map((x) =>
     x.sortering && x.sortering.soort !== "plattegrond"
@@ -163,8 +152,10 @@ export function mapStappen(
   const fout =
     fotos.length > MAX_WONING_FOTOS
       ? `Hoogstens ${MAX_WONING_FOTOS} foto's; er zijn er ${fotos.length}.`
-      : p === null && fotos.length === 0
-        ? "Kies een plattegrond of minstens één foto."
-        : null;
-  return { plattegrond: p, fotos: fotos.map((x) => x.i), sortering, fout };
+      : plattegronden.length > MAX_VERDIEPINGEN
+        ? `Hoogstens ${MAX_VERDIEPINGEN} plattegronden (verdiepingen); zet de rest op Niet gebruiken.`
+        : plattegronden.length === 0 && fotos.length === 0
+          ? "Kies een plattegrond of minstens één foto."
+          : null;
+  return { plattegronden, fotos: fotos.map((x) => x.i), sortering, fout };
 }

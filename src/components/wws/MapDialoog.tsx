@@ -18,7 +18,6 @@ import { driveInstellingen } from "@/lib/wws/map/drive";
 import { downloadUitDrive, kiesUitDrive } from "@/lib/wws/map/googleDrive";
 import { entriesVan, invoerVan, leesGesleept, type MapInvoer } from "@/lib/wws/map/slepen";
 import {
-  kiesPlattegrond,
   labelOpties,
   mapStappen,
   metSortering,
@@ -96,7 +95,6 @@ function MapInlezen({
   const [invoer, setInvoer] = useState<MapInvoer[]>([]);
   const [items, setItems] = useState<MapItem[]>([]);
   const [overgeslagen, setOvergeslagen] = useState<Overgeslagen[]>([]);
-  const [plattegrond, setPlattegrond] = useState<number | null>(null);
   const [stap, setStap] = useState<ReturnType<typeof mapStappen> | null>(null);
   const [bezig, setBezig] = useState(false);
   const [status, setStatus] = useState("");
@@ -210,7 +208,6 @@ function MapInlezen({
     const fotos = teSorteren(items);
     const verder = (lijst: MapItem[], melding: string) => {
       setItems(lijst);
-      setPlattegrond(kiesPlattegrond(lijst));
       setFase("nakijken");
       setStatus(melding);
     };
@@ -257,18 +254,15 @@ function MapInlezen({
   }
 
   function zetLabel(i: number, label: MapLabel) {
-    const lijst = items.map((x) => (x.i === i ? { ...x, label } : x));
-    setItems(lijst);
-    if (label === "plattegrond" && plattegrond === null) setPlattegrond(i);
-    if (label !== "plattegrond" && plattegrond === i) setPlattegrond(kiesPlattegrond(lijst));
+    setItems((lijst) => lijst.map((x) => (x.i === i ? { ...x, label } : x)));
   }
 
   function naarVolgende() {
-    const s = mapStappen(items, plattegrond);
+    const s = mapStappen(items);
     if (s.fout) return setStatus(s.fout);
     setStap(s);
     setStatus("");
-    setFase(s.plattegrond !== null ? "plattegrond" : "fotos");
+    setFase(s.plattegronden.length ? "plattegrond" : "fotos");
   }
 
   /** Na de plattegrond: door naar de foto's, of klaar */
@@ -277,14 +271,14 @@ function MapInlezen({
     else onOpenChange(false);
   }
 
-  if (fase === "plattegrond" && stap?.plattegrond != null)
+  if (fase === "plattegrond" && stap?.plattegronden.length)
     return (
       <div className="min-w-0 space-y-3">
         <StapKop nr={1} van={stap.fotos.length ? 2 : 1} tekst="Plattegrond inlezen en nakijken" />
         <PlattegrondInlezen
           input={input}
           meta={meta}
-          beginBestand={invoer[stap.plattegrond]!.bestand}
+          beginBestanden={stap.plattegronden.map((i) => invoer[i]!.bestand)}
           knopTekst={stap.fotos.length ? "Overnemen en verder naar de foto's" : "Overnemen"}
           onOvernemen={(inp, beeld) => {
             onPlattegrond(inp, beeld);
@@ -301,8 +295,8 @@ function MapInlezen({
     return (
       <div className="min-w-0 space-y-3">
         <StapKop
-          nr={stap.plattegrond !== null ? 2 : 1}
-          van={stap.plattegrond !== null ? 2 : 1}
+          nr={stap.plattegronden.length ? 2 : 1}
+          van={stap.plattegronden.length ? 2 : 1}
           tekst="Foto's indelen en beoordelen"
         />
         <FotosBeoordelen
@@ -369,8 +363,8 @@ function MapInlezen({
 
       {fase === "nakijken" && plattegronden.length > 1 && (
         <p className="rounded-md bg-muted px-3 py-2">
-          Er zijn {plattegronden.length} plattegronden. De app leest er één in; kies welke bij "Deze
-          inlezen".
+          Er zijn {plattegronden.length} plattegronden. Elke plattegrond wordt als aparte verdieping
+          ingelezen; zet een dubbele of verkeerde op Niet gebruiken.
         </p>
       )}
 
@@ -420,17 +414,6 @@ function MapInlezen({
                         </option>
                       ))}
                     </select>
-                    {x.label === "plattegrond" && plattegronden.length > 1 && (
-                      <label className="flex items-center gap-1 text-xs">
-                        <input
-                          type="radio"
-                          name="plattegrond"
-                          checked={plattegrond === x.i}
-                          onChange={() => setPlattegrond(x.i)}
-                        />
-                        Deze inlezen
-                      </label>
-                    )}
                   </>
                 )}
               </li>

@@ -12,6 +12,10 @@ vi.mock("@/lib/wws/ai/ai.functions", () => ({
   beoordeelFotos: vi.fn(),
 }));
 const klaarmaken = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wws/plattegrond/beeld", async (orig) => ({
+  ...(await orig<typeof import("@/lib/wws/plattegrond/beeld")>()),
+  pdfAantalPaginas: vi.fn(async () => 1),
+}));
 vi.mock("@/lib/wws/foto/beeld", async (orig) => ({
   ...(await orig<typeof import("@/lib/wws/foto/beeld")>()),
   fotoKlaarmaken: klaarmaken,
@@ -121,6 +125,27 @@ describe("MapDialoog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Verder" }));
     expect(screen.getByText("Plattegrond inlezen en nakijken")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Overnemen" })).toBeDisabled();
+  });
+
+  it("twee plattegronden: allebei als verdieping naar het inlezen", async () => {
+    openMet();
+    kiesMap([
+      bestand("Woning/Plattegrond BG.pdf", "application/pdf"),
+      bestand("Woning/Plattegrond 1e verdieping.pdf", "application/pdf"),
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Herkennen en nakijken" }));
+    expect(screen.getByText(/Elke plattegrond wordt als aparte verdieping/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verder" }));
+    expect(
+      await screen.findByRole("combobox", { name: "Verdieping: Plattegrond 1e verdieping.pdf" }),
+    ).toHaveValue("1e verdieping");
+    expect(screen.getByRole("combobox", { name: "Verdieping: Plattegrond BG.pdf" })).toHaveValue(
+      "Begane grond",
+    );
+    // van laag naar hoog, ook al staat 1e verdieping eerder in de map
+    expect(screen.getAllByRole("combobox", { name: /^Verdieping:/ })[0]).toHaveAccessibleName(
+      "Verdieping: Plattegrond BG.pdf",
+    );
   });
 
   it("herkennen mislukt: toch nakijken, met de melding", async () => {
