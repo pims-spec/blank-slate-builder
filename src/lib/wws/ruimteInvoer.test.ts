@@ -60,7 +60,7 @@ describe("opmerking per ruimte (roomTable)", () => {
       "Geen oppervlaktepunten, wel verwarming",
     );
     expect(ruimteOpmerking("overig", { type: "berging_in", m2: "1,5" }, N)?.tekst).toBe(
-      "Kleiner dan 2 m²: geen oppervlaktepunten.",
+      "Kleiner dan 2 m²: geen oppervlaktepunten en geen punt voor verwarming.",
     );
     expect(ruimteOpmerking("overig", { type: "toilet", m2: 1.2 }, N)?.tekst).toBe(
       "Kleiner dan 2 m²: geen oppervlaktepunten. Het toilet zelf telt bij rubriek 6 (Sanitair).",

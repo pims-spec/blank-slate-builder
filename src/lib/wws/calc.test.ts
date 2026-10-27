@@ -1,7 +1,8 @@
 // Leesbare voorbeelden met met de hand nagerekende uitkomsten.
 // De volledige gelijkheid met wws-site.html staat in calc.vergelijk.test.ts.
 import { describe, expect, it } from "vitest";
-import { calc, huurVoorPunten, wozCap, zetBronAfronding } from "./calc";
+import { calc, huurVoorPunten, verwarmingTelt, wozCap, zetBronAfronding } from "./calc";
+import { DEFAULT_NORMEN } from "./normen";
 import { ensureFac, m2r, q, r2 } from "./basis";
 import { legeInput } from "./legeInput";
 import type {
@@ -355,5 +356,21 @@ describe("huurprijstabel 2026", () => {
     expect(huurVoorPunten(41)).toBe(256.53);
     const laatste = huurVoorPunten(250)!; // tabel loopt t/m 250 punten
     expect(huurVoorPunten(251)).toBeCloseTo(laatste + (1667.4 - 1660.54), 2);
+  });
+});
+
+describe("verwarming van kleine overige ruimten (bewuste afwijking van de bron)", () => {
+  const punten3 = (overig: WwsInput["overig"]) => {
+    const x = legeInput();
+    x.overig = overig;
+    return calc(x, DEFAULT_NORMEN).rows.find((r) => r.nr === 3)!.p;
+  };
+  it("een berging kleiner dan 2 m² krijgt geen verwarmingspunt; toilet, hal en onbekend oppervlak wel", () => {
+    expect(punten3([{ type: "berging_in", m2: "1", verwarmd: true }])).toBe(0);
+    expect(punten3([{ type: "berging_in", m2: "2", verwarmd: true }])).toBe(1);
+    expect(punten3([{ type: "toilet", m2: "1,2", verwarmd: true }])).toBe(1);
+    expect(punten3([{ type: "hal", m2: 1, verwarmd: true }])).toBe(1);
+    expect(punten3([{ type: "berging_in", m2: "", verwarmd: true }])).toBe(1);
+    expect(verwarmingTelt({ type: "kelder", m2: 1.5 }, 2)).toBe(false);
   });
 });

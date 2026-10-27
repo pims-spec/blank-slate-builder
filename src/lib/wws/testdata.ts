@@ -7,6 +7,8 @@ import {
   ensureFac,
   facDefault,
   LABELS,
+  num,
+  overigType,
 } from "./basis";
 import type { Fac, OverigeRuimte, Vertrek, WwsInput } from "./types";
 
@@ -163,6 +165,13 @@ export function genereer(seed: number): WwsInput {
       nieuwbouw: kans(0.2),
     },
   };
+  // Bewuste afwijking van de bron: een overige ruimte kleiner dan 2 m² telt in de app niet voor
+  // verwarming (verwarmingTelt). Zulke ruimten maakt de generator daarom 2 m², zodat de
+  // vergelijkingen met wws-site.html blijven kloppen; calc.test.ts test de afwijking zelf.
+  for (const r of inp.overig) {
+    const m = num(r.m2);
+    if (!overigType(r.type).verkeer && r.type !== "toilet" && m > 0 && m < 2) r.m2 = 2;
+  }
   return inp;
 }
 

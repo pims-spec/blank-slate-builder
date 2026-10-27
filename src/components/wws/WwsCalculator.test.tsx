@@ -69,7 +69,9 @@ describe("WwsCalculator", () => {
     expect(screen.queryByText(/Kleiner dan 2 m²/)).toBeNull();
     const m2 = screen.getAllByPlaceholderText("0,00")[0]!;
     fireEvent.change(m2, { target: { value: "1,5" } });
-    expect(screen.getByText("Kleiner dan 2 m²: geen oppervlaktepunten.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Kleiner dan 2 m²: geen oppervlaktepunten en geen punt voor verwarming."),
+    ).toBeInTheDocument();
   });
 
   it("nieuwe ruimte: nog geen soort (zoals de bron), valt op tot er gekozen is", () => {

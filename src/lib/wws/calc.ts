@@ -269,12 +269,12 @@ export function calc(
       (aftrek ? ", aftrek zolder zonder vaste trap " + fmt(aftrek) : ""),
   );
 
-  // Rubriek 3: verwarming en verkoeling
+  // Rubriek 3: verwarming en verkoeling (een overige ruimte kleiner dan 2 m² telt niet mee)
   const vv = inp.vertrekken
     .filter((r) => r.verwarmd)
     .reduce((s, r) => s + (vertrekType(r.type).verwVertrekken || 1), 0);
   const vk = inp.vertrekken.filter((r) => r.verwarmd && r.verkoeld).length;
-  const ow = inp.overig.filter((r) => r.verwarmd).length;
+  const ow = inp.overig.filter((r) => r.verwarmd && verwarmingTelt(r, N.minOverig)).length;
   const p3 =
     vv * N.verwVertrek +
     Math.min(ow * N.verwOverig, N.verwOverigMax) +
@@ -715,3 +715,15 @@ export const SEGMENT_NAMEN: Record<Segment, string> = {
   midden: "Middenhuur",
   hoog: "Vrije sector",
 };
+
+/**
+ * Telt een verwarmde overige ruimte mee voor verwarming (rubriek 3)? Bewuste afwijking van de bron:
+ * een overige ruimte kleiner dan 2 m² (bijv. een berging van 1 m²) niet. Verkeersruimten (hal,
+ * gang, overloop) en de toiletruimte tellen altijd; zonder ingevuld oppervlak ook.
+ */
+export function verwarmingTelt(r: { type: string; m2: unknown }, minOverig: number): boolean {
+  const T = overigType(r.type);
+  if (T.verkeer || r.type === "toilet") return true;
+  const m = r2(num(r.m2));
+  return !(m > 0 && m < minOverig);
+}

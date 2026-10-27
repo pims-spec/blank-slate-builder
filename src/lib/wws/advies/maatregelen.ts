@@ -4,7 +4,7 @@
 // uitkomst exact kan vergelijken met de bron.
 
 import { fmt, INDEX_KLASSEN, LABELS, num, overigType, r2, vertrekType } from "../basis";
-import { calc, type SanAgg } from "../calc";
+import { calc, verwarmingTelt, type SanAgg } from "../calc";
 import type { Normen } from "../normen";
 import type { Energie, EnergieAdviesMaatregel, Labelklasse, WwsInput } from "../types";
 import type {
@@ -345,9 +345,11 @@ export const MAATREGELEN: readonly Maatregel[] = [
     naam: "Overige of verkeersruimte verwarmen",
     kost: "verwOverig",
     gen(x, { K, N }) {
-      const n = x.overig.filter((r) => r.verwarmd).length;
+      const telt = (r: (typeof x.overig)[number]) => verwarmingTelt(r, N.minOverig);
+      const n = x.overig.filter((r) => r.verwarmd && telt(r)).length;
       if (n * N.verwOverig >= N.verwOverigMax) return [];
-      const i = x.overig.findIndex((r) => !r.verwarmd);
+      // een ruimte die niet meetelt (kleiner dan 2 m²) niet voorstellen
+      const i = x.overig.findIndex((r) => !r.verwarmd && telt(r));
       if (i < 0) return [];
       const r = x.overig[i]!;
       return [
