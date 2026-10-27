@@ -365,7 +365,7 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
     adviesOpties(x.input, N, inst, opt).forEach((o, i) =>
       opties.push({
         titel: "Optie " + (i + 1) + ": " + o.titel.toLowerCase(),
-        sub: OPTIE_SUB[o.soort](o.doel),
+        sub: OPTIE_SUB[o.soort](o.doel, o.route.eind.totaal),
         route: o.route,
         doelzin: o.doelzin,
       }),
@@ -476,11 +476,25 @@ function adviesPdf(lib: PdfLib, x: AdviesPdfInvoer): PdfBestand {
   return { blob: doc.output("blob"), bestandsnaam: "WWS_" + base + "_huidig_advies_opties.pdf" };
 }
 
-/** Ondertitel van een optiepagina (bewuste afwijking) */
-const OPTIE_SUB: Record<OptieSoort, (doel: number) => string> = {
+/**
+ * Ondertitel van een optiepagina (bewuste afwijking). Bij de marges staan het doel én de uitkomst:
+ * de maatregelen kunnen het doel ruim overschrijden (bijv. een labelsprong), en dan moet het
+ * totaal bovenaan de pagina niet tegenstrijdig lijken.
+ */
+const OPTIE_SUB: Record<OptieSoort, (doel: number, eind: number) => string> = {
   middenhuur: (d) => "Precies op de grens van de middenhuur: " + d + " punten",
-  klein: (d) => "In de vrije sector met een kleine marge: " + d + " punten",
-  ruim: (d) => "In de vrije sector met een ruime marge: " + d + " punten",
+  klein: (d, e) =>
+    "Doel: minimaal " +
+    d +
+    " punten (kleine marge in de vrije sector). Met deze maatregelen: " +
+    e +
+    " punten",
+  ruim: (d, e) =>
+    "Doel: minimaal " +
+    d +
+    " punten (ruime marge in de vrije sector). Met deze maatregelen: " +
+    e +
+    " punten",
   max: () => "Het hoogst haalbare puntentotaal met de beschikbare maatregelen",
 };
 
