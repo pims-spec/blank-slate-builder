@@ -3,7 +3,11 @@
 // "bouwtekening", "floorplan"…); daarna kan de foto-sortering van Gemini een afbeelding nog als
 // plattegrond herkennen (metSortering). De gebruiker kijkt alles na voordat er iets gebeurt.
 import { MAX_WONING_FOTOS, type FotoSortering } from "../foto/sorteren";
-import { MAX_VERDIEPINGEN } from "../plattegrond/verdiepingen";
+import {
+  MAX_VERDIEPINGEN,
+  stelVerdiepingVoor,
+  VERDIEPING_NAMEN,
+} from "../plattegrond/verdiepingen";
 
 /** Groter wordt overgeslagen (een telefoonfoto is een paar MB, een PDF-tekening zelden meer) */
 export const MAX_BESTAND_MB = 25;
@@ -28,6 +32,8 @@ export interface MapItem {
   soort: "pdf" | "afbeelding";
   label: MapLabel;
   bron: MapBron | null;
+  /** Bij een plattegrond: de verdieping (of "Berging") */
+  verdieping?: string;
   /** Wat de foto-sortering zei (alleen bij afbeeldingen die gesorteerd zijn) */
   sortering?: FotoSortering;
 }
@@ -101,7 +107,45 @@ export function verdeelMap(bestanden: readonly MapBestand[]): {
       items.push({ i: b.i, pad: b.pad, soort, label: "foto", bron: null });
     }
   }
-  return { items, overgeslagen };
+  return { items: metVerdiepingen(items), overgeslagen };
+}
+
+/** Volgorde waarin plattegronden zonder herkenbare naam een verdieping krijgen */
+const VOLGORDE = [
+  "Begane grond",
+  "1e verdieping",
+  "2e verdieping",
+  "3e verdieping",
+  "4e verdieping",
+];
+
+/**
+ * Elke plattegrond zonder verdieping krijgt er een: eerst die met een verdieping in de
+ * bestandsnaam, dan de rest de eerste vrije (begane grond, 1e, …). Nooit dubbel als dat kan.
+ */
+export function metVerdiepingen(items: readonly MapItem[]): MapItem[] {
+  const bezet = new Set(
+    items.flatMap((x) => (x.label === "plattegrond" && x.verdieping ? [x.verdieping] : [])),
+  );
+  const uit = items.map((x) => ({ ...x }));
+  const open = uit.filter((x) => x.label === "plattegrond" && !x.verdieping);
+  // zegt de naam iets? dan is het voorstel niet afhankelijk van het volgnummer
+  const uitNaam = (pad: string) =>
+    stelVerdiepingVoor(pad, 0) === stelVerdiepingVoor(pad, 1) ? stelVerdiepingVoor(pad, 0) : null;
+  for (const x of open) {
+    const v = uitNaam(x.pad);
+    if (v && !bezet.has(v)) {
+      x.verdieping = v;
+      bezet.add(v);
+    }
+  }
+  for (const x of open) {
+    if (x.verdieping) continue;
+    const v = VOLGORDE.find((n) => !bezet.has(n)) ?? "Begane grond";
+    x.verdieping = v;
+    bezet.add(v);
+  }
+  return uit;
 }
 
 /** De items die naar de foto-sortering gaan: de afbeeldingen met label foto, in volgorde */
@@ -110,25 +154,73 @@ export const teSorteren = (items: readonly MapItem[]) =>
 
 /**
  * De uitkomst van de sortering (in de volgorde van teSorteren) bij de items zetten. Wat Gemini
- * een plattegrond noemt, krijgt dat label (bron ai).
+ * een plattegrond noemt, krijgt dat label (bron ai) en een verdieping; een andere ruimte dan
+ * keuken, badkamer of toilet wordt niet gebruikt (de fotobeoordeling kent alleen die drie).
  */
 export function metSortering(
   items: readonly MapItem[],
   sortering: readonly FotoSortering[],
 ): MapItem[] {
   const per = new Map(teSorteren(items).map((x, j) => [x.i, sortering[j]]));
-  return items.map((x) => {
-    const s = per.get(x.i);
-    if (!s) return x;
-    return s.soort === "plattegrond"
-      ? { ...x, sortering: s, label: "plattegrond", bron: "ai" }
-      : { ...x, sortering: s };
-  });
+  return metVerdiepingen(
+    items.map((x) => {
+      const s = per.get(x.i);
+      if (!s) return x;
+      if (s.soort === "plattegrond")
+        return { ...x, sortering: s, label: "plattegrond", bron: "ai" };
+      return s.soort === "anders" ? { ...x, sortering: s, label: "niet" } : { ...x, sortering: s };
+    }),
+  );
 }
 
-/** De keuzes per label; een PDF kan geen foto zijn */
-export const labelOpties = (x: MapItem): MapLabel[] =>
-  x.soort === "pdf" ? ["plattegrond", "niet"] : ["plattegrond", "foto", "niet"];
+// ---------- één keuzelijst per bestand ----------
+// Badkamer, toilet en keuken (een foto voor de fotobeoordeling), een verdieping of berging (een
+// plattegrond), of niet gebruiken. "foto" is een foto waarvan de ruimte later wordt gekozen (als
+// het herkennen niet lukte).
+
+export const FOTO_KEUZES = ["badkamer", "toilet", "keuken"] as const;
+export const PLATTEGROND_KEUZES = [
+  "Begane grond",
+  "1e verdieping",
+  "2e verdieping",
+  "3e verdieping",
+  "Berging",
+] as const;
+export type MapKeuze = string;
+
+const isFotoKeuze = (k: string): k is (typeof FOTO_KEUZES)[number] =>
+  (FOTO_KEUZES as readonly string[]).includes(k);
+
+/** De keuze die nu bij het bestand hoort */
+export function keuzeVan(x: MapItem): MapKeuze {
+  if (x.label === "niet") return "niet";
+  if (x.label === "plattegrond") return x.verdieping ?? "Begane grond";
+  const s = x.sortering?.soort;
+  return s && isFotoKeuze(s) ? s : "foto";
+}
+
+/** Het bestand met een andere keuze (een PDF kan geen foto zijn) */
+export function metKeuze(x: MapItem, k: MapKeuze): MapItem {
+  if (k === "niet") return { ...x, label: "niet" };
+  if (k === "foto") return x.soort === "pdf" ? x : { ...x, label: "foto" };
+  if (isFotoKeuze(k)) {
+    if (x.soort === "pdf") return x;
+    const reden = x.sortering?.soort === k ? x.sortering.reden : "Zelf gekozen.";
+    return { ...x, label: "foto", sortering: { soort: k, reden } };
+  }
+  if (!(VERDIEPING_NAMEN as readonly string[]).includes(k)) return x;
+  return { ...x, label: "plattegrond", verdieping: k };
+}
+
+/** De keuzes in de lijst, gegroepeerd; de huidige staat er altijd tussen */
+export function keuzeOpties(x: MapItem): { fotos: string[]; plattegronden: string[] } {
+  const huidig = keuzeVan(x);
+  const fotos: string[] = x.soort === "pdf" ? [] : [...FOTO_KEUZES];
+  if (huidig === "foto") fotos.push("foto");
+  const plattegronden: string[] = [...PLATTEGROND_KEUZES];
+  if (x.label === "plattegrond" && !plattegronden.includes(huidig)) plattegronden.push(huidig);
+  return { fotos, plattegronden };
+}
 
 /**
  * Wat er na het nakijken gebeurt: de plattegronden die worden ingelezen (elk een verdieping, in de
@@ -138,11 +230,15 @@ export const labelOpties = (x: MapItem): MapLabel[] =>
  */
 export function mapStappen(items: readonly MapItem[]): {
   plattegronden: number[];
+  /** De verdieping per plattegrond */
+  verdiepingen: string[];
   fotos: number[];
   sortering: FotoSortering[];
   fout: string | null;
 } {
-  const plattegronden = items.filter((x) => x.label === "plattegrond").map((x) => x.i);
+  const platItems = items.filter((x) => x.label === "plattegrond");
+  const plattegronden = platItems.map((x) => x.i);
+  const verdiepingen = platItems.map((x) => x.verdieping ?? "Begane grond");
   const fotos = items.filter((x) => x.label === "foto");
   const sortering = fotos.map((x) =>
     x.sortering && x.sortering.soort !== "plattegrond"
@@ -154,8 +250,10 @@ export function mapStappen(items: readonly MapItem[]): {
       ? `Hoogstens ${MAX_WONING_FOTOS} foto's; er zijn er ${fotos.length}.`
       : plattegronden.length > MAX_VERDIEPINGEN
         ? `Hoogstens ${MAX_VERDIEPINGEN} plattegronden (verdiepingen); zet de rest op Niet gebruiken.`
-        : plattegronden.length === 0 && fotos.length === 0
-          ? "Kies een plattegrond of minstens één foto."
-          : null;
-  return { plattegronden, fotos: fotos.map((x) => x.i), sortering, fout };
+        : new Set(verdiepingen).size < verdiepingen.length
+          ? "Twee plattegronden hebben dezelfde verdieping. Kies bij elke plattegrond een andere."
+          : plattegronden.length === 0 && fotos.length === 0
+            ? "Kies een plattegrond of minstens één foto."
+            : null;
+  return { plattegronden, verdiepingen, fotos: fotos.map((x) => x.i), sortering, fout };
 }

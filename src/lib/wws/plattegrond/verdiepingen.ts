@@ -25,6 +25,7 @@ export const VERDIEPING_NAMEN = [
   "3e verdieping",
   "4e verdieping",
   "Zolder",
+  "Berging",
 ] as const;
 
 /** Voorstel voor de verdieping: uit de bestandsnaam, anders op volgorde (begane grond, 1e, …) */
@@ -36,11 +37,29 @@ export function stelVerdiepingVoor(pad: string, volgnr: number): string {
   if (/kelder/.test(n)) return "Kelder";
   if (/souterrain/.test(n)) return "Souterrain";
   if (/zolder|vliering/.test(n)) return "Zolder";
+  if (/berging|schuur/.test(n)) return "Berging";
   if (/begane|\bbg\b|parterre|\bgrond/.test(n)) return "Begane grond";
   const v =
     /\b([1-4])\s*(e|ste|de)?\s*(verd|verdieping|etage)/.exec(n) ?? /\bverd\w*\s*([1-4])\b/.exec(n);
   if (v) return `${v[1]}e verdieping`;
   return volgnr === 0 ? "Begane grond" : `${Math.min(volgnr, 4)}e verdieping`;
+}
+
+/** n verdiepingen hoger dan v (voor de volgende pagina's van een PDF); bovenaan blijft het daar */
+export function volgendeVerdieping(v: string, n: number): string {
+  const rij = [
+    "Kelder",
+    "Souterrain",
+    "Begane grond",
+    "1e verdieping",
+    "2e verdieping",
+    "3e verdieping",
+    "4e verdieping",
+    "Zolder",
+  ];
+  const i = rij.indexOf(v);
+  if (i < 0 || n <= 0) return v;
+  return rij[Math.min(rij.length - 1, i + n)]!;
 }
 
 /** De toelichting voor Claude bij meer verdiepingen: welke verdieping dit is, dan de eigen tekst */

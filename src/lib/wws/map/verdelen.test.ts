@@ -3,7 +3,10 @@ import { MAX_WONING_FOTOS } from "../foto/sorteren";
 import {
   bestandSoort,
   isVerborgen,
-  labelOpties,
+  keuzeOpties,
+  keuzeVan,
+  metKeuze,
+  metVerdiepingen,
   mapStappen,
   MAX_BESTAND_MB,
   metSortering,
@@ -104,20 +107,64 @@ describe("na het sorteren", () => {
   ]);
   const s = (soort: "keuken" | "toilet" | "plattegrond" | "anders") => ({ soort, reden: "Zo." });
 
-  it("metSortering: per foto in volgorde; een plattegrond van de AI krijgt dat label", () => {
+  it("metSortering: per foto in volgorde; plattegrond van de AI met verdieping, anders → niet", () => {
     expect(teSorteren(items).map((x) => x.pad)).toEqual(["a.jpg", "b.jpg", "c.jpg"]);
     const m = metSortering(items, [s("keuken"), s("plattegrond"), s("anders")]);
-    expect(m.map((x) => [x.pad, x.label, x.bron, x.sortering?.soort])).toEqual([
-      ["a.jpg", "foto", null, "keuken"],
-      ["b.jpg", "plattegrond", "ai", "plattegrond"],
-      ["c.jpg", "foto", null, "anders"],
-      ["d.pdf", "plattegrond", "pdf", undefined],
+    expect(m.map((x) => [x.pad, x.label, x.bron, x.sortering?.soort, x.verdieping])).toEqual([
+      ["a.jpg", "foto", null, "keuken", undefined],
+      ["b.jpg", "plattegrond", "ai", "plattegrond", "1e verdieping"],
+      ["c.jpg", "niet", null, "anders", undefined],
+      ["d.pdf", "plattegrond", "pdf", undefined, "Begane grond"],
     ]);
   });
 
-  it("labelOpties: een PDF kan geen foto zijn", () => {
-    expect(labelOpties(items[3]!)).toEqual(["plattegrond", "niet"]);
-    expect(labelOpties(items[0]!)).toEqual(["plattegrond", "foto", "niet"]);
+  it("metVerdiepingen: uit de naam, anders de eerste vrije", () => {
+    const r = verdeelMap([
+      { pad: "Plattegrond 1e verdieping.pdf", type: "application/pdf", grootte: 1 },
+      { pad: "Plattegrond berging.jpg", type: "image/jpeg", grootte: 1 },
+      { pad: "tekening.pdf", type: "application/pdf", grootte: 1 },
+      { pad: "tekening 2.pdf", type: "application/pdf", grootte: 1 },
+    ]).items;
+    expect(r.map((x) => x.verdieping)).toEqual([
+      "1e verdieping",
+      "Berging",
+      "Begane grond",
+      "2e verdieping",
+    ]);
+    // een al gekozen verdieping blijft staan
+    expect(metVerdiepingen(r)).toEqual(r);
+  });
+
+  it("keuzeVan, metKeuze en keuzeOpties: één lijst met ruimten, verdiepingen en niet", () => {
+    const m = metSortering(items, [s("keuken"), s("plattegrond"), s("toilet")]);
+    expect(m.map(keuzeVan)).toEqual(["keuken", "1e verdieping", "toilet", "Begane grond"]);
+    // foto → badkamer: zelf gekozen; terug naar keuken: de reden van Gemini
+    const bad = metKeuze(m[0]!, "badkamer");
+    expect(bad).toMatchObject({
+      label: "foto",
+      sortering: { soort: "badkamer", reden: "Zelf gekozen." },
+    });
+    expect(metKeuze(bad, "keuken").sortering).toEqual({ soort: "keuken", reden: "Zelf gekozen." });
+    expect(metKeuze(m[0]!, "keuken")).toEqual(m[0]);
+    // foto → plattegrond (verdieping) en weer terug
+    const plat = metKeuze(m[2]!, "2e verdieping");
+    expect(plat).toMatchObject({ label: "plattegrond", verdieping: "2e verdieping" });
+    expect(keuzeVan(metKeuze(plat, "toilet"))).toBe("toilet");
+    expect(keuzeVan(metKeuze(m[1]!, "niet"))).toBe("niet");
+    // een PDF kan geen foto zijn; onbekende waarde verandert niets
+    expect(metKeuze(m[3]!, "keuken")).toBe(m[3]);
+    expect(metKeuze(m[3]!, "Kantine")).toBe(m[3]);
+    expect(keuzeOpties(m[3]!)).toEqual({
+      fotos: [],
+      plattegronden: ["Begane grond", "1e verdieping", "2e verdieping", "3e verdieping", "Berging"],
+    });
+    expect(keuzeOpties(m[0]!).fotos).toEqual(["badkamer", "toilet", "keuken"]);
+    // een foto zonder sortering (herkennen mislukt): "foto", ruimte later kiezen
+    expect(keuzeVan(items[0]!)).toBe("foto");
+    expect(keuzeOpties(items[0]!).fotos).toEqual(["badkamer", "toilet", "keuken", "foto"]);
+    // een zolder uit de bestandsnaam staat er ook tussen
+    const zolder = { ...m[3]!, verdieping: "Zolder" };
+    expect(keuzeOpties(zolder).plattegronden).toContain("Zolder");
   });
 
   it("mapStappen: alle plattegronden, foto's met sortering; zelf omgezet → anders", () => {
@@ -132,11 +179,19 @@ describe("na het sorteren", () => {
     );
     const r = mapStappen(na);
     expect(r.plattegronden).toEqual([3]);
+    expect(r.verdiepingen).toEqual(["Begane grond"]);
     expect(r.fotos).toEqual([0, 1]);
     expect(r.sortering.map((x) => x.soort)).toEqual(["keuken", "anders"]);
     expect(r.fout).toBeNull();
     // twee plattegronden (verdiepingen) gaan allebei mee
     expect(mapStappen(m).plattegronden).toEqual([1, 3]);
+    expect(mapStappen(m).verdiepingen).toEqual(["1e verdieping", "Begane grond"]);
+    // twee keer dezelfde verdieping → fout
+    expect(
+      mapStappen(
+        m.map((x) => metKeuze(x, x.label === "plattegrond" ? "Begane grond" : keuzeVan(x))),
+      ).fout,
+    ).toContain("dezelfde verdieping");
     expect(mapStappen(na.map((x) => ({ ...x, label: "niet" as const }))).fout).toContain(
       "Kies een plattegrond",
     );
