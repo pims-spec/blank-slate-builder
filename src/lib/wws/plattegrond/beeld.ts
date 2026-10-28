@@ -1,6 +1,7 @@
 // Afbeeldingen voorbereiden in de browser — fileToCanvas(), canvasToBlob() en pdfAllText() in
 // wws-site.html. pdf.js wordt pas geladen als er echt een PDF is (eigen chunk, eigen worker; niet
 // van een CDN).
+import { stukkenNaarRegels } from "../inladen/huurprijscheck";
 
 /** Langste zijde, zoals de bron */
 export const MAX_ZIJDE = 2200;
@@ -162,6 +163,29 @@ export async function pdfTekst(file: Blob): Promise<{ n: number; text: string; l
   await sluit();
   const text = out.join("\n\n").slice(0, 90000);
   return { n, text, leeg: text.replace(/\[Pagina \d+\]/g, "").trim().length < 20 };
+}
+
+/** De tekst van elke pagina als regels, van boven naar beneden (voor inladen/huurprijscheck.ts) */
+export async function pdfRegels(file: Blob): Promise<string[][]> {
+  const { pdf, sluit } = await openPdf(file);
+  try {
+    const paginas: string[][] = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const tc = await (await pdf.getPage(i)).getTextContent();
+      paginas.push(
+        stukkenNaarRegels(
+          tc.items.flatMap((it) =>
+            "str" in it
+              ? [{ str: it.str, x: it.transform[4] as number, y: it.transform[5] as number }]
+              : [],
+          ),
+        ),
+      );
+    }
+    return paginas;
+  } finally {
+    await sluit();
+  }
 }
 
 /** Meer tekeningen onder elkaar op één canvas, met een kop per tekening (stapelMaten) */

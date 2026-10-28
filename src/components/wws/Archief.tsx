@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -32,8 +32,10 @@ import {
 } from "@/lib/wws/archief";
 import { useNormen } from "./NormenContext";
 import { maakArchiefExcel } from "@/lib/wws/excel";
-import type { Telling } from "@/lib/wws/opslag";
+import { maakTellingDoc, type Bewerker, type Telling } from "@/lib/wws/opslag";
+import { staatUitHuurprijscheck } from "@/lib/wws/inladen/huurprijscheck";
 import DelenDialoog from "./DelenDialoog";
+import TellingInladenDialoog from "./TellingInladenDialoog";
 import { RijActies } from "./RijActies";
 import { dashboardVersiesQuery, klantenQuery, tellingStore, tellingenQuery } from "./tellingStore";
 import { useDownload } from "./useDownload";
@@ -51,10 +53,12 @@ interface Props {
   voorIndeling?: boolean;
   /** Tabbladen (Tellingen / Portefeuille-analyses) onder de titel */
   tabs?: ReactNode;
+  /** Ingelogde gebruiker; nodig voor "Telling inladen" */
+  bewerker?: Bewerker;
 }
 
 /** Archief: zoeken, filteren, per collega groeperen, openen en verwijderen — renderArchief() */
-export default function Archief({ rechten, userId, voorIndeling = false, tabs }: Props) {
+export default function Archief({ rechten, userId, voorIndeling = false, tabs, bewerker }: Props) {
   const queryClient = useQueryClient();
   const NORMEN = useNormen();
   const { data, isPending, error } = useQuery(tellingenQuery());
@@ -64,6 +68,8 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
   const [teVerwijderen, setTeVerwijderen] = useState<ArchiefRij | null>(null);
   /** Telling waarvan het deelvenster open staat */
   const [teDelen, setTeDelen] = useState<ArchiefRij | null>(null);
+  const [inladen, setInladen] = useState(false);
+  const navigate = useNavigate();
   // namen en nummers van de versies (dezelfde lichte query als het dashboard)
   const { data: versieData } = useQuery(dashboardVersiesQuery());
   /** Per telling de gekozen versie om te openen ("" = werkversie) */
@@ -95,6 +101,25 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
     },
     onError: (e) => toast.error("Verwijderen lukte niet: " + e.message),
   });
+
+  /** Een ingeladen Huurprijscheck wordt een gewone telling; daarna openen */
+  async function neemOver(u: Parameters<typeof staatUitHuurprijscheck>[0]) {
+    if (!bewerker) return;
+    const id = crypto.randomUUID();
+    try {
+      await tellingStore.maakAan(
+        id,
+        maakTellingDoc(staatUitHuurprijscheck(u, bewerker.naam), NORMEN, bewerker),
+      );
+    } catch {
+      toast.error("De telling kon niet worden aangemaakt. Probeer het opnieuw.");
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: ["tellingen"] });
+    setInladen(false);
+    toast.success("Telling ingeladen. Kijk de meldingen na en sla op.");
+    void navigate({ to: "/wws", search: { id } });
+  }
 
   /** Favoriet aan/uit, meteen opgeslagen — toggleFavoriet() */
   const favoriet = useMutation({
@@ -256,6 +281,11 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
           >
             {download.bezig ? "Exporteren…" : "Exporteren (.xlsx)"}
           </Button>
+          {rechten.magSchrijven && bewerker && (
+            <Button variant="outline" onClick={() => setInladen(true)}>
+              Telling inladen
+            </Button>
+          )}
           {rechten.magSchrijven && (
             <Button asChild>
               <Link to="/wws">Nieuwe telling</Link>
@@ -409,6 +439,8 @@ export default function Archief({ rechten, userId, voorIndeling = false, tabs }:
           </table>
         </div>
       )}
+
+      <TellingInladenDialoog open={inladen} onOpenChange={setInladen} onOvernemen={neemOver} />
 
       {teDelen && (
         <DelenDialoog

@@ -4,6 +4,7 @@
 // Wat de PDF niet vertelt (maten, labeldatum, privé of gemeenschappelijk) komt in `meldingen`.
 import { OVERIG_TYPES, VERTREK_TYPES, facDefault } from "../basis";
 import { legeInput } from "../legeInput";
+import { nieuweTellingStaat, type TellingStaat } from "../opslag/doc";
 import type { TellingMeta } from "../opslag/types";
 import type {
   Aanrecht,
@@ -660,4 +661,14 @@ export function vergelijkHuurprijscheck(v: HpcVerwacht, R: WwsResultaat): HpcVer
     gelijk: v.totaal === R.totaal,
   });
   return rijen;
+}
+
+/** Een ingeladen Huurprijscheck als nieuwe telling (nog niet opgeslagen) */
+export function staatUitHuurprijscheck(
+  u: Extract<HpcUitkomst, { ok: true }>,
+  opsteller: string,
+  nu = new Date(),
+): TellingStaat {
+  const s = nieuweTellingStaat(opsteller, nu);
+  return { ...s, meta: { ...s.meta, ...u.meta }, input: structuredClone(u.input) };
 }

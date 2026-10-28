@@ -67,6 +67,11 @@ function ArchiefPage() {
               userId={user.id}
               voorIndeling={!!indeling}
               tabs={<ArchiefTabs actief="tellingen" />}
+              bewerker={{
+                id: user.id,
+                naam: data.profile?.display_name || (user.email ?? ""),
+                email: user.email ?? "",
+              }}
             />
           )}
         </NormenProvider>

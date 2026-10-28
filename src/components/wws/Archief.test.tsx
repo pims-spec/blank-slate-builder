@@ -6,9 +6,12 @@ import { kiesInMenu, menuKeuzes } from "@/test/menu";
 import { rechtenVan, type AppRole } from "@/lib/rollen";
 import { DEFAULT_NORMEN, type Normen } from "@/lib/wws";
 import { maakTellingDoc, nieuweTellingStaat, type Telling } from "@/lib/wws/opslag";
+import { HAARLEMMERMEERSTRAAT_139H } from "@/lib/wws/inladen/huurprijscheck.fixtures";
 import Archief from "./Archief";
 
+const navigate = vi.hoisted(() => vi.fn());
 vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigate,
   Link: ({ children, search }: { children: ReactNode; search?: object }) => (
     <a data-search={search ? JSON.stringify(search) : undefined}>{children}</a>
   ),
@@ -16,6 +19,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 const tellingStore = vi.hoisted(() => ({
   lijst: vi.fn(),
+  maakAan: vi.fn(async () => {}),
   verwijder: vi.fn(),
   zetFavoriet: vi.fn(),
 }));
@@ -30,6 +34,11 @@ const delenStore = vi.hoisted(() => ({
   ontdeel: vi.fn(async () => {}),
 }));
 const versiesLijst = vi.hoisted(() => vi.fn());
+const pdfRegels = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wws/plattegrond/beeld", async (orig) => ({
+  ...(await orig<typeof import("@/lib/wws/plattegrond/beeld")>()),
+  pdfRegels,
+}));
 vi.mock("./tellingStore", () => ({
   tellingStore,
   delenStore,
@@ -52,10 +61,16 @@ function telling(id: string, naam: string, ownerId: string, ownerNaam: string, k
   };
 }
 
+const BEWERKER = { id: "bob", naam: "Bob", email: "bob@x.nl" };
 function toon(roles: AppRole[], userId: string, voorIndeling = false) {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Archief rechten={rechtenVan(roles)} userId={userId} voorIndeling={voorIndeling} />
+      <Archief
+        rechten={rechtenVan(roles)}
+        userId={userId}
+        voorIndeling={voorIndeling}
+        bewerker={BEWERKER}
+      />
     </QueryClientProvider>,
   );
 }
@@ -117,6 +132,30 @@ describe("Archief", () => {
     expect(screen.queryByRole("button", { name: "Delen" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Meer acties/ })).toBeNull();
     expect(screen.queryByText("Nieuwe telling")).toBeNull();
+    expect(screen.queryByText("Telling inladen")).toBeNull();
+  });
+
+  it("telling inladen: overnemen maakt een gewone telling aan en opent die", async () => {
+    pdfRegels.mockResolvedValue([HAARLEMMERMEERSTRAAT_139H.split("\n").filter(Boolean)]);
+    toon(["member"], "bob");
+    await screen.findByText("Eigen telling");
+    fireEvent.click(screen.getByRole("button", { name: "Telling inladen" }));
+    const d = await screen.findByRole("dialog", { name: "Telling inladen" });
+    fireEvent.change(within(d).getByLabelText("PDF"), {
+      target: { files: [new File(["x"], "hpc.pdf", { type: "application/pdf" })] },
+    });
+    await within(d).findByRole("region", { name: "Punten" });
+    fireEvent.click(within(d).getByRole("button", { name: "Overnemen als telling" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalled());
+    const [id, doc] = tellingStore.maakAan.mock.calls[0] as unknown as [string, Telling];
+    expect(doc.meta).toMatchObject({
+      adres: "Haarlemmermeerstraat",
+      huisnummer: "139H",
+      opsteller: "Bob",
+    });
+    expect(doc.laatstePunten).toBe(216);
+    expect(doc.lastEditedBy).toEqual(BEWERKER);
+    expect(navigate).toHaveBeenCalledWith({ to: "/wws", search: { id } });
   });
 
   it("filter op eigenaar en wissen", async () => {
