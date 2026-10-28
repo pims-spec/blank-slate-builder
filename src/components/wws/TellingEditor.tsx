@@ -57,6 +57,7 @@ import { maakTellingPdf } from "@/lib/wws/pdf/rapporten";
 import { useDownload } from "./useDownload";
 import FotoDialoog from "./FotoDialoog";
 import MapDialoog from "./MapDialoog";
+import VerdiepingenBalk from "./VerdiepingenBalk";
 import EnergielabelUitslag from "./EnergielabelUitslag";
 import MonumentUitslag from "./MonumentUitslag";
 import PlattegrondDialoog from "./PlattegrondDialoog";
@@ -93,6 +94,8 @@ import { weergaveAdres } from "@/lib/wws/opslag";
 import { bewaarUitgangssituatie, type AdviesSoort } from "@/lib/wws/opslag/uitgangssituatie";
 import { REGISTRATIE_MELDING, uitgangspuntTekst } from "@/lib/wws/advies/energieAdvies";
 import { blobNaarBytes } from "@/lib/wws/plattegrond/beeld";
+import { knipVerdiepingWeg } from "@/lib/wws/plattegrond/verdiepingBeeld";
+import { leesVerdiepingen, zonderRuimtenVan } from "@/lib/wws/plattegrond/verdiepingen";
 import DelenDialoog from "./DelenDialoog";
 import EigenaarKeuze from "./EigenaarKeuze";
 import IndelingDialoog, { type IndelingKeuze } from "./IndelingDialoog";
@@ -571,6 +574,7 @@ export default function TellingEditor({
             bytes: await blobNaarBytes(nieuwBeeld.blob),
             breedte: nieuwBeeld.breedte,
             hoogte: nieuwBeeld.hoogte,
+            ...(nieuwBeeld.verdiepingen ? { verdiepingen: nieuwBeeld.verdiepingen } : {}),
           }
         : null,
     });
@@ -857,7 +861,13 @@ export default function TellingEditor({
       try {
         const blob = await plattegrondOpslag.haal(pad);
         const bm = await createImageBitmap(blob);
-        beeld = { blob, breedte: bm.width, hoogte: bm.height };
+        const verdiepingen = leesVerdiepingen(staat.input.plattegrond);
+        beeld = {
+          blob,
+          breedte: bm.width,
+          hoogte: bm.height,
+          ...(verdiepingen.length ? { verdiepingen } : {}),
+        };
         bm.close();
       } catch {
         beeld = null;
@@ -930,6 +940,31 @@ export default function TellingEditor({
     setNieuwBeeld(beeld);
     setDirty(true);
     toast("Plattegrond overgenomen. Controleer de gemarkeerde ruimten.");
+  }
+
+  /** De verdiepingen van de plattegrond: van het nieuwe beeld, anders van de opgeslagen verwijzing */
+  const verdiepingen = nieuwBeeld
+    ? (nieuwBeeld.verdiepingen ?? [])
+    : leesVerdiepingen(staat.input.plattegrond);
+
+  /**
+   * Eén verdieping van de plattegrond halen: een nieuw beeld zonder die tekening (bij Opslaan naar
+   * Storage, de oude wordt dan opgeruimd), en desgewenst de ruimten van die verdieping weg.
+   */
+  async function verdiepingVerwijderen(i: number, metRuimten: boolean) {
+    const v = verdiepingen[i];
+    if (!v) return;
+    try {
+      const pad = staat.input.plattegrond?.pad;
+      const blob = nieuwBeeld?.blob ?? (pad ? await plattegrondOpslag.haal(pad) : null);
+      if (!blob) throw new Error("geen afbeelding");
+      setNieuwBeeld(await knipVerdiepingWeg(blob, verdiepingen, i));
+      if (metRuimten) setStaat((s) => ({ ...s, input: zonderRuimtenVan(s.input, v.naam) }));
+      setDirty(true);
+      toast(v.naam + " verwijderd. Sla op om het te bewaren.");
+    } catch {
+      toast.error("De verdieping kon niet worden verwijderd. Probeer het opnieuw.");
+    }
   }
 
   /** Plattegrond-afbeelding weghalen (bij Opslaan ook uit Storage, tenzij een versie hem gebruikt) */
@@ -1279,6 +1314,11 @@ export default function TellingEditor({
       )}
 
       <PlattegrondBlok input={staat.input} nieuw={nieuwBeeld} />
+      <VerdiepingenBalk
+        input={staat.input}
+        verdiepingen={verdiepingen}
+        {...(!alleenLezen ? { onVerwijder: verdiepingVerwijderen } : {})}
+      />
 
       <RapportPlattegronden
         tellingId={id}
