@@ -170,6 +170,16 @@ bij één tekening. In Storage komt één afbeelding met de tekeningen onder elk
 aanklikken; alleen het indelingsadvies gebruikt dat, en de Blanco-start daarvan blijft bij één
 tekening.
 
+Eén verdieping verwijderen: bij het inlezen bewaart de telling per verdieping de plek op de
+samengestelde afbeelding (`input.plattegrond.verdiepingen`, bij Opslaan via `bewaarBeeld`) en elke
+ruimte zijn `verdieping`. In de telling staat onder de plattegrond een rij verdiepingen met ✕
+(`VerdiepingenBalk`); na bevestiging knipt `knipVerdiepingWeg` (verdiepingBeeld.ts) de andere
+tekeningen uit de afbeelding en zet ze opnieuw onder elkaar (`zonderVerdieping`; één over → alleen
+die tekening). Het vinkje "ook de ruimten" (standaard aan) haalt de ruimten met die verdieping weg
+(`zonderRuimtenVan`). Het nieuwe beeld gaat bij Opslaan naar Storage; de oude afbeelding wordt
+opgeruimd zoals altijd. De opgeslagen plekken zijn onbetrouwbare invoer: `leesVerdiepingen` (zod,
+binnen de afbeelding, unieke namen). Buitenruimten zijn bij het inlezen opgeteld en blijven staan.
+
 ## Map inlezen (plattegrond en foto's in één keer)
 
 Knop "Map inlezen" in de telling (`MapDialoog.tsx`). Een map van de computer (Map kiezen met
