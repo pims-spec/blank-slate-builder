@@ -18,16 +18,18 @@ import { driveInstellingen } from "@/lib/wws/map/drive";
 import { downloadUitDrive, kiesUitDrive } from "@/lib/wws/map/googleDrive";
 import { entriesVan, invoerVan, leesGesleept, type MapInvoer } from "@/lib/wws/map/slepen";
 import {
-  labelOpties,
+  keuzeOpties,
+  keuzeVan,
+  metKeuze,
   mapStappen,
   metSortering,
   teSorteren,
   verdeelMap,
   type MapItem,
-  type MapLabel,
   type Overgeslagen,
 } from "@/lib/wws/map/verdelen";
 import type { TellingMeta } from "@/lib/wws/opslag";
+import { canvasNaarJpeg, pdfPaginasNaarCanvassen } from "@/lib/wws/plattegrond/beeld";
 import { FotosBeoordelen } from "./FotoDialoog";
 import { PlattegrondInlezen } from "./PlattegrondDialoog";
 import type { NieuwBeeld } from "./plattegrondBeeld";
@@ -43,10 +45,11 @@ interface Props {
   onFotos: (input: WwsInput) => void;
 }
 
-const LABEL_NAAM: Record<MapLabel, string> = {
-  plattegrond: "Plattegrond",
-  foto: "Foto",
-  niet: "Niet gebruiken",
+const FOTO_NAAM: Record<string, string> = {
+  badkamer: "Badkamer",
+  toilet: "Toilet",
+  keuken: "Keuken",
+  foto: "Foto (ruimte later kiezen)",
 };
 const BRON_NAAM = { pdf: "PDF", naam: "bestandsnaam", ai: "Gemini" } as const;
 const veldCls =
@@ -103,13 +106,40 @@ function MapInlezen({
   const ctl = useRef<AbortController | null>(null);
 
   // voorbeelden van de afbeeldingen
+  // (alleen bij een andere map opnieuw, niet bij elke keuze)
   const urls = useMemo(() => {
     const m = new Map<number, string>();
-    for (const x of items)
-      if (x.soort === "afbeelding") m.set(x.i, URL.createObjectURL(invoer[x.i]!.bestand));
+    invoer.forEach((x, i) => {
+      if (/^image\/(jpeg|png|webp)$/.test(x.bestand.type)) m.set(i, URL.createObjectURL(x.bestand));
+    });
     return m;
-  }, [items, invoer]);
+  }, [invoer]);
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
+  // van een PDF de eerste pagina als voorbeeld, zodat te zien is welke verdieping het is
+  const [pdfUrls, setPdfUrls] = useState(new Map<number, string>());
+  useEffect(() => {
+    let weg = false;
+    const gemaakt: string[] = [];
+    void (async () => {
+      for (const [i, x] of invoer.entries()) {
+        if (x.bestand.type !== "application/pdf") continue;
+        try {
+          const [c] = await pdfPaginasNaarCanvassen(x.bestand, [1]);
+          if (!c || weg) continue;
+          const u = URL.createObjectURL(await canvasNaarJpeg(c, 0.7));
+          gemaakt.push(u);
+          if (!weg) setPdfUrls((m) => new Map(m).set(i, u));
+        } catch {
+          // geen voorbeeld: dan alleen "PDF"
+        }
+      }
+    })();
+    return () => {
+      weg = true;
+      gemaakt.forEach((u) => URL.revokeObjectURL(u));
+      setPdfUrls(new Map());
+    };
+  }, [invoer]);
 
   /** De gekozen bestanden verdelen; extra = al overgeslagen bij het kiezen in Drive */
   function binnen(lijst: MapInvoer[], extra: Overgeslagen[] = []) {
@@ -253,8 +283,8 @@ function MapInlezen({
     }
   }
 
-  function zetLabel(i: number, label: MapLabel) {
-    setItems((lijst) => lijst.map((x) => (x.i === i ? { ...x, label } : x)));
+  function zetKeuze(i: number, keuze: string) {
+    setItems((lijst) => lijst.map((x) => (x.i === i ? metKeuze(x, keuze) : x)));
   }
 
   function naarVolgende() {
@@ -279,6 +309,7 @@ function MapInlezen({
           input={input}
           meta={meta}
           beginBestanden={stap.plattegronden.map((i) => invoer[i]!.bestand)}
+          beginVerdiepingen={stap.verdiepingen}
           knopTekst={stap.fotos.length ? "Overnemen en verder naar de foto's" : "Overnemen"}
           onOvernemen={(inp, beeld) => {
             onPlattegrond(inp, beeld);
@@ -363,8 +394,8 @@ function MapInlezen({
 
       {fase === "nakijken" && plattegronden.length > 1 && (
         <p className="rounded-md bg-muted px-3 py-2">
-          Er zijn {plattegronden.length} plattegronden. Elke plattegrond wordt als aparte verdieping
-          ingelezen; zet een dubbele of verkeerde op Niet gebruiken.
+          Er zijn {plattegronden.length} plattegronden. Kies bij elke plattegrond de verdieping;
+          elke plattegrond wordt apart ingelezen. Zet een dubbele of verkeerde op Niet gebruiken.
         </p>
       )}
 
@@ -372,7 +403,7 @@ function MapInlezen({
         <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {items.map((x) => {
             const naam = x.pad.split("/").pop() ?? x.pad;
-            const url = urls.get(x.i);
+            const url = urls.get(x.i) ?? pdfUrls.get(x.i);
             return (
               <li key={x.i} className="min-w-0 space-y-1">
                 {url ? (
@@ -401,19 +432,7 @@ function MapInlezen({
                           : x.sortering?.reden}
                       </p>
                     )}
-                    <select
-                      aria-label={"Wat is " + naam}
-                      disabled={bezig}
-                      className={veldCls}
-                      value={x.label}
-                      onChange={(e) => zetLabel(x.i, e.target.value as MapLabel)}
-                    >
-                      {labelOpties(x).map((l) => (
-                        <option key={l} value={l}>
-                          {LABEL_NAAM[l]}
-                        </option>
-                      ))}
-                    </select>
+                    <KeuzeLijst item={x} naam={naam} uit={bezig} onKies={(k) => zetKeuze(x.i, k)} />
                   </>
                 )}
               </li>
@@ -468,6 +487,48 @@ function MapInlezen({
         )}
       </DialogFooter>
     </div>
+  );
+}
+
+/** Per bestand één keuze: een ruimte (foto), een verdieping (plattegrond) of niet gebruiken */
+function KeuzeLijst({
+  item,
+  naam,
+  uit,
+  onKies,
+}: {
+  item: MapItem;
+  naam: string;
+  uit: boolean;
+  onKies: (keuze: string) => void;
+}) {
+  const { fotos, plattegronden } = keuzeOpties(item);
+  return (
+    <select
+      aria-label={"Wat is " + naam}
+      disabled={uit}
+      className={veldCls}
+      value={keuzeVan(item)}
+      onChange={(e) => onKies(e.target.value)}
+    >
+      {fotos.length > 0 && (
+        <optgroup label="Foto">
+          {fotos.map((k) => (
+            <option key={k} value={k}>
+              {FOTO_NAAM[k] ?? k}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      <optgroup label="Plattegrond">
+        {plattegronden.map((k) => (
+          <option key={k} value={k}>
+            {k}
+          </option>
+        ))}
+      </optgroup>
+      <option value="niet">Niet gebruiken</option>
+    </select>
   );
 }
 

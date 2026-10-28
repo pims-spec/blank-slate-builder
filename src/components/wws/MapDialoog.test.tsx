@@ -86,9 +86,10 @@ describe("MapDialoog", () => {
     expect(await screen.findByRole("button", { name: "Verder" })).toBeEnabled();
     expect(sorteerFotos.mock.calls[0]![0].data).toMatchObject({ metPlattegrond: true });
     expect(sorteerFotos.mock.calls[0]![0].data.fotos).toHaveLength(3);
-    expect(screen.getByRole("combobox", { name: "Wat is IMG_2.jpg" })).toHaveValue("plattegrond");
+    expect(screen.getByRole("combobox", { name: "Wat is IMG_2.jpg" })).toHaveValue("Begane grond");
     expect(screen.getByText("Plattegrond (Gemini)")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Wat is IMG_1.jpg" })).toHaveValue("foto");
+    expect(screen.getByRole("combobox", { name: "Wat is IMG_1.jpg" })).toHaveValue("keuken");
+    expect(screen.getByRole("combobox", { name: "Wat is IMG_3.jpg" })).toHaveValue("toilet");
 
     // de derde foto niet gebruiken
     fireEvent.change(screen.getByRole("combobox", { name: "Wat is IMG_3.jpg" }), {
@@ -116,12 +117,19 @@ describe("MapDialoog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Herkennen en nakijken" }));
     expect(sorteerFotos).not.toHaveBeenCalled();
     const kaart = screen.getByText("tekening.pdf").closest("li")!;
-    expect(within(kaart).getByRole("combobox")).toHaveValue("plattegrond");
+    expect(within(kaart).getByRole("combobox")).toHaveValue("Begane grond");
     expect(
       within(kaart)
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toEqual(["Plattegrond", "Niet gebruiken"]);
+    ).toEqual([
+      "Begane grond",
+      "1e verdieping",
+      "2e verdieping",
+      "3e verdieping",
+      "Berging",
+      "Niet gebruiken",
+    ]);
     fireEvent.click(screen.getByRole("button", { name: "Verder" }));
     expect(screen.getByText("Plattegrond inlezen en nakijken")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Overnemen" })).toBeDisabled();
@@ -134,11 +142,21 @@ describe("MapDialoog", () => {
       bestand("Woning/Plattegrond 1e verdieping.pdf", "application/pdf"),
     ]);
     fireEvent.click(screen.getByRole("button", { name: "Herkennen en nakijken" }));
-    expect(screen.getByText(/Elke plattegrond wordt als aparte verdieping/)).toBeInTheDocument();
+    expect(screen.getByText(/Kies bij elke plattegrond de verdieping/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Wat is Plattegrond BG.pdf" })).toHaveValue(
+      "Begane grond",
+    );
+    // de gebruiker ziet dat de tweede tekening de zolder is (2e verdieping)
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Wat is Plattegrond 1e verdieping.pdf" }),
+      {
+        target: { value: "2e verdieping" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Verder" }));
     expect(
       await screen.findByRole("combobox", { name: "Verdieping: Plattegrond 1e verdieping.pdf" }),
-    ).toHaveValue("1e verdieping");
+    ).toHaveValue("2e verdieping");
     expect(screen.getByRole("combobox", { name: "Verdieping: Plattegrond BG.pdf" })).toHaveValue(
       "Begane grond",
     );
@@ -156,6 +174,8 @@ describe("MapDialoog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Herkennen en nakijken" }));
     expect(await screen.findByRole("button", { name: "Verder" })).toBeEnabled();
     expect(screen.getByRole("status")).toHaveTextContent("Kijk zelf na wat de plattegrond is.");
+    // niet herkend: een foto waarvan de ruimte later wordt gekozen
+    expect(screen.getByRole("combobox", { name: "Wat is a.jpg" })).toHaveValue("foto");
     // niets gekozen → foutmelding
     fireEvent.change(screen.getByRole("combobox", { name: "Wat is a.jpg" }), {
       target: { value: "niet" },

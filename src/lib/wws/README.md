@@ -191,8 +191,12 @@ Knop "Map inlezen" in de telling (`MapDialoog.tsx`). Een map van de computer (Ma
 - Herkennen: de foto's gaan door dezelfde sortering als de fotobeoordeling, met `metPlattegrond`
   (extra soort `plattegrond`). Eén AI-aanroep voor de hele map. Lukt dat niet, dan kijkt de
   gebruiker zelf na.
-- Nakijken: per bestand Plattegrond / Foto / Niet gebruiken; elke plattegrond wordt als aparte
-  verdieping ingelezen (hoogstens 4).
+- Nakijken: per bestand één keuzelijst (`keuzeVan`, `metKeuze`, `keuzeOpties`): Foto (badkamer,
+  toilet, keuken), Plattegrond (begane grond, 1e/2e/3e verdieping, berging) of Niet gebruiken.
+  Gemini-"anders" wordt Niet gebruiken; een plattegrond krijgt een verdieping uit de naam, anders
+  de eerste vrije (`metVerdiepingen`); twee keer dezelfde verdieping geeft een fout. Een PDF
+  toont de eerste pagina als voorbeeld. De verdiepingen gaan mee naar de plattegrondstap
+  (`beginVerdiepingen`; volgende PDF-pagina's één hoger).
 - Daarna de bestaande stappen: `PlattegrondInlezen` met de controletabel (de ruimten komen in de
   telling bij Overnemen), dan `FotosBeoordelen` vanaf de indeling, met de telling inclusief de
   nieuwe ruimten.

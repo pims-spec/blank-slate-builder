@@ -38,6 +38,7 @@ import {
   VERDIEPING_NAMEN,
   verdiepingenVan,
   verdiepingNotitie,
+  volgendeVerdieping,
   voegVerdiepingenSamen,
 } from "@/lib/wws/plattegrond/verdiepingen";
 import type { NieuwBeeld } from "./plattegrondBeeld";
@@ -103,11 +104,14 @@ export function PlattegrondInlezen({
   vastVervangen = false,
   knopTekst = "Overnemen",
   beginBestanden,
+  beginVerdiepingen,
 }: Omit<Props, "open" | "onOpenChange"> & {
   vastVervangen?: boolean;
   knopTekst?: string;
   /** "Map inlezen": de plattegrond(en) zijn al gekozen */
   beginBestanden?: readonly File[];
+  /** De verdieping per beginbestand (al gekozen bij het nakijken van de map) */
+  beginVerdiepingen?: readonly string[];
 }) {
   // meer verdiepingen (elk apart naar Claude); niet in de Blanco-start van het indelingsadvies,
   // dat de vlakken op één tekening nodig heeft
@@ -134,11 +138,15 @@ export function PlattegrondInlezen({
   }, [beeld]);
 
   /** Bestanden erbij (een PDF met meer pagina's: elke pagina een tekening); hoogstens 4 */
-  async function voegToe(bestanden: readonly File[], vervang: boolean) {
+  async function voegToe(
+    bestanden: readonly File[],
+    vervang: boolean,
+    gekozen: readonly string[] = [],
+  ) {
     const al = vervang ? [] : tekeningen;
     const nieuw: Tekening[] = [];
     let teVeel = false;
-    for (const bestand of bestanden) {
+    for (const [b, bestand] of bestanden.entries()) {
       let paginas: (number | null)[] = [null];
       if (bestand.type === "application/pdf" && meer) {
         try {
@@ -160,8 +168,12 @@ export function PlattegrondInlezen({
           bestand,
           pagina,
           naam: bestand.name + (paginas.length > 1 ? ", pagina " + pagina : ""),
-          verdieping:
-            paginas.length > 1 ? stelVerdiepingVoor("", nr) : stelVerdiepingVoor(bestand.name, nr),
+          verdieping: gekozen[b]
+            ? // al gekozen; bij een PDF met meer pagina's de volgende pagina's één hoger
+              volgendeVerdieping(gekozen[b], (pagina ?? 1) - 1)
+            : paginas.length > 1
+              ? stelVerdiepingVoor("", nr)
+              : stelVerdiepingVoor(bestand.name, nr),
         });
       }
     }
@@ -183,7 +195,7 @@ export function PlattegrondInlezen({
   useEffect(() => {
     if (begonnen.current || !beginBestanden?.length) return;
     begonnen.current = true;
-    void voegToe(beginBestanden, true);
+    void voegToe(beginBestanden, true, beginVerdiepingen);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen
   }, []);
 
