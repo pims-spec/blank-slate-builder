@@ -728,6 +728,32 @@ factor met "GoHome-inschatting", de bronnen met peildatum en link, en de disclai
 opgeslagen gegevens (of de huidige berekening), dus met de bronregel en factoren van dat moment.
 Ook de kijkrol kan de PDF van een opgeslagen indicatie downloaden.
 
+## Telling inladen uit de Huurprijscheck (nieuw, niet in de bron)
+
+Knop "Telling inladen" in het archief (alleen met schrijfrol). Een bestaande puntentelling
+wordt een gewone, bewerkbare telling in `tellingen`; het PDF-rapport werkt zoals bij elke telling.
+
+- **Bron:** de "Resultaat Huurprijscheck" van de Huurcommissie: de PDF zelf, of een rapport
+  (CBRE) met die bijlage. Andere formaten (Excel, eigen rapporten zonder bijlage) nog niet.
+- **Lezen zonder AI:** `pdfRegels` (`plattegrond/beeld.ts`) haalt de tekst per regel uit de PDF
+  (`stukkenNaarRegels`: op hoogte gegroepeerd). `zoekHuurprijscheck` zoekt de bijlage,
+  `leesHuurprijscheck` (`inladen/huurprijscheck.ts`, puur) zet hem om naar meta + `WwsInput`:
+  adres, WOZ (peildatum 1-1-2025 → beschikking 2026), energielabel/-index/bouwjaar, woonvorm,
+  ruimten met m² en verwarming, keuken (voorzieningen en aanrecht), sanitair per ruimte,
+  buitenruimten, intercom, opslag stadsgezicht/monument. Geen AI-aanroep, geen daglimiet.
+- **Wat de PDF niet zegt** komt in de meldingen (oranje in de nakijkstap): geen maten (alleen
+  m²), geen labeldatum, buitenruimten als privé, rijksmonument als "contract na 1 juli 2024".
+  Elke regel die niet herkend is: "Niet overgenomen: ‘…’".
+- **Toiletruimte en overloop** staan in de Huurprijscheck niet bij de m²; ze worden een overige
+  ruimte met 0 m² (verwarmd alleen als de Huurprijscheck dat zegt).
+- **Nakijkstap** (`TellingInladenDialoog.tsx`): adres, tijdvak, maximale huur, de punten van de
+  Huurcommissie naast `calc()` per onderdeel (`vergelijkHuurprijscheck`), ruimten met
+  voorzieningen. "Overnemen als telling" → `staatUitHuurprijscheck` → `maakTellingDoc` →
+  `tellingStore.maakAan`, daarna opent de telling. Ruimten krijgen herkomst "Huurprijscheck dd-mm-jjjj".
+- **Verificatie:** alle 75 Huurprijscheck-bijlagen in de CBRE-rapporten komen per onderdeel en in
+  totaal gelijk uit (lokaal script, niet in de repo). Vijf bijlagen staan als fixture in
+  `inladen/huurprijscheck.fixtures.ts` (zonder de uitlegtekst).
+
 ## Tweestapsverificatie (nieuw, niet in de bron)
 
 Verplicht voor iedereen: na het wachtwoord (of Google) een code uit een code-app (TOTP, Supabase
