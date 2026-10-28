@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Zijmenu, zijmenuRuimte } from "@/components/Zijmenu";
 import { BloxsBeheer } from "@/components/wws/BloxsBeheer";
 import { CollegaUitnodigen } from "@/components/CollegaUitnodigen";
+import { GebruikerVerwijderen } from "@/components/GebruikerVerwijderen";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +55,7 @@ function Admin() {
   const qc = useQueryClient();
   const [intrekken, setIntrekken] = useState<(typeof users)[number] | null>(null);
   const [reset, setReset] = useState<(typeof users)[number] | null>(null);
+  const [verwijderen, setVerwijderen] = useState<(typeof users)[number] | null>(null);
   const resetMutatie = useMutation({
     mutationFn: async (id: string) => {
       const r = await resetTweestaps({ data: { userId: id } });
@@ -117,7 +119,8 @@ function Admin() {
         </div>
         <p className="mt-2 text-muted-foreground">
           Nieuwe aanmeldingen hebben pas toegang nadat jij ze een rol geeft. Een lezer kan alles
-          bekijken, maar niets aanmaken, wijzigen of verwijderen.
+          bekijken, maar niets aanmaken, wijzigen of verwijderen. Verwijder je een gebruiker, dan
+          gaan diens tellingen naar een collega die jij kiest.
         </p>
         <ul className="mt-8 divide-y divide-border gh-card">
           {users.map((u) => (
@@ -162,15 +165,28 @@ function Admin() {
                 </label>
               )}
               {u.id !== user.id && (
-                <Button size="sm" variant="ghost" onClick={() => setReset(u)}>
-                  2FA resetten
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setReset(u)}>
+                    2FA resetten
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setVerwijderen(u)}>
+                    Verwijderen…
+                  </Button>
+                </div>
               )}
             </li>
           ))}
         </ul>
         <ServerStatus />
       </main>
+      {verwijderen && (
+        <GebruikerVerwijderen
+          key={verwijderen.id}
+          gebruiker={verwijderen}
+          gebruikers={users}
+          onSluit={() => setVerwijderen(null)}
+        />
+      )}
       <AlertDialog
         open={reset !== null}
         onOpenChange={(open) => {
