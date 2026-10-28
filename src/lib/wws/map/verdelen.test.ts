@@ -156,15 +156,22 @@ describe("na het sorteren", () => {
     expect(metKeuze(m[3]!, "Kantine")).toBe(m[3]);
     expect(keuzeOpties(m[3]!)).toEqual({
       fotos: [],
-      plattegronden: ["Begane grond", "1e verdieping", "2e verdieping", "3e verdieping", "Berging"],
+      plattegronden: [
+        "Begane grond",
+        "1e verdieping",
+        "2e verdieping",
+        "3e verdieping",
+        "Zolder",
+        "Berging",
+      ],
     });
     expect(keuzeOpties(m[0]!).fotos).toEqual(["badkamer", "toilet", "keuken"]);
     // een foto zonder sortering (herkennen mislukt): "foto", ruimte later kiezen
     expect(keuzeVan(items[0]!)).toBe("foto");
     expect(keuzeOpties(items[0]!).fotos).toEqual(["badkamer", "toilet", "keuken", "foto"]);
-    // een zolder uit de bestandsnaam staat er ook tussen
-    const zolder = { ...m[3]!, verdieping: "Zolder" };
-    expect(keuzeOpties(zolder).plattegronden).toContain("Zolder");
+    // een kelder uit de bestandsnaam staat er ook tussen
+    const kelder = { ...m[3]!, verdieping: "Kelder" };
+    expect(keuzeOpties(kelder).plattegronden).toContain("Kelder");
   });
 
   it("mapStappen: alle plattegronden, foto's met sortering; zelf omgezet → anders", () => {

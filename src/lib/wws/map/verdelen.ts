@@ -174,7 +174,7 @@ export function metSortering(
 }
 
 // ---------- één keuzelijst per bestand ----------
-// Badkamer, toilet en keuken (een foto voor de fotobeoordeling), een verdieping of berging (een
+// Badkamer, toilet en keuken (een foto voor de fotobeoordeling), een verdieping, zolder of berging (een
 // plattegrond), of niet gebruiken. "foto" is een foto waarvan de ruimte later wordt gekozen (als
 // het herkennen niet lukte).
 
@@ -184,6 +184,7 @@ export const PLATTEGROND_KEUZES = [
   "1e verdieping",
   "2e verdieping",
   "3e verdieping",
+  "Zolder",
   "Berging",
 ] as const;
 export type MapKeuze = string;

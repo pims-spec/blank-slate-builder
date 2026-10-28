@@ -111,6 +111,25 @@ describe("MapDialoog", () => {
     expect(screen.getByRole("button", { name: "Beoordelen" })).toBeEnabled();
   });
 
+  it("vóór het herkennen een bestand weghalen met ✕: gaat niet naar Gemini", async () => {
+    klaarmaken.mockResolvedValue({ data: "KLEIN", type: "image/jpeg" });
+    sorteerFotos.mockResolvedValue({
+      ok: true,
+      data: [{ soort: "keuken", reden: "Aanrecht." }],
+    });
+    openMet();
+    kiesMap([bestand("Woning/a.jpg", "image/jpeg"), bestand("Woning/b.jpg", "image/jpeg")]);
+    expect(screen.getByRole("status")).toHaveTextContent("2 foto's gevonden.");
+    fireEvent.click(screen.getByRole("button", { name: "Weghalen: b.jpg" }));
+    expect(screen.queryByAltText("b.jpg")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("1 foto gevonden.");
+    fireEvent.click(screen.getByRole("button", { name: "Herkennen en nakijken" }));
+    expect(await screen.findByRole("button", { name: "Verder" })).toBeEnabled();
+    expect(sorteerFotos.mock.calls[0]![0].data.fotos).toHaveLength(1);
+    // na het herkennen geen ✕ meer (dan: Niet gebruiken)
+    expect(screen.queryByRole("button", { name: "Weghalen: a.jpg" })).toBeNull();
+  });
+
   it("alleen een PDF: geen AI-aanroep, direct de plattegrond", async () => {
     openMet();
     kiesMap([bestand("Woning/tekening.pdf", "application/pdf")]);
@@ -127,6 +146,7 @@ describe("MapDialoog", () => {
       "1e verdieping",
       "2e verdieping",
       "3e verdieping",
+      "Zolder",
       "Berging",
       "Niet gebruiken",
     ]);

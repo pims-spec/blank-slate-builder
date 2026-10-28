@@ -163,13 +163,14 @@ function MapInlezen({
     setInvoer(metType);
     setItems(r.items);
     setOvergeslagen([...extra, ...r.overgeslagen]);
-    const nP = r.items.filter((x) => x.label === "plattegrond").length;
-    const nF = r.items.length - nP;
-    setStatus(
-      r.items.length
-        ? `${nF === 1 ? "1 foto" : nF + " foto's"}${nP ? ` en ${nP === 1 ? "1 plattegrond" : nP + " plattegronden"}` : ""} gevonden.`
-        : "Geen foto's of plattegrond gevonden in deze map.",
-    );
+    setStatus(telTekst(r.items));
+  }
+
+  /** Vóór het herkennen een bestand weghalen (gaat dan niet naar Gemini) */
+  function haalWeg(i: number) {
+    const lijst = items.filter((x) => x.i !== i);
+    setItems(lijst);
+    setStatus(telTekst(lijst));
   }
 
   async function gesleept(e: React.DragEvent) {
@@ -406,20 +407,32 @@ function MapInlezen({
             const url = urls.get(x.i) ?? pdfUrls.get(x.i);
             return (
               <li key={x.i} className="min-w-0 space-y-1">
-                {url ? (
-                  <img
-                    src={url}
-                    alt={naam}
-                    className={
-                      "aspect-square w-full rounded-md border border-border object-cover" +
-                      (x.label === "niet" ? " opacity-40" : "")
-                    }
-                  />
-                ) : (
-                  <div className="flex aspect-square w-full items-center justify-center rounded-md border border-border bg-muted font-semibold text-muted-foreground">
-                    PDF
-                  </div>
-                )}
+                <div className="relative">
+                  {url ? (
+                    <img
+                      src={url}
+                      alt={naam}
+                      className={
+                        "aspect-square w-full rounded-md border border-border object-cover" +
+                        (x.label === "niet" ? " opacity-40" : "")
+                      }
+                    />
+                  ) : (
+                    <div className="flex aspect-square w-full items-center justify-center rounded-md border border-border bg-muted font-semibold text-muted-foreground">
+                      PDF
+                    </div>
+                  )}
+                  {fase === "kiezen" && !bezig && (
+                    <button
+                      type="button"
+                      aria-label={"Weghalen: " + naam}
+                      className="absolute right-1 top-1 rounded bg-background/90 px-1.5 text-xs hover:text-destructive"
+                      onClick={() => haalWeg(x.i)}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
                 <p className="truncate text-xs" title={x.pad}>
                   {naam}
                 </p>
@@ -488,6 +501,14 @@ function MapInlezen({
       </DialogFooter>
     </div>
   );
+}
+
+/** "3 foto's en 1 plattegrond gevonden." */
+function telTekst(items: readonly MapItem[]): string {
+  const nP = items.filter((x) => x.label === "plattegrond").length;
+  const nF = items.length - nP;
+  if (!items.length) return "Geen foto's of plattegrond (meer) over.";
+  return `${nF === 1 ? "1 foto" : nF + " foto's"}${nP ? ` en ${nP === 1 ? "1 plattegrond" : nP + " plattegronden"}` : ""} gevonden.`;
 }
 
 /** Per bestand één keuze: een ruimte (foto), een verdieping (plattegrond) of niet gebruiken */

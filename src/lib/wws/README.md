@@ -192,7 +192,8 @@ Knop "Map inlezen" in de telling (`MapDialoog.tsx`). Een map van de computer (Ma
   (extra soort `plattegrond`). Eén AI-aanroep voor de hele map. Lukt dat niet, dan kijkt de
   gebruiker zelf na.
 - Nakijken: per bestand één keuzelijst (`keuzeVan`, `metKeuze`, `keuzeOpties`): Foto (badkamer,
-  toilet, keuken), Plattegrond (begane grond, 1e/2e/3e verdieping, berging) of Niet gebruiken.
+  toilet, keuken), Plattegrond (begane grond, 1e/2e/3e verdieping, zolder, berging) of Niet
+  gebruiken. Vóór het herkennen kan een bestand met ✕ weg (gaat dan niet naar Gemini).
   Gemini-"anders" wordt Niet gebruiken; een plattegrond krijgt een verdieping uit de naam, anders
   de eerste vrije (`metVerdiepingen`); twee keer dezelfde verdieping geeft een fout. Een PDF
   toont de eerste pagina als voorbeeld. De verdiepingen gaan mee naar de plattegrondstap
