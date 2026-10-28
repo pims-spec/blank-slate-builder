@@ -5,6 +5,7 @@ import { slaWerkversieOp, type TellingStore } from "../opslag/store";
 import type { Bewerker, Versie } from "../opslag/types";
 import type { TellingStaat } from "../opslag/doc";
 import type { Normen } from "../normen";
+import type { PlatVerdieping } from "../types";
 import { oudeAfbeeldingOpruimen, type PlattegrondOpslag } from "./opslag";
 import { allePaden } from "./rapport";
 
@@ -12,6 +13,8 @@ export interface TeBewarenBeeld {
   bytes: Uint8Array;
   breedte: number;
   hoogte: number;
+  /** Meer verdiepingen onder elkaar: de plek van elke verdieping */
+  verdiepingen?: PlatVerdieping[];
 }
 
 /**
@@ -31,7 +34,12 @@ export async function bewaarBeeld(o: {
   if (!o.beeld) return { staat: o.staat, isNieuw: o.isNieuw };
   if (o.isNieuw) await slaWerkversieOp(o.store, { ...o, isNieuw: true });
   const ref = await o.opslag.bewaar(o.id, o.beeld.bytes, o.beeld);
-  const input = { ...o.staat.input, plattegrond: ref };
+  const input = {
+    ...o.staat.input,
+    plattegrond: o.beeld.verdiepingen?.length
+      ? { ...ref, verdiepingen: o.beeld.verdiepingen }
+      : ref,
+  };
   delete input.plattegrondImg;
   return { staat: { ...o.staat, input }, isNieuw: false };
 }

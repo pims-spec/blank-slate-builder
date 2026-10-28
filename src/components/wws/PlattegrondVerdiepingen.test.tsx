@@ -100,15 +100,17 @@ describe("Plattegrond inlezen: meer verdiepingen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Overnemen" }));
     const [nieuw, beeld] = onOvernemen.mock.calls[0]! as [
       WwsInput,
-      { breedte: number; hoogte: number },
+      { breedte: number; hoogte: number; verdiepingen?: { naam: string }[] },
     ];
     expect(nieuw.vertrekken.map((v) => v.naam)).toEqual([
       "Woonkamer (Begane grond)",
       "Slaapkamer (1e verdieping)",
     ]);
     expect(nieuw.vertrekken.every((v) => !("bbox" in v))).toBe(true);
+    expect(nieuw.vertrekken.map((v) => v.verdieping)).toEqual(["Begane grond", "1e verdieping"]);
     expect(nieuw.buiten.ruimten[0]!.m2).toBe("6");
     expect(beeld).toMatchObject({ breedte: 1000, hoogte: 1700 });
+    expect(beeld.verdiepingen!.map((v) => v.naam)).toEqual(["Begane grond", "1e verdieping"]);
   });
 
   it("een PDF met twee pagina's: twee tekeningen; een fout bij de tweede noemt de verdieping", async () => {
@@ -129,6 +131,20 @@ describe("Plattegrond inlezen: meer verdiepingen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Plattegrond inlezen" }));
     expect(await screen.findByRole("status")).toHaveTextContent(/^Zolder: /);
     expect(screen.queryByText(/Gevonden ruimten/)).toBeNull();
+  });
+
+  it("twee keer dezelfde verdieping: eerst een andere kiezen", async () => {
+    open();
+    kies([
+      new File(["a"], "a.jpg", { type: "image/jpeg" }),
+      new File(["b"], "b.jpg", { type: "image/jpeg" }),
+    ]);
+    fireEvent.change(await screen.findByRole("combobox", { name: "Verdieping: b.jpg" }), {
+      target: { value: "Begane grond" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Plattegrond inlezen" }));
+    expect(screen.getByRole("status")).toHaveTextContent("dezelfde verdieping");
+    expect(leesPlattegrond).not.toHaveBeenCalled();
   });
 
   it("hoogstens 4 tekeningen", async () => {

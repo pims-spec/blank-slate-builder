@@ -36,6 +36,7 @@ import {
   stapelMaten,
   stelVerdiepingVoor,
   VERDIEPING_NAMEN,
+  verdiepingenVan,
   verdiepingNotitie,
   voegVerdiepingenSamen,
 } from "@/lib/wws/plattegrond/verdiepingen";
@@ -198,6 +199,10 @@ export function PlattegrondInlezen({
       setStatus("Kies eerst een bestand.");
       return;
     }
+    if (new Set(tekeningen.map((t) => t.verdieping)).size < tekeningen.length) {
+      setStatus("Twee tekeningen hebben dezelfde verdieping. Kies per tekening een andere.");
+      return;
+    }
     setBezig(true);
     setR(null);
     setK(null);
@@ -269,7 +274,15 @@ export function PlattegrondInlezen({
           maten,
         );
         try {
-          setBeeld({ blob: await canvasNaarJpeg(c), breedte: c.width, hoogte: c.height });
+          setBeeld({
+            blob: await canvasNaarJpeg(c),
+            breedte: c.width,
+            hoogte: c.height,
+            verdiepingen: verdiepingenVan(
+              maten,
+              tekeningen.map((t) => t.verdieping),
+            ),
+          });
         } catch (e) {
           setStatus(e instanceof Error ? e.message : "Samenvoegen van de tekeningen is mislukt.");
           return;
@@ -531,7 +544,15 @@ export function PlattegrondInlezen({
       <DialogFooter>
         <Button
           disabled={!R || !k || !beeld || bezig}
-          onClick={() => R && k && beeld && onOvernemen(platToepassen(input, R, k), beeld)}
+          onClick={() =>
+            R &&
+            k &&
+            beeld &&
+            onOvernemen(
+              platToepassen(input, R, k, verdiepingen.length ? { verdiepingen } : {}),
+              beeld,
+            )
+          }
         >
           {knopTekst}
         </Button>

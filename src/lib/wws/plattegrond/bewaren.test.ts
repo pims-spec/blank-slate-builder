@@ -48,6 +48,25 @@ describe("bewaarBeeld", () => {
     expect(JSON.stringify(r.staat)).not.toContain("base64");
   });
 
+  it("meer verdiepingen: de plek per verdieping gaat mee in de verwijzing", async () => {
+    const { store, opslag } = opzet();
+    const verdiepingen = [
+      { naam: "Begane grond", x: 0, y: 56, w: 800, h: 250 },
+      { naam: "1e verdieping", x: 0, y: 362, w: 800, h: 238 },
+    ];
+    const r = await bewaarBeeld({
+      store,
+      opslag,
+      id: T,
+      isNieuw: true,
+      staat: nieuweTellingStaat("Pim"),
+      normen: N,
+      bewerker: null,
+      beeld: { bytes: JPEG, breedte: 800, hoogte: 600, verdiepingen },
+    });
+    expect(r.staat.input.plattegrond?.verdiepingen).toEqual(verdiepingen);
+  });
+
   it("zonder nieuw beeld: niets", async () => {
     const { store, opslag, dblog, log } = opzet();
     const staat = nieuweTellingStaat("Pim");

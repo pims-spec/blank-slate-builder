@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { WwsInput } from "@/lib/wws";
+import type { PlatVerdieping, WwsInput } from "@/lib/wws";
 import { BUCKET, maakPlattegrondOpslag, PAD_RE, type Bucket } from "@/lib/wws/plattegrond/opslag";
 import { paginaTitel, rapportPlattegronden } from "@/lib/wws/plattegrond/rapport";
 import type { PdfRapportPlattegrond } from "@/lib/wws/pdf/delen";
@@ -16,6 +16,8 @@ export interface NieuwBeeld {
   blob: Blob;
   breedte: number;
   hoogte: number;
+  /** Meer verdiepingen onder elkaar (gaat bij Opslaan mee in input.plattegrond) */
+  verdiepingen?: PlatVerdieping[];
 }
 
 /** Alleen echte afbeeldings-data-URL's uit oude tellingen (geen svg/javascript) */
