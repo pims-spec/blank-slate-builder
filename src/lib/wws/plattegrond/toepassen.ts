@@ -101,6 +101,8 @@ type Nieuw = (Vertrek | OverigeRuimte) & { herkomst: string; bbox?: unknown; _me
  *   alleen de aanrechtlengte uit de plattegrond.
  * - "raam" en "open_keuken" uit het antwoord gaan mee als `raam` en `openKeuken` (voor het
  *   indelingsadvies).
+ * - bij meer verdiepingen krijgt elke ruimte zijn verdieping mee (`verdiepingen`, per ruimte in
+ *   het antwoord), zodat die verdieping later in zijn geheel weg kan.
  * - bij vervangen houdt een ingelezen ruimte de al ingevulde voorzieningen van een bestaande
  *   ruimte met dezelfde voorziening (keuken, badkamer, toilet, …), in volgorde; de bron gooide
  *   die weg.
@@ -109,7 +111,10 @@ export function platToepassen(
   input: WwsInput,
   R: PlattegrondAntwoord,
   k: PlatKeuzes,
-  { bronGetrouw = false }: { bronGetrouw?: boolean } = {},
+  {
+    bronGetrouw = false,
+    verdiepingen,
+  }: { bronGetrouw?: boolean; verdiepingen?: readonly string[] } = {},
 ): WwsInput {
   let I = structuredClone(input);
   const newV: Nieuw[] = [],
@@ -137,6 +142,7 @@ export function platToepassen(
     if (!bronGetrouw) {
       if (typeof r.raam === "boolean") extra.raam = r.raam;
       if (r.open_keuken === true && sel[1] === "keuken") (extra as Vertrek).openKeuken = true;
+      if (verdiepingen?.[i]) extra.verdieping = verdiepingen[i];
     }
     if (sel[0] === "v")
       newV.push(
@@ -195,6 +201,7 @@ export function platToepassen(
           ex.maten = n.maten!;
           ex.herkomst = n.herkomst;
           ex.naam = n.naam!;
+          if (n.verdieping) ex.verdieping = n.verdieping;
           ex._merged = true;
         } else list.push(n);
       });

@@ -143,6 +143,8 @@ export interface Vertrek {
   raam?: boolean;
   /** Keuken loopt zonder deur of tussenmuur over in de woonkamer (plattegrond of indelingsadvies) */
   openKeuken?: boolean;
+  /** Verdieping uit een plattegrond met meer verdiepingen (om die verdieping te kunnen verwijderen) */
+  verdieping?: string;
 }
 export interface OverigeRuimte {
   /** Herkomst van een ingelezen plattegrond, bijv. "Plattegrond: berekend" (alleen tonen) */
@@ -156,6 +158,17 @@ export interface OverigeRuimte {
   fac?: Fac;
   /** Raam naar de buitenlucht (plattegrond of indelingsadvies); ontbreekt = onbekend */
   raam?: boolean;
+  /** Verdieping uit een plattegrond met meer verdiepingen (om die verdieping te kunnen verwijderen) */
+  verdieping?: string;
+}
+
+/** Eén verdieping op een samengestelde plattegrond: de tekening zelf, zonder de kop */
+export interface PlatVerdieping {
+  naam: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 // ---------- overige rubrieken ----------
@@ -307,7 +320,13 @@ export interface WwsInput {
   /** Geüpload verduurzamingsadvies (input.energieAdvies in wws-site.html) */
   energieAdvies?: EnergieAdvies;
   /** Plattegrond-afbeelding in Storage (bucket "plattegronden"); de telling zelf bevat geen beeld */
-  plattegrond?: { pad: string; breedte: number; hoogte: number };
+  plattegrond?: {
+    pad: string;
+    breedte: number;
+    hoogte: number;
+    /** Meer verdiepingen onder elkaar: per verdieping de naam en de plek (px); zie verdiepingen.ts */
+    verdiepingen?: PlatVerdieping[];
+  };
   /** Oude tellingen: afbeelding als data-URL in de telling zelf. Alleen nog lezen. */
   plattegrondImg?: string;
   /** Plattegronden alleen voor het rapport (zonder maten); zie plattegrond/rapport.ts */

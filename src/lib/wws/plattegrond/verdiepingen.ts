@@ -2,8 +2,15 @@
 // met de verdieping in de toelichting. Daarna komen de antwoorden samen in één antwoord voor de
 // controletabel en platToepassen. Bij meer dan één verdieping vervallen de vlakken op de tekening
 // (bbox): de tekeningen staan dan onder elkaar op één afbeelding (stapelMaten).
+//
+// Eén verdieping verwijderen: de telling onthoudt per verdieping waar de tekening op de
+// samengestelde afbeelding staat (input.plattegrond.verdiepingen) en elke ruimte zijn verdieping.
+// Bij verwijderen worden de andere tekeningen uit de afbeelding geknipt en opnieuw gestapeld
+// (zonderVerdieping), en desgewenst de ruimten van die verdieping uit de telling gehaald.
+import * as z from "zod";
 import { num } from "../basis";
 import type { PlattegrondAntwoord } from "../ai/antwoorden";
+import type { PlatVerdieping, WwsInput } from "../types";
 import { MAX_ZIJDE } from "./beeld";
 
 /** Hoogstens zoveel tekeningen tegelijk (elke tekening is één AI-aanroep) */
@@ -132,4 +139,85 @@ export function stapelMaten(
     return d;
   });
   return { breedte: Math.max(1, Math.round(W * f)), hoogte: Math.max(1, y), delen, kop };
+}
+
+/** De plekken van de tekeningen (zonder de kop) op het samengestelde beeld */
+export function verdiepingenVan(
+  maten: { delen: readonly StapelDeel[] },
+  namen: readonly string[],
+): PlatVerdieping[] {
+  return maten.delen.map((d, i) => ({ naam: namen[i] ?? "", x: d.x, y: d.y, w: d.w, h: d.h }));
+}
+
+const PlatVerdiepingSchema = z.object({
+  naam: z.string().trim().min(1).max(40),
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  w: z.number().int().positive(),
+  h: z.number().int().positive(),
+});
+
+/**
+ * De verdiepingen van een opgeslagen plattegrond (onbetrouwbare invoer): alleen als het er 2 tot 4
+ * zijn, met verschillende namen en binnen de afbeelding. Anders [] (dan kan alleen alles weg).
+ */
+export function leesVerdiepingen(p: WwsInput["plattegrond"] | undefined): PlatVerdieping[] {
+  if (!p) return [];
+  const r = z.array(PlatVerdiepingSchema).min(2).max(MAX_VERDIEPINGEN).safeParse(p.verdiepingen);
+  if (!r.success) return [];
+  const binnen = r.data.every((v) => v.x + v.w <= num(p.breedte) && v.y + v.h <= num(p.hoogte));
+  const uniek = new Set(r.data.map((v) => v.naam)).size === r.data.length;
+  return binnen && uniek ? r.data : [];
+}
+
+/**
+ * De nieuwe afbeelding zonder verdieping i: welke stukken (bron) waar komen (doel). Blijft er meer
+ * dan één over, dan opnieuw onder elkaar met koppen (stapelMaten); blijft er één over, dan alleen
+ * die tekening, zonder kop, en geen verdiepingen meer.
+ */
+export function zonderVerdieping(
+  verdiepingen: readonly PlatVerdieping[],
+  i: number,
+): {
+  breedte: number;
+  hoogte: number;
+  kop: number;
+  stukken: { bron: PlatVerdieping; doel: StapelDeel }[];
+  verdiepingen: PlatVerdieping[] | null;
+} {
+  const rest = verdiepingen.filter((_, j) => j !== i);
+  if (rest.length === 1) {
+    const v = rest[0]!;
+    return {
+      breedte: v.w,
+      hoogte: v.h,
+      kop: 0,
+      stukken: [{ bron: v, doel: { x: 0, y: 0, w: v.w, h: v.h, kopY: 0 } }],
+      verdiepingen: null,
+    };
+  }
+  const m = stapelMaten(rest.map((v) => ({ breedte: v.w, hoogte: v.h })));
+  return {
+    breedte: m.breedte,
+    hoogte: m.hoogte,
+    kop: m.kop,
+    stukken: rest.map((bron, j) => ({ bron, doel: m.delen[j]! })),
+    verdiepingen: verdiepingenVan(
+      m,
+      rest.map((v) => v.naam),
+    ),
+  };
+}
+
+/** Hoeveel ruimten in de telling bij deze verdieping horen */
+export const ruimtenVanVerdieping = (input: WwsInput, naam: string) =>
+  [...input.vertrekken, ...input.overig].filter((r) => r.verdieping === naam).length;
+
+/** De telling zonder de ruimten van deze verdieping (wijzigt input niet) */
+export function zonderRuimtenVan(input: WwsInput, naam: string): WwsInput {
+  return {
+    ...input,
+    vertrekken: input.vertrekken.filter((r) => r.verdieping !== naam),
+    overig: input.overig.filter((r) => r.verdieping !== naam),
+  };
 }

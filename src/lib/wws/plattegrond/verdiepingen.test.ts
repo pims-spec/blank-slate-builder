@@ -3,10 +3,15 @@ import { PlattegrondAntwoord } from "../ai/antwoorden";
 import { platToepassen, standaardKeuzes } from "./toepassen";
 import {
   KOP_HOOGTE,
+  leesVerdiepingen,
+  ruimtenVanVerdieping,
   stapelMaten,
   stelVerdiepingVoor,
   verdiepingNotitie,
+  verdiepingenVan,
   voegVerdiepingenSamen,
+  zonderRuimtenVan,
+  zonderVerdieping,
 } from "./verdiepingen";
 import { legeInput } from "..";
 
@@ -164,5 +169,74 @@ describe("stapelMaten", () => {
     );
     expect(hoog.hoogte).toBeLessThanOrEqual(1001);
     expect(hoog.breedte).toBeLessThan(1000);
+  });
+});
+
+describe("verdieping verwijderen", () => {
+  const drie = verdiepingenVan(
+    stapelMaten([
+      { breedte: 1000, hoogte: 800 },
+      { breedte: 500, hoogte: 400 },
+      { breedte: 800, hoogte: 600 },
+    ]),
+    ["Begane grond", "1e verdieping", "Zolder"],
+  );
+  const plat = (verdiepingen: unknown, breedte = 1000, hoogte = 2000) =>
+    ({ pad: "x", breedte, hoogte, verdiepingen }) as never;
+
+  it("verdiepingenVan: de tekeningen zonder kop", () => {
+    expect(drie[1]).toEqual({
+      naam: "1e verdieping",
+      x: 250,
+      y: 2 * KOP_HOOGTE + 800,
+      w: 500,
+      h: 400,
+    });
+  });
+
+  it("leesVerdiepingen: alleen 2–4 geldige, unieke en binnen de afbeelding", () => {
+    expect(leesVerdiepingen(plat(drie))).toEqual(drie);
+    expect(leesVerdiepingen(undefined)).toEqual([]);
+    expect(leesVerdiepingen(plat(undefined))).toEqual([]);
+    expect(leesVerdiepingen(plat([drie[0]]))).toEqual([]);
+    expect(leesVerdiepingen(plat([drie[0], { ...drie[1], naam: "Begane grond" }]))).toEqual([]);
+    expect(leesVerdiepingen(plat(drie, 1000, 1500))).toEqual([]);
+    expect(leesVerdiepingen(plat([drie[0], { ...drie[1], w: -5 }]))).toEqual([]);
+    expect(leesVerdiepingen(plat([drie[0], { ...drie[1], naam: "<x>".repeat(20) }]))).toEqual([]);
+  });
+
+  it("zonderVerdieping: de rest opnieuw onder elkaar, met hun eigen maten", () => {
+    const r = zonderVerdieping(drie, 1);
+    expect(r.stukken.map((s) => s.bron.naam)).toEqual(["Begane grond", "Zolder"]);
+    expect(r.stukken[1]!.doel).toMatchObject({ x: 100, y: 2 * KOP_HOOGTE + 800, w: 800, h: 600 });
+    expect(r.breedte).toBe(1000);
+    expect(r.hoogte).toBe(2 * KOP_HOOGTE + 1400);
+    expect(r.verdiepingen!.map((v) => v.naam)).toEqual(["Begane grond", "Zolder"]);
+  });
+
+  it("zonderVerdieping: één over → alleen die tekening, zonder kop en zonder verdiepingen", () => {
+    const r = zonderVerdieping(zonderVerdieping(drie, 2).verdiepingen!, 0);
+    expect(r).toMatchObject({ breedte: 500, hoogte: 400, kop: 0, verdiepingen: null });
+    expect(r.stukken).toHaveLength(1);
+    expect(r.stukken[0]!.doel).toEqual({ x: 0, y: 0, w: 500, h: 400, kopY: 0 });
+  });
+
+  it("ruimten krijgen hun verdieping; ruimtenVanVerdieping en zonderRuimtenVan", () => {
+    const { R, verdiepingen } = voegVerdiepingenSamen([
+      { verdieping: "Begane grond", R: bg },
+      { verdieping: "1e verdieping", R: eerste },
+    ]);
+    const I = platToepassen(legeInput(), R, standaardKeuzes(R), { verdiepingen });
+    expect(I.vertrekken.map((v) => v.verdieping)).toEqual([
+      "Begane grond",
+      "1e verdieping",
+      "1e verdieping",
+    ]);
+    expect(ruimtenVanVerdieping(I, "1e verdieping")).toBe(2);
+    expect(ruimtenVanVerdieping(I, "Begane grond")).toBe(3);
+    const zonder = zonderRuimtenVan(I, "1e verdieping");
+    expect(zonder.vertrekken.map((v) => v.naam)).toEqual(["Woonkamer (Begane grond)"]);
+    expect(zonder.overig).toHaveLength(2);
+    expect(I.vertrekken).toHaveLength(3);
   });
 });
