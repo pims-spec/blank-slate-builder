@@ -750,6 +750,14 @@ wordt een gewone, bewerkbare telling in `tellingen`; het PDF-rapport werkt zoals
   Huurcommissie naast `calc()` per onderdeel (`vergelijkHuurprijscheck`), ruimten met
   voorzieningen. "Overnemen als telling" → `staatUitHuurprijscheck` → `maakTellingDoc` →
   `tellingStore.maakAan`, daarna opent de telling. Ruimten krijgen herkomst "Huurprijscheck dd-mm-jjjj".
+- **Ophalen in de nakijkstap** (`inladen/aanvullen.ts`, puur): direct na het inlezen haalt het
+  venster bij het adres het energielabel (EP-Online), de monumentstatus (Kadaster/RCE) en gemeente
+  + bouwjaar (PDOK/BAG) op, met de bestaande server functions. Gelijke klasse: registratiedatum
+  erbij. Bouwjaar "1976 of eerder": het BAG-bouwjaar als het in dezelfde klasse valt. COROP-gegevens
+  en het bouwjaar in de meta. Monument: invullen als de Huurprijscheck niets had, anders alleen een
+  melding. Een **ander label** in EP-Online: de Huurprijscheck blijft, met het vinkje "Label uit
+  EP-Online gebruiken" (alleen de energie, niet het woningtype). Mislukt het ophalen, dan kan
+  overnemen toch.
 - **Verificatie:** alle 75 Huurprijscheck-bijlagen in de CBRE-rapporten komen per onderdeel en in
   totaal gelijk uit (lokaal script, niet in de repo). Vijf bijlagen staan als fixture in
   `inladen/huurprijscheck.fixtures.ts` (zonder de uitlegtekst).

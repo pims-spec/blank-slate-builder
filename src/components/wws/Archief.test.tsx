@@ -35,6 +35,10 @@ const delenStore = vi.hoisted(() => ({
 }));
 const versiesLijst = vi.hoisted(() => vi.fn());
 const pdfRegels = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wws/opzoeken/opzoeken.functions", () => {
+  const niet = vi.fn(async () => ({ ok: false, fout: "niet_gevonden" }));
+  return { zoekEnergielabel: niet, zoekMonument: niet, zoekCorop: niet };
+});
 vi.mock("@/lib/wws/plattegrond/beeld", async (orig) => ({
   ...(await orig<typeof import("@/lib/wws/plattegrond/beeld")>()),
   pdfRegels,
@@ -145,6 +149,7 @@ describe("Archief", () => {
       target: { files: [new File(["x"], "hpc.pdf", { type: "application/pdf" })] },
     });
     await within(d).findByRole("region", { name: "Punten" });
+    await within(d).findByLabelText("Niet opgehaald");
     fireEvent.click(within(d).getByRole("button", { name: "Overnemen als telling" }));
     await waitFor(() => expect(navigate).toHaveBeenCalled());
     const [id, doc] = tellingStore.maakAan.mock.calls[0] as unknown as [string, Telling];

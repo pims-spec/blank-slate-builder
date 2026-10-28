@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +16,11 @@ import {
   zoekHuurprijscheck,
   type HpcUitkomst,
 } from "@/lib/wws/inladen/huurprijscheck";
+import { aanvullenUitBronnen, type Aanvulling, type Bronnen } from "@/lib/wws/inladen/aanvullen";
+import { epFoutMelding, EpVraagSchema } from "@/lib/wws/opzoeken/dienst";
+import { epAdresVelden } from "@/lib/wws/opzoeken/eponline";
+import { monumentFoutMelding } from "@/lib/wws/opzoeken/monument";
+import { zoekCorop, zoekEnergielabel, zoekMonument } from "@/lib/wws/opzoeken/opzoeken.functions";
 import { pdfRegels } from "@/lib/wws/plattegrond/beeld";
 import { samenvattingVoorz } from "@/lib/wws/voorzSamenvatting";
 import { useNormen } from "./NormenContext";
@@ -47,18 +52,34 @@ function Inhoud({
   onOvernemen: Props["onOvernemen"];
   onSluit: () => void;
 }) {
+  const N = useNormen();
   const [u, setU] = useState<Ingeladen | null>(null);
   const [status, setStatus] = useState("");
   const [bezig, setBezig] = useState(false);
+  /** Opgehaalde gegevens (null = niets) en waarom iets niet lukte; undefined = nog bezig */
+  const [bronnen, setBronnen] = useState<Bronnen | undefined>(undefined);
+  const [fouten, setFouten] = useState<string[]>([]);
+  const [epGebruiken, setEpGebruiken] = useState(false);
+  const poging = useRef(0);
+
+  const a = useMemo(
+    () => (u && bronnen ? aanvullenUitBronnen(u, bronnen, N, epGebruiken) : null),
+    [u, bronnen, N, epGebruiken],
+  );
 
   async function lees(file: File) {
+    const nr = ++poging.current;
     setU(null);
+    setBronnen(undefined);
+    setFouten([]);
+    setEpGebruiken(false);
     if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
       setStatus("Kies een PDF-bestand.");
       return;
     }
     setBezig(true);
     setStatus("Bezig met lezen…");
+    let r: HpcUitkomst;
     try {
       const regels = zoekHuurprijscheck(await pdfRegels(file));
       if (!regels) {
@@ -67,25 +88,31 @@ function Inhoud({
         );
         return;
       }
-      const r = leesHuurprijscheck(regels);
+      r = leesHuurprijscheck(regels);
       if (!r.ok) {
         setStatus(r.fout);
         return;
       }
-      setU(r);
-      setStatus("");
     } catch {
       setStatus("De PDF kon niet worden gelezen. Is het bestand beschadigd of beveiligd?");
+      return;
     } finally {
       setBezig(false);
     }
+    setU(r);
+    setStatus("Bezig met ophalen van energielabel, monumentstatus en bouwjaar…");
+    const b = await haalBronnen(r);
+    if (poging.current !== nr) return;
+    setBronnen(b.bronnen);
+    setFouten(b.fouten);
+    setStatus("");
   }
 
   async function overnemen() {
-    if (!u) return;
+    if (!u || !a) return;
     setBezig(true);
     try {
-      await onOvernemen(u);
+      await onOvernemen({ ...u, meta: a.meta, input: a.input, meldingen: a.meldingen });
     } finally {
       setBezig(false);
     }
@@ -117,33 +144,99 @@ function Inhoud({
       <p className="min-h-5 text-muted-foreground" role="status">
         {status}
       </p>
-      {u && <Nakijken u={u} />}
+      {u && a && (
+        <Nakijken
+          u={u}
+          a={a}
+          fouten={fouten}
+          epGebruiken={epGebruiken}
+          onEpGebruiken={setEpGebruiken}
+        />
+      )}
       <DialogFooter className="gap-2">
         <Button type="button" variant="ghost" onClick={onSluit} disabled={bezig}>
           Annuleren
         </Button>
-        <Button type="button" disabled={!u || bezig} onClick={() => void overnemen()}>
-          {bezig && u ? "Bezig…" : "Overnemen als telling"}
+        <Button type="button" disabled={!a || bezig} onClick={() => void overnemen()}>
+          {bezig && a ? "Bezig…" : "Overnemen als telling"}
         </Button>
       </DialogFooter>
     </div>
   );
 }
 
+/**
+ * Energielabel (EP-Online), monumentstatus (Kadaster/RCE) en gemeente + bouwjaar (PDOK/BAG) bij
+ * het adres uit de Huurprijscheck, tegelijk. Wat niet lukt, wordt een regel in `fouten`.
+ */
+async function haalBronnen(u: Ingeladen): Promise<{ bronnen: Bronnen; fouten: string[] }> {
+  const bronnen: Bronnen = { label: null, monument: null, corop: null };
+  const v = EpVraagSchema.safeParse(epAdresVelden(u.meta));
+  if (!v.success)
+    return { bronnen, fouten: ["Zonder postcode en huisnummer kon er niets worden opgehaald."] };
+  const fouten: string[] = [];
+  const probeer = async <T,>(
+    f: () => Promise<
+      { ok: true; data: T } | { ok: false; fout: Parameters<typeof epFoutMelding>[0] }
+    >,
+    melding: (fout: Parameters<typeof epFoutMelding>[0]) => string,
+  ): Promise<T | null> => {
+    try {
+      const r = await f();
+      if (r.ok) return r.data;
+      fouten.push(melding(r.fout));
+    } catch {
+      fouten.push(melding("geen_verbinding"));
+    }
+    return null;
+  };
+  const [label, monument, corop] = await Promise.all([
+    probeer(
+      () => zoekEnergielabel({ data: v.data }),
+      (f) =>
+        "Energielabel: " +
+        (f === "niet_gevonden"
+          ? "geen geregistreerd label gevonden bij EP-Online."
+          : epFoutMelding(f)),
+    ),
+    probeer(
+      () => zoekMonument({ data: v.data }),
+      (f) => "Monumentstatus: " + monumentFoutMelding(f),
+    ),
+    probeer(
+      () => zoekCorop({ data: v.data }),
+      (f) => "Gemeente en bouwjaar: " + monumentFoutMelding(f),
+    ),
+  ]);
+  return { bronnen: { label, monument, corop }, fouten };
+}
+
 const punten = (n: number | null) => (n == null ? "–" : fmt(n));
 
 /** De nakijkstap: wat er is ingelezen, de punten naast elkaar en wat de gebruiker moet nakijken */
-export function Nakijken({ u }: { u: Ingeladen }) {
+export function Nakijken({
+  u,
+  a,
+  fouten,
+  epGebruiken,
+  onEpGebruiken,
+}: {
+  u: Ingeladen;
+  a: Aanvulling;
+  fouten: string[];
+  epGebruiken: boolean;
+  onEpGebruiken: (aan: boolean) => void;
+}) {
   const N = useNormen();
-  const R = useMemo(() => calc(u.input, N), [u.input, N]);
+  const R = useMemo(() => calc(a.input, N), [a.input, N]);
   const vergelijk = vergelijkHuurprijscheck(u.verwacht, R);
   const gelijk = vergelijk.every((x) => x.gelijk);
-  const m = u.meta;
+  const m = a.meta;
   const ruimten = [
-    ...u.input.vertrekken.map((r) => ({ r, soort: vertrekType(r.type).l })),
-    ...u.input.overig.map((r) => ({ r, soort: overigType(r.type).l })),
+    ...a.input.vertrekken.map((r) => ({ r, soort: vertrekType(r.type).l })),
+    ...a.input.overig.map((r) => ({ r, soort: overigType(r.type).l })),
   ];
-  const buiten = u.input.buiten.ruimten
+  const buiten = a.input.buiten.ruimten
     .map(
       (b) =>
         (BUITEN_SOORTEN.find(([k]) => k === b.soort)?.[1] ?? b.soort) +
@@ -172,6 +265,51 @@ export function Nakijken({ u }: { u: Ingeladen }) {
           {u.verwacht.maxHuur == null ? "–" : eur(u.verwacht.maxHuur)}
         </span>
       </div>
+
+      {a.aangevuld.length > 0 && (
+        <section
+          aria-label="Opgehaald"
+          className="space-y-1 rounded-lg border border-emerald-600/30 bg-emerald-600/10 px-3 py-2"
+        >
+          <p className="font-medium text-emerald-800 dark:text-emerald-300">
+            ✓ Succesvol opgehaald
+          </p>
+          <ul className="list-disc space-y-0.5 pl-5">
+            {a.aangevuld.map((x, i) => (
+              <li key={i}>{x}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {fouten.length > 0 && (
+        <ul
+          className="rounded-lg border border-border bg-muted px-3 py-2"
+          aria-label="Niet opgehaald"
+        >
+          {fouten.map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
+      )}
+      {a.labelVerschil && (
+        <section
+          aria-label="Ander energielabel"
+          className="space-y-1 rounded-md bg-orange px-3 py-2 text-orange-foreground"
+        >
+          <p>
+            <b>Ander energielabel.</b> Huurprijscheck: {a.labelVerschil.huurprijscheck}. EP-Online
+            nu: {a.labelVerschil.epOnline}.
+          </p>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={epGebruiken}
+              onChange={(e) => onEpGebruiken(e.target.checked)}
+            />
+            Label uit EP-Online gebruiken
+          </label>
+        </section>
+      )}
 
       <section aria-label="Punten">
         <h3 className="mb-1 font-semibold">Punten</h3>
@@ -241,14 +379,14 @@ export function Nakijken({ u }: { u: Ingeladen }) {
         </p>
       </section>
 
-      {u.meldingen.length > 0 && (
+      {a.meldingen.length > 0 && (
         <section
           aria-label="Nakijken"
           className="rounded-md bg-orange px-3 py-2 text-orange-foreground"
         >
           <h3 className="font-semibold">Nakijken</h3>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {u.meldingen.map((x, i) => (
+            {a.meldingen.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
           </ul>
