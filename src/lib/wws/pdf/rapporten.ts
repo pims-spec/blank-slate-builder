@@ -108,7 +108,7 @@ function tellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
     M = PDF_M,
     MUT = PDF_MUT;
   const txt = pdfTxt;
-  pdfCoverPage(doc, meta, "Rapportage puntentelling");
+  pdfCoverPage(doc, meta, "Rapportage puntentelling", { zonderOpsteller: true });
   doc.addPage();
   const dateText = versie
     ? "Versie " +
@@ -134,7 +134,10 @@ function tellingPdf(lib: PdfLib, x: TellingPdfInvoer): PdfBestand {
   let zijbeeld: string | null = null;
   if (x.bronGetrouw) y = pdfPlattegrondBlok(doc, y, x.plattegrond);
   else zijbeeld = kleinePlattegrond(x.rapportPlattegronden, SITUATIE_VOORKEUR, x.plattegrond);
-  const body = pdfTellingBody(lib, doc, y, meta, input, normen, { zijbeeld });
+  const body = pdfTellingBody(lib, doc, y, meta, input, normen, {
+    zijbeeld,
+    zonderOpsteller: true,
+  });
   y = body.y;
   const R = body.R;
   if (y > 258) {

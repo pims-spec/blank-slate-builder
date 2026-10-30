@@ -398,7 +398,7 @@ describe("bewuste afwijkingen in de PDF's", () => {
     }
   });
 
-  it("voorblad: opgesteld door; adviesrapport zonder blok Woning, de puntentelling met", async () => {
+  it("opgesteld door alleen in de adviezen; adviesrapport zonder blok Woning, de puntentelling met", async () => {
     const input = normaliseer(genereer(2));
     const meta = { ...willekeurigeMeta(2), opsteller: "Test Opsteller" };
     const inst = standaardInstellingen(N);
@@ -406,9 +406,15 @@ describe("bewuste afwijkingen in de PDF's", () => {
     expect(advies[0]).toContain("Opgesteld door");
     expect(advies[0]).toContain("Test Opsteller");
     expect(advies.flat()).not.toContain("Bouwjaar");
+    // de puntentelling noemt de maker nergens (voorblad en blok Woning)
     const telling = await pdfTekst(maakTellingPdf(LIB, { meta, input, normen: N }).blob);
-    expect(telling[0]).toContain("Opgesteld door");
     expect(telling.flat()).toContain("Bouwjaar");
+    expect(telling.flat().join(" ")).not.toMatch(/Opgesteld door|Test Opsteller/);
+    // bron-getrouw blijft het blok Woning zoals wws-site.html (met de opsteller)
+    const tellingBron = await pdfTekst(
+      maakTellingPdf(LIB, { meta, input, normen: N, bronGetrouw: true }).blob,
+    );
+    expect(tellingBron.flat()).toContain("Test Opsteller");
     const bron = await pdfTekst(
       maakAdviesPdf(LIB, { meta, input, normen: N, inst, bronGetrouw: true }).blob,
     );

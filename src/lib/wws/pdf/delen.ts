@@ -191,6 +191,8 @@ export function pdfTellingBody(
   opts: {
     skipGauge?: boolean;
     zonderWoning?: boolean;
+    /** Zonder "Opgesteld door" (puntentelling-PDF; bewuste afwijking, niet in bron-modus) */
+    zonderOpsteller?: boolean;
     /** Kleine plattegrond rechts naast "Punten per onderdeel" (JPEG data-URL), zoals CBRE */
     zijbeeld?: string | null;
   } = {},
@@ -243,7 +245,9 @@ export function pdfTellingBody(
             "Peildatum",
             meta.peildatum ? new Date(meta.peildatum).toLocaleDateString("nl-NL") : "-",
           ],
-          ["Opgesteld door", meta.opsteller || "-"],
+          ...(opts.zonderOpsteller && !isBronModus()
+            ? []
+            : [["Opgesteld door", meta.opsteller || "-"]]),
         ],
         theme: "plain",
         styles: { fontSize: 9.5, textColor: INK, cellPadding: 1.4 },
@@ -613,7 +617,12 @@ export function pdfTellingBody(
 }
 
 /** Voorpagina met de grote GoHome-wordmark en het adres — pdfCoverPage() */
-export function pdfCoverPage(doc: Doc, meta: TellingMeta, titel?: string) {
+export function pdfCoverPage(
+  doc: Doc,
+  meta: TellingMeta,
+  titel?: string,
+  opties: { zonderOpsteller?: boolean } = {},
+) {
   const mHn = /^(\d+)\s*[-\s]?\s*(.*)$/.exec(String(meta.huisnummer || "").trim());
   const rows: [string, string][] = (
     [
@@ -623,7 +632,10 @@ export function pdfCoverPage(doc: Doc, meta: TellingMeta, titel?: string) {
       ["Plaats", meta.plaats || "-"],
       ["Postcode", meta.postcode || "-"],
       // bewuste afwijking: de bron noemde de opsteller niet op het voorblad
-      ...(isBronModus() ? [] : [["Opgesteld door", meta.opsteller || "-"]]),
+      // de puntentelling-PDF noemt de opsteller helemaal niet (alleen de adviezen)
+      ...(isBronModus() || opties.zonderOpsteller
+        ? []
+        : [["Opgesteld door", meta.opsteller || "-"]]),
     ] as [string, string][]
   ).filter((r) => r[0] !== "Toevoeging" || r[1]);
   const pc = String(meta.postcode || "").replace(/^(\d{4})\s*([A-Za-z]{2})$/, "$1 $2");
